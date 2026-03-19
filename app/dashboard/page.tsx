@@ -53,8 +53,8 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-          <p className="text-slate-400">Monitor and analyze your calls in real-time</p>
+          <h1 className="text-3xl font-bold text-navy-900 mb-2">Dashboard</h1>
+          <p className="text-navy-500">Monitor and analyze your calls in real-time</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -72,9 +72,9 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <Card className="p-4 mb-6 bg-red-500/10 border border-red-500/20">
-          <p className="text-red-400">{error}</p>
-          <p className="text-slate-400 text-sm mt-1">Please check your CTM credentials in .env</p>
+        <Card className="p-4 mb-6 bg-red-50 border border-red-200">
+          <p className="text-red-600">{error}</p>
+          <p className="text-navy-500 text-sm mt-1">Please check your CTM credentials in .env</p>
         </Card>
       )}
 
@@ -123,8 +123,8 @@ export default function DashboardPage() {
       {/* Recent Calls */}
       <div>
         <div className="mb-4">
-          <h2 className="text-xl font-bold text-white">Recent Calls</h2>
-          <p className="text-slate-400 text-sm mt-1">Your latest 10 calls with analysis</p>
+          <h2 className="text-xl font-bold text-navy-900">Recent Calls</h2>
+          <p className="text-navy-500 text-sm mt-1">Your latest 10 calls with analysis</p>
         </div>
         <CallTable calls={recentCalls} />
       </div>

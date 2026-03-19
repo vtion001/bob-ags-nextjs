@@ -159,6 +159,20 @@ export default function CallDetailPage() {
             </Card>
           )}
 
+          {/* Audio Player */}
+          {call.recordingUrl && (
+            <Card className="p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Recording</h3>
+              <audio 
+                controls 
+                className="w-full h-12 bg-navy-900 rounded-lg"
+                src={call.recordingUrl}
+              >
+                Your browser does not support audio playback.
+              </audio>
+            </Card>
+          )}
+
           {/* Transcript */}
           <Card className="p-6">
             <h3 className="text-lg font-bold text-white mb-4">Transcript</h3>
@@ -168,7 +182,7 @@ export default function CallDetailPage() {
               </div>
             ) : (
               <div className="bg-navy-900/50 rounded-lg p-4 text-slate-500 text-sm">
-                No transcript available
+                No transcript available. {call.recordingUrl && 'Enable transcription in settings.'}
               </div>
             )}
           </Card>

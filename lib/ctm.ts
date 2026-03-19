@@ -4,9 +4,28 @@ export interface Call {
   direction: 'inbound' | 'outbound'
   duration: number
   status: 'completed' | 'missed' | 'active'
-  score?: number
   timestamp: Date
+  name?: string
+  callerNumber?: string
+  trackingNumber?: string
+  trackingLabel?: string
+  source?: string
+  sourceId?: string
+  agent?: {
+    id: string
+    name: string
+    email: string
+  }
+  recordingUrl?: string
   transcript?: string
+  city?: string
+  state?: string
+  postalCode?: string
+  notes?: string
+  talkTime?: number
+  waitTime?: number
+  ringTime?: number
+  score?: number
   analysis?: {
     sentiment: string
     summary: string
@@ -26,26 +45,49 @@ interface GetCallsParams {
   hours?: number
   status?: string | null
   sourceId?: string | null
+  agentId?: string | null
 }
 
 interface CTMCall {
   id: number
+  sid?: string
+  account_id?: number
+  name?: string
   caller_id?: string
+  caller_number?: string
   phone_number?: string
   duration?: number
   status?: string
   direction?: string
   started_at?: string
+  called_at?: string
+  source?: string
   source_id?: string
+  source_sid?: string
   tracking_number?: string
+  tracking_number_format?: string
+  tracking_label?: string
   talk_time?: number
   wait_time?: number
-  source_name?: string
+  ring_time?: number
   destination_number?: string
   pool_number?: string
   did_number?: string
   recording_url?: string
+  audio?: string
   transcript?: string
+  city?: string
+  state?: string
+  postal_code?: string
+  notes?: string
+  tag_list?: string[]
+  emails?: Array<{ email: string }>
+  agent?: {
+    id: string
+    name: string
+    email: string
+  }
+  agent_id?: string
 }
 
 interface CTMAccount {
@@ -183,17 +225,24 @@ export class CTMClient {
   }
 
   async getCalls(params: GetCallsParams = {}): Promise<Call[]> {
-    const { limit = 100, hours = 24, status, sourceId } = params
+    const { limit = 100, hours = 24, status, sourceId, agentId } = params
     
     let endpoint = `/accounts/${this.accountId}/calls.json?limit=${limit}&hours=${hours}`
     if (status) endpoint += `&status=${status}`
     if (sourceId) endpoint += `&source_id=${sourceId}`
+    if (agentId) endpoint += `&agent_id=${agentId}`
 
     const data = await this.makeRequest<{ calls?: CTMCall[] }>(endpoint)
     
     if (!data.calls) return []
 
-    return data.calls.map((call: CTMCall) => this.transformCall(call))
+    let calls = data.calls.map((call: CTMCall) => this.transformCall(call))
+    
+    if (agentId) {
+      calls = calls.filter(c => c.agent?.id === agentId)
+    }
+
+    return calls
   }
 
   async getCall(callId: string): Promise<Call | null> {
@@ -419,12 +468,27 @@ export class CTMClient {
   private transformCall(ctmCall: CTMCall): Call {
     return {
       id: String(ctmCall.id),
-      phone: ctmCall.phone_number || ctmCall.caller_id || ctmCall.did_number || '',
+      phone: ctmCall.phone_number || ctmCall.caller_number || ctmCall.caller_id || ctmCall.did_number || '',
       direction: (ctmCall.direction as 'inbound' | 'outbound') || 'inbound',
       duration: ctmCall.duration || ctmCall.talk_time || 0,
       status: this.mapStatus(ctmCall.status),
       timestamp: ctmCall.started_at ? new Date(ctmCall.started_at) : new Date(),
+      name: ctmCall.name,
+      callerNumber: ctmCall.caller_number || ctmCall.caller_id,
+      trackingNumber: ctmCall.tracking_number,
+      trackingLabel: ctmCall.tracking_label,
+      source: ctmCall.source,
+      sourceId: ctmCall.source_id ? String(ctmCall.source_id) : undefined,
+      agent: ctmCall.agent,
+      recordingUrl: ctmCall.audio || ctmCall.recording_url,
       transcript: ctmCall.transcript,
+      city: ctmCall.city,
+      state: ctmCall.state,
+      postalCode: ctmCall.postal_code,
+      notes: ctmCall.notes,
+      talkTime: ctmCall.talk_time,
+      waitTime: ctmCall.wait_time,
+      ringTime: ctmCall.ring_time,
     }
   }
 
@@ -441,17 +505,18 @@ export class CTMClient {
 
   getStats(calls: Call[]) {
     const totalCalls = calls.length
-    const analyzed = calls.filter(c => c.score !== undefined).length
-    const hotLeads = calls.filter(c => c.score && c.score >= 75).length
-    const avgScore = analyzed > 0 
-      ? calls.reduce((sum, c) => sum + (c.score || 0), 0) / analyzed 
-      : 0
+    const answered = calls.filter(c => c.status === 'completed' || c.status === 'active').length
+    const missed = calls.filter(c => c.status === 'missed').length
+    const withRecordings = calls.filter(c => c.recordingUrl).length
 
     return {
       totalCalls,
-      analyzed,
-      hotLeads,
-      avgScore: avgScore.toFixed(1),
+      answered,
+      missed,
+      withRecordings,
+      avgDuration: totalCalls > 0 
+        ? Math.round(calls.reduce((sum, c) => sum + (c.duration || 0), 0) / totalCalls)
+        : 0,
     }
   }
 }

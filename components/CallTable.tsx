@@ -10,9 +10,10 @@ export interface CallTableProps {
   onCallClick?: (callId: string) => void
 }
 
-function formatTime(date: Date) {
+function formatTime(date: Date | string) {
+  const dateObj = typeof date === 'string' ? new Date(date) : date
   const now = new Date()
-  const diff = now.getTime() - date.getTime()
+  const diff = now.getTime() - dateObj.getTime()
   const minutes = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)

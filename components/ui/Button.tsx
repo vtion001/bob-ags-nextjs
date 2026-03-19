@@ -19,9 +19,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'font-medium transition-all duration-200 rounded-xs font-sans cursor-pointer inline-flex items-center justify-center gap-2'
     
     const variantStyles = {
-      primary: 'bg-navy-900 text-white hover:bg-navy-800 active:bg-navy-700',
-      secondary: 'border border-navy-300 text-navy-900 hover:bg-navy-50 active:bg-navy-100',
-      ghost: 'text-navy-600 hover:text-navy-900 active:text-navy-950',
+      primary: 'bg-navy-900 text-white hover:bg-navy-800 active:bg-navy-950',
+      secondary: 'bg-navy-900 text-white hover:bg-navy-800 active:bg-navy-950',
+      ghost: 'bg-navy-900 text-white hover:bg-navy-800 active:bg-navy-950',
     }
     
     const sizeStyles = {

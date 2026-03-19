@@ -14,9 +14,10 @@ export async function GET(request: NextRequest) {
     const hours = parseInt(searchParams.get('hours') || '24')
     const status = searchParams.get('status')
     const sourceId = searchParams.get('source_id')
+    const agentId = searchParams.get('agent_id')
 
     const ctmClient = new CTMClient()
-    const calls = await ctmClient.getCalls({ limit, hours, status, sourceId })
+    const calls = await ctmClient.getCalls({ limit, hours, status, sourceId, agentId })
 
     return NextResponse.json({ calls })
   } catch (error) {
