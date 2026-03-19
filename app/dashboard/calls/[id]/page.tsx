@@ -7,6 +7,14 @@ import Card from '@/components/ui/Card'
 import ScoreCircle from '@/components/ScoreCircle'
 import { Call } from '@/lib/ctm'
 
+interface AnalysisResult {
+  score: number
+  sentiment: string
+  summary: string
+  tags: string[]
+  disposition: string
+}
+
 export default function CallDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -14,6 +22,8 @@ export default function CallDetailPage() {
   const [call, setCall] = useState<Call | null>(null)
   const [transcript, setTranscript] = useState<string>('')
   const [transcriptError, setTranscriptError] = useState<string | null>(null)
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -24,12 +34,37 @@ export default function CallDetailPage() {
         if (!res.ok) throw new Error('Call not found')
         const data = await res.json()
         setCall(data.call)
+        
+        if (data.call.analysis) {
+          setAnalysis(data.call.analysis)
+        }
 
         const transcriptRes = await fetch(`/api/ctm/calls/${callId}/transcript`)
         if (transcriptRes.ok) {
           const transcriptData = await transcriptRes.json()
           if (transcriptData.transcript) {
             setTranscript(transcriptData.transcript)
+            if (!data.call.analysis) {
+              setIsAnalyzing(true)
+              try {
+                const analyzeRes = await fetch('/api/ctm/calls/analyze', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ callIds: [callId] }),
+                })
+                if (analyzeRes.ok) {
+                  const analyzeData = await analyzeRes.json()
+                  const result = analyzeData.results?.[0]
+                  if (result?.success && result.analysis) {
+                    setAnalysis(result.analysis)
+                  }
+                }
+              } catch (err) {
+                console.error('Analysis failed:', err)
+              } finally {
+                setIsAnalyzing(false)
+              }
+            }
           } else if (transcriptData.error) {
             setTranscriptError(transcriptData.error)
           }
@@ -75,6 +110,8 @@ export default function CallDetailPage() {
     return `${mins}m ${secs}s`
   }
 
+  const displayScore = analysis?.score || call.score || 0
+
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
       {/* Header */}
@@ -86,7 +123,7 @@ export default function CallDetailPage() {
         {/* Left column - Score and basic info */}
         <div className="lg:col-span-1">
           <Card className="flex flex-col items-center p-8 text-center">
-            <ScoreCircle score={call.score || 0} size="md" />
+            <ScoreCircle score={displayScore} size="md" />
           </Card>
 
           <Card className="mt-6 p-6">
@@ -124,31 +161,38 @@ export default function CallDetailPage() {
         {/* Right column - Analysis and transcript */}
         <div className="lg:col-span-2 space-y-6">
           {/* Analysis */}
-          {call.analysis && (
+          {(analysis || call?.analysis) && (
             <Card className="p-6">
-              <h3 className="text-lg font-bold text-navy-900 mb-4">AI Analysis</h3>
+              <h3 className="text-lg font-bold text-navy-900 mb-4">
+                AI Analysis {isAnalyzing && <span className="text-navy-400 text-sm font-normal">(Analyzing...)</span>}
+              </h3>
               
               <div className="space-y-4">
                 <div>
+                  <p className="text-sm text-navy-500 mb-2">Score</p>
+                  <ScoreCircle score={analysis?.score || call?.score || 0} size="sm" />
+                </div>
+
+                <div>
                   <p className="text-sm text-navy-500 mb-2">Sentiment</p>
                   <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                    call.analysis.sentiment === 'positive' ? 'bg-green-100 text-green-700' :
-                    call.analysis.sentiment === 'negative' ? 'bg-red-100 text-red-700' :
+                    (analysis?.sentiment || call?.analysis?.sentiment) === 'positive' ? 'bg-green-100 text-green-700' :
+                    (analysis?.sentiment || call?.analysis?.sentiment) === 'negative' ? 'bg-red-100 text-red-700' :
                     'bg-slate-100 text-slate-600'
                   }`}>
-                    {call.analysis.sentiment}
+                    {analysis?.sentiment || call?.analysis?.sentiment || 'unknown'}
                   </span>
                 </div>
 
                 <div>
                   <p className="text-sm text-navy-500 mb-2">Summary</p>
-                  <p className="text-navy-800">{call.analysis.summary}</p>
+                  <p className="text-navy-800">{analysis?.summary || call?.analysis?.summary || 'No summary available'}</p>
                 </div>
 
                 <div>
                   <p className="text-sm text-navy-500 mb-2">Tags</p>
                   <div className="flex flex-wrap gap-2">
-                    {call.analysis.tags.map((tag: string) => (
+                    {(analysis?.tags || call?.analysis?.tags || []).map((tag: string) => (
                       <span key={tag} className="px-3 py-1 bg-navy-100 text-navy-700 text-xs rounded-full">
                         {tag}
                       </span>
@@ -158,7 +202,13 @@ export default function CallDetailPage() {
 
                 <div>
                   <p className="text-sm text-navy-500 mb-2">Suggested Disposition</p>
-                  <p className="text-navy-800 bg-navy-50 rounded-lg p-3">{call.analysis.disposition}</p>
+                  <p className="text-navy-800 bg-navy-50 rounded-lg p-3">
+                    {(analysis?.disposition && analysis.disposition !== '-------- dup unq --------') 
+                      ? analysis.disposition 
+                      : call?.analysis?.disposition && call.analysis.disposition !== '-------- dup unq --------'
+                        ? call.analysis.disposition
+                        : 'No disposition available'}
+                  </p>
                 </div>
               </div>
             </Card>

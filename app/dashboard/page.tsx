@@ -74,6 +74,50 @@ export default function DashboardPage() {
     setAutoRefresh(!autoRefresh)
   }
 
+  const handleAnalyze = async () => {
+    setIsAnalyzing(true)
+    setAnalyzeProgress('Fetching calls...')
+    
+    try {
+      const callsRes = await fetch('/api/ctm/calls?limit=50&hours=168&direction=inbound')
+      if (!callsRes.ok) throw new Error('Failed to fetch calls')
+      const callsData = await callsRes.json()
+      
+      const callsWithoutAnalysis = (callsData.calls || []).filter(
+        (c: Call) => c.direction === 'inbound' && !c.score && !c.analysis
+      )
+      
+      if (callsWithoutAnalysis.length === 0) {
+        setAnalyzeProgress('All calls already analyzed!')
+        setTimeout(() => setAnalyzeProgress(''), 2000)
+        setIsAnalyzing(false)
+        return
+      }
+
+      const callIds = callsWithoutAnalysis.map((c: Call) => c.id)
+      setAnalyzeProgress(`Analyzing ${callIds.length} calls...`)
+      
+      const analyzeRes = await fetch('/api/ctm/calls/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callIds }),
+      })
+      
+      if (!analyzeRes.ok) throw new Error('Analysis failed')
+      
+      const result = await analyzeRes.json()
+      setAnalyzeProgress(`Analyzed ${result.analyzed} calls successfully!`)
+      
+      await fetchData()
+      
+      setTimeout(() => setAnalyzeProgress(''), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Analysis failed')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -81,7 +125,7 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-navy-900 mb-2">Dashboard</h1>
           <p className="text-navy-500">Monitor and analyze your calls in real-time</p>
         </div>0
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <Button
             variant="secondary"
             size="md"
@@ -93,6 +137,19 @@ export default function DashboardPage() {
             </svg>
             Refresh
           </Button>
+          <button
+            onClick={toggleAutoRefresh}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              autoRefresh 
+                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+          >
+            <svg className={`w-4 h-4 ${autoRefresh ? 'animate-spin-slow' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {autoRefresh ? 'Auto' : 'Paused'}
+          </button>
           <Button 
             variant="primary" 
             size="md"

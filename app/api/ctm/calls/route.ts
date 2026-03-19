@@ -15,11 +15,19 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const sourceId = searchParams.get('source_id')
     const agentId = searchParams.get('agent_id')
+    const phone = searchParams.get('phone')
 
     const ctmClient = new CTMClient()
-    const calls = await ctmClient.getCalls({ limit, hours, status, sourceId, agentId })
+    let calls = await ctmClient.getCalls({ limit, hours, status, sourceId, agentId })
 
     const inboundCalls = calls.filter(call => call.direction === 'inbound')
+    
+    if (phone) {
+      const filteredByPhone = inboundCalls.filter(call => 
+        call.phone.includes(phone) || call.callerNumber?.includes(phone)
+      )
+      return NextResponse.json({ calls: filteredByPhone })
+    }
 
     return NextResponse.json({ calls: inboundCalls })
   } catch (error) {

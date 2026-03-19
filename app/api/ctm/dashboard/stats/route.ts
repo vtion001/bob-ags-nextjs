@@ -15,12 +15,13 @@ export async function GET(request: NextRequest) {
 
     const ctmClient = new CTMClient()
     const calls = await ctmClient.getCalls({ limit, hours })
-
-    const totalCalls = calls.length
-    const analyzed = calls.filter(c => c.score !== undefined || c.analysis).length
-    const hotLeads = calls.filter(c => (c.score ?? 0) >= 80).length
+    
+    const inboundCalls = calls.filter(c => c.direction === 'inbound')
+    const totalCalls = inboundCalls.length
+    const analyzed = inboundCalls.filter(c => c.score !== undefined || c.analysis).length
+    const hotLeads = inboundCalls.filter(c => (c.score ?? 0) >= 80).length
     const avgScore = totalCalls > 0
-      ? Math.round(calls.reduce((sum, c) => sum + (c.score ?? 0), 0) / totalCalls)
+      ? Math.round(inboundCalls.reduce((sum, c) => sum + (c.score ?? 0), 0) / totalCalls)
       : 0
 
     const stats = {
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       stats,
-      recentCalls: calls.slice(0, 10),
+      recentCalls: inboundCalls.slice(0, 10),
     })
   } catch (error) {
     console.error('CTM dashboard stats error:', error)

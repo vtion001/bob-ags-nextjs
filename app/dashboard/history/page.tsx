@@ -9,6 +9,7 @@ import { Call } from '@/lib/ctm'
 
 export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState('')
+  const [accountIdFilter, setAccountIdFilter] = useState('')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [scoreFilter, setScoreFilter] = useState({ min: 0, max: 100 })
   const [filteredCalls, setFilteredCalls] = useState<Call[]>([])
@@ -47,7 +48,14 @@ export default function HistoryPage() {
 
     if (searchQuery) {
       results = results.filter(call =>
-        call.phone.includes(searchQuery)
+        call.phone.includes(searchQuery) || 
+        call.callerNumber?.includes(searchQuery)
+      )
+    }
+
+    if (accountIdFilter) {
+      results = results.filter(call =>
+        call.accountId?.includes(accountIdFilter)
       )
     }
 
@@ -116,7 +124,7 @@ export default function HistoryPage() {
       <Card className="p-6 mb-6">
         <h3 className="text-lg font-bold text-navy-900 mb-4">Search & Filter</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
           <Input
             label="Phone Number"
             type="text"
@@ -124,6 +132,15 @@ export default function HistoryPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="Search by phone..."
+          />
+
+          <Input
+            label="Account ID"
+            type="text"
+            value={accountIdFilter}
+            onChange={(e) => setAccountIdFilter(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="Filter by account..."
           />
 
           <Input

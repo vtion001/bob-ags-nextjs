@@ -11,6 +11,7 @@ export interface Call {
   trackingLabel?: string
   source?: string
   sourceId?: string
+  accountId?: string
   agent?: {
     id: string
     name: string
@@ -491,6 +492,7 @@ export class CTMClient {
       trackingLabel: ctmCall.tracking_label,
       source: ctmCall.source,
       sourceId: ctmCall.source_id ? String(ctmCall.source_id) : undefined,
+      accountId: ctmCall.account_id ? String(ctmCall.account_id) : undefined,
       agent: ctmCall.agent,
       recordingUrl: ctmCall.audio || ctmCall.recording_url,
       transcript: ctmCall.transcript,
