@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Call } from '@/lib/mockData'
+import { Call } from '@/lib/ctm'
 import Card from './ui/Card'
 
 export interface CallTableProps {
@@ -54,41 +54,41 @@ export default function CallTable({ calls, onCallClick }: CallTableProps) {
   return (
     <Card hoverable={false} className="overflow-x-auto p-0">
       <table className="w-full">
-        <thead className="bg-navy-900/50 border-b border-navy-700">
+        <thead className="bg-navy-100 border-b border-navy-200">
           <tr>
-            <th className="text-left px-6 py-3 text-sm font-semibold text-slate-400">Time</th>
-            <th className="text-left px-6 py-3 text-sm font-semibold text-slate-400">Phone</th>
-            <th className="text-left px-6 py-3 text-sm font-semibold text-slate-400">Type</th>
-            <th className="text-left px-6 py-3 text-sm font-semibold text-slate-400">Duration</th>
-            <th className="text-left px-6 py-3 text-sm font-semibold text-slate-400">Score</th>
-            <th className="text-left px-6 py-3 text-sm font-semibold text-slate-400">Status</th>
+            <th className="text-left px-6 py-3 text-sm font-semibold text-navy-600">Time</th>
+            <th className="text-left px-6 py-3 text-sm font-semibold text-navy-600">Phone</th>
+            <th className="text-left px-6 py-3 text-sm font-semibold text-navy-600">Type</th>
+            <th className="text-left px-6 py-3 text-sm font-semibold text-navy-600">Duration</th>
+            <th className="text-left px-6 py-3 text-sm font-semibold text-navy-600">Score</th>
+            <th className="text-left px-6 py-3 text-sm font-semibold text-navy-600">Status</th>
           </tr>
         </thead>
         <tbody>
           {calls.map((call, index) => (
             <tr
               key={call.id}
-              className={`border-b border-navy-700/50 transition-colors duration-200 hover:bg-cyan-500/5 cursor-pointer ${
-                index % 2 === 0 ? 'bg-navy-800/30' : ''
+              className={`border-b border-navy-200 transition-colors duration-200 hover:bg-navy-50 cursor-pointer ${
+                index % 2 === 0 ? 'bg-white' : 'bg-navy-50'
               }`}
               onClick={() => onCallClick?.(call.id)}
             >
-              <td className="px-6 py-4 text-sm text-white">
+              <td className="px-6 py-4 text-sm text-navy-900">
                 <Link href={`/dashboard/calls/${call.id}`}>
                   {formatTime(call.timestamp)}
                 </Link>
               </td>
-              <td className="px-6 py-4 text-sm text-cyan-400">
+              <td className="px-6 py-4 text-sm text-navy-900 font-medium">
                 <Link href={`/dashboard/calls/${call.id}`}>
                   {call.phone}
                 </Link>
               </td>
-              <td className="px-6 py-4 text-sm text-slate-400">
+              <td className="px-6 py-4 text-sm text-navy-600">
                 <span className="capitalize">
                   {call.direction === 'inbound' ? '📞 Inbound' : '📤 Outbound'}
                 </span>
               </td>
-              <td className="px-6 py-4 text-sm text-white">
+              <td className="px-6 py-4 text-sm text-navy-900">
                 {formatDuration(call.duration)}
               </td>
               <td className="px-6 py-4 text-sm">
@@ -97,7 +97,7 @@ export default function CallTable({ calls, onCallClick }: CallTableProps) {
                 </span>
               </td>
               <td className="px-6 py-4 text-sm">
-                <span className="capitalize text-slate-400">
+                <span className="capitalize text-navy-600">
                   {call.status === 'completed' ? '✓ Done' : call.status === 'missed' ? '✕ Missed' : '⏱ Active'}
                 </span>
               </td>

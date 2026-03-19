@@ -1,33 +1,61 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import CallTable from '@/components/CallTable'
-import { mockCalls, Call } from '@/lib/mockData'
+import { Call } from '@/lib/ctm'
 
 export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [scoreFilter, setScoreFilter] = useState({ min: 0, max: 100 })
-  const [filteredCalls, setFilteredCalls] = useState<Call[]>(mockCalls)
+  const [filteredCalls, setFilteredCalls] = useState<Call[]>([])
+  const [allCalls, setAllCalls] = useState<Call[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchCalls = async () => {
+      try {
+        const res = await fetch('/api/ctm/calls?limit=500&hours=720')
+        if (!res.ok) throw new Error('Failed to fetch calls')
+        const data = await res.json()
+        setAllCalls(data.calls || [])
+        setFilteredCalls(data.calls || [])
+      } catch (err) {
+        console.error('Error fetching calls:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchCalls()
+  }, [])
 
   const handleSearch = () => {
-    let results = [...mockCalls]
+    let results = [...allCalls]
 
-    // Filter by phone number
     if (searchQuery) {
       results = results.filter(call =>
         call.phone.includes(searchQuery)
       )
     }
 
-    // Filter by score
     if (scoreFilter.min > 0 || scoreFilter.max < 100) {
       results = results.filter(call =>
         call.score && call.score >= scoreFilter.min && call.score <= scoreFilter.max
       )
+    }
+
+    if (dateRange.start) {
+      const startDate = new Date(dateRange.start)
+      results = results.filter(call => new Date(call.timestamp) >= startDate)
+    }
+
+    if (dateRange.end) {
+      const endDate = new Date(dateRange.end)
+      endDate.setHours(23, 59, 59, 999)
+      results = results.filter(call => new Date(call.timestamp) <= endDate)
     }
 
     setFilteredCalls(results.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()))
@@ -101,6 +129,7 @@ export default function HistoryPage() {
               size="md"
               className="w-full"
               onClick={handleSearch}
+              isLoading={isLoading}
             >
               Search
             </Button>
@@ -138,7 +167,7 @@ export default function HistoryPage() {
         </Card>
         <Card className="p-4">
           <p className="text-slate-400 text-sm">Avg Score</p>
-          <p className="text-2xl font-bold text-cyan-400 mt-1">
+          <p className="text-2xl font-bold text-white mt-1">
             {filteredCalls.length > 0
               ? Math.round(filteredCalls.reduce((sum, c) => sum + (c.score || 0), 0) / filteredCalls.length)
               : 0}
@@ -166,7 +195,7 @@ export default function HistoryPage() {
       {/* Pagination info */}
       {filteredCalls.length > 0 && (
         <div className="text-center text-slate-400 text-sm">
-          Showing {filteredCalls.length} of {mockCalls.length} calls
+          Showing {filteredCalls.length} of {allCalls.length} calls
         </div>
       )}
     </div>

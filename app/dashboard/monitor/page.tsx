@@ -1,27 +1,75 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
+import { Call } from '@/lib/ctm'
 
 export default function MonitorPage() {
-  const [isMonitoring, setIsMonitoring] = useState(true)
+  const router = useRouter()
+  const [isMonitoring, setIsMonitoring] = useState(false)
   const [pollingInterval, setPollingInterval] = useState(3)
-  const [activeCall, setActiveCall] = useState<{
-    phone: string
-    duration: number
-    timestamp: Date
-  } | null>({
-    phone: '+1 (555) 123-4567',
-    duration: 145,
-    timestamp: new Date(),
-  })
+  const [activeCalls, setActiveCalls] = useState<Call[]>([])
+  const [recentAnalyzed, setRecentAnalyzed] = useState<Call[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchActiveCalls = useCallback(async () => {
+    try {
+      const res = await fetch('/api/ctm/active-calls')
+      if (!res.ok) throw new Error('Failed to fetch active calls')
+      const data = await res.json()
+      setActiveCalls(data.calls || [])
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    }
+  }, [])
+
+  const fetchRecentAnalyzed = useCallback(async () => {
+    try {
+      const res = await fetch('/api/ctm/dashboard/stats?limit=10&hours=1')
+      if (!res.ok) throw new Error('Failed to fetch recent analysis')
+      const data = await res.json()
+      setRecentAnalyzed(data.recentCalls?.filter((c: Call) => c.score !== undefined) || [])
+    } catch (err) {
+      console.error('Error fetching recent analysis:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isMonitoring) {
+      fetchActiveCalls()
+      fetchRecentAnalyzed()
+      const interval = setInterval(() => {
+        fetchActiveCalls()
+        fetchRecentAnalyzed()
+      }, pollingInterval * 1000)
+      return () => clearInterval(interval)
+    }
+  }, [isMonitoring, pollingInterval, fetchActiveCalls, fetchRecentAnalyzed])
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const getScoreBadge = (score?: number) => {
+    if (!score) return null
+    if (score >= 75) return { label: 'Hot', className: 'bg-red-500/20 text-red-400' }
+    if (score >= 50) return { label: 'Warm', className: 'bg-amber-500/20 text-amber-400' }
+    return { label: 'Cold', className: 'bg-slate-500/20 text-slate-400' }
+  }
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date()
+    const diff = now.getTime() - new Date(date).getTime()
+    const minutes = Math.floor(diff / 60000)
+    if (minutes < 60) return `${minutes} minutes ago`
+    const hours = Math.floor(diff / 3600000)
+    return `${hours} hours ago`
   }
 
   return (
@@ -50,6 +98,12 @@ export default function MonitorPage() {
           </Button>
         </div>
 
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+
         {/* Settings */}
         <div className="bg-navy-900/50 rounded-lg p-4 space-y-4">
           <div>
@@ -73,39 +127,48 @@ export default function MonitorPage() {
       {/* Active Calls */}
       <div className="mb-6">
         <h2 className="text-xl font-bold text-white mb-4">Active Calls</h2>
-        {activeCall ? (
-          <Card className="p-6 bg-gradient-to-br from-navy-800/50 to-navy-900/50 border-cyan-500/30">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h3 className="text-2xl font-bold text-cyan-400 font-mono">{activeCall.phone}</h3>
-                <p className="text-slate-400 text-sm mt-1">Duration: {formatDuration(activeCall.duration)}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="text-red-400 font-semibold text-sm">LIVE</span>
-              </div>
-            </div>
+        {activeCalls.length > 0 ? (
+          <div className="space-y-4">
+            {activeCalls.map(call => (
+              <Card key={call.id} className="p-6 border border-navy-200">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-white font-mono">{call.phone}</h3>
+                    <p className="text-slate-400 text-sm mt-1">Duration: {formatDuration(call.duration)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-red-400 font-semibold text-sm">LIVE</span>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-navy-900/50 rounded-lg p-4">
-                <p className="text-slate-400 text-sm">Call Type</p>
-                <p className="text-white font-semibold mt-1">Inbound</p>
-              </div>
-              <div className="bg-navy-900/50 rounded-lg p-4">
-                <p className="text-slate-400 text-sm">Status</p>
-                <p className="text-cyan-400 font-semibold mt-1">Connected</p>
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-navy-900/50 rounded-lg p-4">
+                    <p className="text-slate-400 text-sm">Call Type</p>
+                    <p className="text-white font-semibold mt-1 capitalize">{call.direction}</p>
+                  </div>
+                  <div className="bg-navy-900/50 rounded-lg p-4">
+                    <p className="text-slate-400 text-sm">Status</p>
+                    <p className="text-white font-semibold mt-1 capitalize">{call.status}</p>
+                  </div>
+                </div>
 
-            <div className="flex gap-2">
-              <Button variant="primary" size="md" className="flex-1">
-                View Details
-              </Button>
-              <Button variant="secondary" size="md" className="flex-1">
-                Quick Note
-              </Button>
-            </div>
-          </Card>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="primary" 
+                    size="md" 
+                    className="flex-1"
+                    onClick={() => router.push(`/dashboard/calls/${call.id}`)}
+                  >
+                    View Details
+                  </Button>
+                  <Button variant="secondary" size="md" className="flex-1">
+                    Quick Note
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
         ) : (
           <Card className="p-12 text-center">
             <div className="flex justify-center mb-4">
@@ -125,43 +188,40 @@ export default function MonitorPage() {
       <div>
         <h2 className="text-xl font-bold text-white mb-4">Recent Analysis</h2>
         <Card className="p-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-navy-900/50 rounded-lg">
-              <div>
-                <p className="text-white font-medium">+1 (555) 456-7890</p>
-                <p className="text-slate-400 text-sm">2 minutes ago</p>
-              </div>
-              <span className="px-3 py-1 bg-red-500/20 text-red-400 text-xs rounded-full font-semibold">
-                Hot
-              </span>
+          {recentAnalyzed.length > 0 ? (
+            <div className="space-y-3">
+              {recentAnalyzed.map(call => {
+                const badge = getScoreBadge(call.score)
+                return (
+                  <div 
+                    key={call.id} 
+                    className="flex items-center justify-between p-3 bg-navy-900/50 rounded-lg cursor-pointer hover:bg-navy-900/70 transition-colors"
+                    onClick={() => router.push(`/dashboard/calls/${call.id}`)}
+                  >
+                    <div>
+                      <p className="text-white font-medium">{call.phone}</p>
+                      <p className="text-slate-400 text-sm">{formatTimeAgo(call.timestamp)}</p>
+                    </div>
+                    {badge && (
+                      <span className={`px-3 py-1 text-xs rounded-full font-semibold ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-            <div className="flex items-center justify-between p-3 bg-navy-900/50 rounded-lg">
-              <div>
-                <p className="text-white font-medium">+1 (555) 567-8901</p>
-                <p className="text-slate-400 text-sm">5 minutes ago</p>
-              </div>
-              <span className="px-3 py-1 bg-amber-500/20 text-amber-400 text-xs rounded-full font-semibold">
-                Warm
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-navy-900/50 rounded-lg">
-              <div>
-                <p className="text-white font-medium">+1 (555) 678-9012</p>
-                <p className="text-slate-400 text-sm">8 minutes ago</p>
-              </div>
-              <span className="px-3 py-1 bg-slate-500/20 text-slate-400 text-xs rounded-full font-semibold">
-                Cold
-              </span>
-            </div>
-          </div>
+          ) : (
+            <p className="text-slate-500 text-center">No recent analysis available</p>
+          )}
         </Card>
       </div>
 
       {/* Notification */}
-      {activeCall && (
+      {activeCalls.length > 0 && isMonitoring && (
         <div className="fixed bottom-4 right-4 bg-green-500/20 border border-green-500/30 text-green-300 px-4 py-3 rounded-lg flex items-center gap-2 animate-pulse">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span>New analysis ready</span>
+          <span>{activeCalls.length} active call{activeCalls.length > 1 ? 's' : ''}</span>
         </div>
       )}
     </div>

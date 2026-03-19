@@ -43,23 +43,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 flex">
+    <div className="min-h-screen bg-white flex">
       {/* Left side - Brand */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 bg-gradient-to-br from-navy-900 to-navy-950">
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 bg-navy-900">
         <div className="max-w-md text-center">
           <div className="mb-8">
-            <div className="inline-block p-4 bg-cyan-500/10 rounded-xl">
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-400 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-navy-950" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                </svg>
+            <div className="inline-block p-4 bg-white/10 rounded-xl">
+              <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                <span className="text-navy-900 font-bold text-xl">B</span>
               </div>
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">Mission Control</h1>
-          <p className="text-xl text-cyan-400 mb-6">Transform calls into insights</p>
-          <p className="text-slate-400 leading-relaxed">
-            AI-powered call analysis dashboard for sales teams. Track, analyze, and optimize every conversation.
+          <h1 className="text-4xl font-bold text-white mb-4">BOB</h1>
+          <p className="text-xl text-white/80 mb-6">Business Operations Butler</p>
+          <p className="text-white/60 leading-relaxed">
+            AI-powered business operations assistant. Automate workflows, analyze data, and streamline your business.
           </p>
         </div>
       </div>
@@ -68,8 +66,8 @@ export default function LoginPage() {
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 sm:p-12">
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>
-            <p className="text-slate-400">Enter your credentials to continue</p>
+            <h2 className="text-3xl font-bold text-navy-900 mb-2">Welcome Back</h2>
+            <p className="text-navy-500">Enter your credentials to continue</p>
           </div>
 
           <Card hoverable={false} className="mb-6">
@@ -108,10 +106,10 @@ export default function LoginPage() {
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-navy-700"></div>
+              <div className="w-full border-t border-navy-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-navy-950 text-slate-400">or</span>
+              <span className="px-2 bg-white text-navy-500">or</span>
             </div>
           </div>
 
@@ -125,8 +123,8 @@ export default function LoginPage() {
             Try Demo Mode
           </Button>
 
-          <p className="text-center text-slate-400 text-sm mt-6">
-            Demo credentials: demo@example.com / demo
+          <p className="text-center text-navy-500 text-sm mt-6">
+            Developer credentials: agsdev@allianceglobalsolutions.com / ags2026@@
           </p>
         </div>
       </div>

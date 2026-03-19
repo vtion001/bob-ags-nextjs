@@ -1,19 +1,4 @@
-export interface Call {
-  id: string
-  phone: string
-  direction: 'inbound' | 'outbound'
-  duration: number
-  status: 'completed' | 'missed' | 'active'
-  score?: number
-  timestamp: Date
-  transcript?: string
-  analysis?: {
-    sentiment: string
-    summary: string
-    tags: string[]
-    disposition: string
-  }
-}
+import type { Call } from './ctm'
 
 export const mockCalls: Call[] = [
   {

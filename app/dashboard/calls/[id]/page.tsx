@@ -1,27 +1,64 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import ScoreCircle from '@/components/ScoreCircle'
-import { mockCalls } from '@/lib/mockData'
+import { Call } from '@/lib/ctm'
 
 export default function CallDetailPage() {
   const params = useParams()
   const router = useRouter()
   const callId = params.id as string
+  const [call, setCall] = useState<Call | null>(null)
+  const [transcript, setTranscript] = useState<string>('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const call = mockCalls.find(c => c.id === callId)
+  useEffect(() => {
+    const fetchCallDetails = async () => {
+      try {
+        const res = await fetch(`/api/ctm/calls/${callId}`)
+        if (!res.ok) throw new Error('Call not found')
+        const data = await res.json()
+        setCall(data.call)
 
-  if (!call) {
+        const transcriptRes = await fetch(`/api/ctm/calls/${callId}/transcript`)
+        if (transcriptRes.ok) {
+          const transcriptData = await transcriptRes.json()
+          setTranscript(transcriptData.transcript || '')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchCallDetails()
+  }, [callId])
+
+  if (isLoading) {
     return (
       <div className="p-6 lg:p-8">
         <Button variant="ghost" onClick={() => router.back()} className="mb-6">
           ← Back
         </Button>
         <Card className="text-center py-12">
-          <p className="text-slate-400">Call not found</p>
+          <p className="text-slate-400">Loading...</p>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error || !call) {
+    return (
+      <div className="p-6 lg:p-8">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-6">
+          ← Back
+        </Button>
+        <Card className="text-center py-12">
+          <p className="text-slate-400">{error || 'Call not found'}</p>
         </Card>
       </div>
     )
@@ -106,7 +143,7 @@ export default function CallDetailPage() {
                 <div>
                   <p className="text-sm text-slate-400 mb-2">Tags</p>
                   <div className="flex flex-wrap gap-2">
-                    {call.analysis.tags.map(tag => (
+                    {call.analysis.tags.map((tag: string) => (
                       <span key={tag} className="px-3 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded-full">
                         {tag}
                       </span>
@@ -125,20 +162,15 @@ export default function CallDetailPage() {
           {/* Transcript */}
           <Card className="p-6">
             <h3 className="text-lg font-bold text-white mb-4">Transcript</h3>
-            <div className="bg-navy-900/50 rounded-lg p-4 text-slate-300 text-sm leading-relaxed space-y-3">
-              <div className="flex gap-3">
-                <span className="font-semibold text-cyan-400 flex-shrink-0">Agent:</span>
-                <span>Good afternoon, thank you for calling. How can I help you today?</span>
+            {transcript ? (
+              <div className="bg-navy-900/50 rounded-lg p-4 text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                {transcript}
               </div>
-              <div className="flex gap-3">
-                <span className="font-semibold text-emerald-400 flex-shrink-0">Caller:</span>
-                <span>Hi, I'm interested in learning more about your premium plan.</span>
+            ) : (
+              <div className="bg-navy-900/50 rounded-lg p-4 text-slate-500 text-sm">
+                No transcript available
               </div>
-              <div className="flex gap-3">
-                <span className="font-semibold text-cyan-400 flex-shrink-0">Agent:</span>
-                <span>Great! I'd be happy to help. Let me go over the key features with you...</span>
-              </div>
-            </div>
+            )}
           </Card>
 
           {/* Actions */}

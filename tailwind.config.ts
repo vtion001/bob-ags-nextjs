@@ -17,15 +17,7 @@ const config: Config = {
           800: '#0F1F33',
           700: '#1A2E47',
           600: '#2A4A6B',
-        },
-        cyan: {
-          500: '#00D4FF',
-          400: '#00E0FF',
-          300: '#33DDFF',
-        },
-        slate: {
-          500: '#64748B',
-          400: '#94A3B8',
+          500: '#3D5A80',
         },
       },
       borderRadius: {
@@ -35,19 +27,6 @@ const config: Config = {
       },
       spacing: {
         gutter: '24px',
-      },
-      boxShadow: {
-        'glow-cyan': '0 0 20px rgba(0, 212, 255, 0.15)',
-        'glow-cyan-md': '0 0 30px rgba(0, 212, 255, 0.25)',
-      },
-      animation: {
-        'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      },
-      keyframes: {
-        'pulse-glow': {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.5' },
-        },
       },
     },
   },

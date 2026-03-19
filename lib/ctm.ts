@@ -1,4 +1,19 @@
-import { Call } from './mockData'
+export interface Call {
+  id: string
+  phone: string
+  direction: 'inbound' | 'outbound'
+  duration: number
+  status: 'completed' | 'missed' | 'active'
+  score?: number
+  timestamp: Date
+  transcript?: string
+  analysis?: {
+    sentiment: string
+    summary: string
+    tags: string[]
+    disposition: string
+  }
+}
 
 interface CTMConfig {
   accessKey: string
@@ -23,6 +38,96 @@ interface CTMCall {
   started_at?: string
   source_id?: string
   tracking_number?: string
+  talk_time?: number
+  wait_time?: number
+  source_name?: string
+  destination_number?: string
+  pool_number?: string
+  did_number?: string
+  recording_url?: string
+  transcript?: string
+}
+
+interface CTMAccount {
+  id: number
+  name: string
+  status?: string
+  created_at?: string
+}
+
+interface CTMNumber {
+  id: number
+  source: number
+  friendly_name: string
+  number: string
+  phone_number: string
+  latitude?: string
+  longitude?: string
+  region?: string
+  postal_code?: string
+  iso_country?: string
+  ratecenter?: string
+  capabilities?: {
+    voice: boolean
+    SMS: boolean
+    MMS: boolean
+  }
+  number_type?: string
+  distance?: number
+}
+
+interface CTMSource {
+  id: string
+  name: string
+  account_id: number
+  referring_url?: string
+  landing_url?: string
+  position?: number
+  online?: boolean
+  geo_mode?: string
+}
+
+interface CTMSchedule {
+  id: number
+  name: string
+  times?: Array<{
+    start_time: string
+    end_time: string
+    days: Record<string, boolean>
+    position: string
+  }>
+  timezone?: string
+}
+
+interface CTMVoiceMenu {
+  id: number
+  name: string
+  play_message?: string
+  input_maxkeys?: string
+  input_timeout?: string
+  prompt_retries?: string
+  items?: Array<{
+    keypress: string
+    voice_action_type: string
+    dial_number_id?: string
+    next_voice_menu_id?: string
+  }>
+}
+
+interface CTMReceivingNumber {
+  id: number
+  number: string
+  name?: string
+  account_id?: number
+  created_at?: string
+}
+
+interface SearchNumbersParams {
+  country?: string
+  searchby?: 'area' | 'address' | 'zip'
+  areacode?: string
+  address?: string
+  pattern?: string
 }
 
 export class CTMClient {
@@ -38,7 +143,7 @@ export class CTMClient {
     this.baseUrl = 'https://api.calltrackingmetrics.com/api/v1'
   }
 
-  private async makeRequest<T>(endpoint: string): Promise<T> {
+  private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     if (!this.accessKey || !this.secretKey || !this.accountId) {
       throw new Error('CTM credentials not configured')
     }
@@ -47,17 +152,34 @@ export class CTMClient {
     const auth = Buffer.from(`${this.accessKey}:${this.secretKey}`).toString('base64')
 
     const response = await fetch(url, {
+      ...options,
       headers: {
         'Authorization': `Basic ${auth}`,
         'Content-Type': 'application/json',
+        ...options.headers,
       },
     })
 
     if (!response.ok) {
-      throw new Error(`CTM API error: ${response.status} ${response.statusText}`)
+      const errorText = await response.text()
+      throw new Error(`CTM API error: ${response.status} ${response.statusText} - ${errorText}`)
     }
 
     return response.json()
+  }
+
+  async getAccounts(): Promise<{ accounts?: CTMAccount[] }> {
+    return this.makeRequest<{ accounts?: CTMAccount[] }>('/accounts')
+  }
+
+  async createAccount(name: string, timezoneHint: string = 'America/Los_Angeles'): Promise<{ status: string; id: number; name: string }> {
+    return this.makeRequest<{ status: string; id: number; name: string }>('/accounts', {
+      method: 'POST',
+      body: JSON.stringify({
+        account: { name, timezone_hint: timezoneHint },
+        billing_type: 'existing'
+      }),
+    })
   }
 
   async getCalls(params: GetCallsParams = {}): Promise<Call[]> {
@@ -86,20 +208,223 @@ export class CTMClient {
   }
 
   async getCallTranscript(callId: string): Promise<string> {
-    const data = await this.makeRequest<{ transcript?: string }>(
-      `/accounts/${this.accountId}/calls/${callId}/transcript`
+    try {
+      const data = await this.makeRequest<{ transcript?: string }>(
+        `/accounts/${this.accountId}/calls/${callId}/transcript`
+      )
+      return data.transcript || ''
+    } catch {
+      return ''
+    }
+  }
+
+  async getActiveCalls(): Promise<Call[]> {
+    return this.getCalls({ status: 'active' })
+  }
+
+  async getNumbers(): Promise<{ numbers?: CTMNumber[] }> {
+    return this.makeRequest<{ numbers?: CTMNumber[] }>(
+      `/accounts/${this.accountId}/numbers.json`
     )
-    return data.transcript || ''
+  }
+
+  async searchNumbers(params: SearchNumbersParams): Promise<{ numbers?: CTMNumber[] }> {
+    const queryParams = new URLSearchParams()
+    if (params.country) queryParams.set('country', params.country)
+    if (params.searchby) queryParams.set('searchby', params.searchby)
+    if (params.areacode) queryParams.set('areacode', params.areacode)
+    if (params.address) queryParams.set('address', params.address)
+    if (params.pattern) queryParams.set('pattern', params.pattern)
+
+    return this.makeRequest<{ numbers?: CTMNumber[] }>(
+      `/accounts/${this.accountId}/numbers/search.json?${queryParams.toString()}`
+    )
+  }
+
+  async purchaseNumber(phoneNumber: string, test: boolean = true): Promise<{ status: string; number?: CTMNumber }> {
+    return this.makeRequest<{ status: string; number?: CTMNumber }>(
+      `/accounts/${this.accountId}/numbers`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ phone_number: phoneNumber, test }),
+      }
+    )
+  }
+
+  async getNumberDetails(tpnId: string): Promise<{ number?: CTMNumber }> {
+    return this.makeRequest<{ number?: CTMNumber }>(
+      `/accounts/${this.accountId}/numbers/${tpnId}`
+    )
+  }
+
+  async updateNumberRoute(tpnId: string, dialRoute: string, numbers?: string[], countryCodes?: string[]): Promise<{ status: string }> {
+    const data: Record<string, unknown> = { dial_route: dialRoute }
+    if (numbers) data.numbers = numbers
+    if (countryCodes) data.country_codes = countryCodes
+
+    return this.makeRequest<{ status: string }>(
+      `/accounts/${this.accountId}/numbers/${tpnId}/update_number`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    )
+  }
+
+  async getReceivingNumbers(): Promise<{ receiving_numbers?: CTMReceivingNumber[] }> {
+    return this.makeRequest<{ receiving_numbers?: CTMReceivingNumber[] }>(
+      `/accounts/${this.accountId}/receiving_numbers`
+    )
+  }
+
+  async createReceivingNumber(number: string, name: string): Promise<{ status: string; receiving_number?: CTMReceivingNumber }> {
+    return this.makeRequest<{ status: string; receiving_number?: CTMReceivingNumber }>(
+      `/accounts/${this.accountId}/receiving_numbers`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ number, name }),
+      }
+    )
+  }
+
+  async updateReceivingNumber(rpnId: string, name: string): Promise<{ status: string }> {
+    return this.makeRequest<{ status: string }>(
+      `/accounts/${this.accountId}/receiving_numbers/${rpnId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      }
+    )
+  }
+
+  async getSources(): Promise<{ sources?: CTMSource[] }> {
+    return this.makeRequest<{ sources?: CTMSource[] }>(
+      `/accounts/${this.accountId}/sources`
+    )
+  }
+
+  async createSource(data: {
+    name: string
+    online?: string
+    referring_url?: string
+    landing_url?: string
+    position?: string
+  }): Promise<{ status: string; source?: CTMSource }> {
+    return this.makeRequest<{ status: string; source?: CTMSource }>(
+      `/accounts/${this.accountId}/sources`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    )
+  }
+
+  async assignNumberToSource(tsoId: string, tpnId: string): Promise<{ status: string }> {
+    return this.makeRequest<{ status: string }>(
+      `/accounts/${this.accountId}/sources/${tsoId}/numbers/${tpnId}/add`,
+      { method: 'POST' }
+    )
+  }
+
+  async getSchedules(): Promise<{ schedules?: CTMSchedule[] }> {
+    return this.makeRequest<{ schedules?: CTMSchedule[] }>(
+      `/accounts/${this.accountId}/schedules`
+    )
+  }
+
+  async createSchedule(schedule: {
+    name: string
+    times?: Array<{
+      start_time: string
+      days: Record<string, boolean>
+      end_time: string
+      position: string
+    }>
+    timezone?: string
+  }): Promise<{ status: string; schedule?: CTMSchedule }> {
+    return this.makeRequest<{ status: string; schedule?: CTMSchedule }>(
+      `/accounts/${this.accountId}/schedules`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ schedule }),
+      }
+    )
+  }
+
+  async updateSchedule(schId: string, schedule: { name?: string }): Promise<{ status: string }> {
+    return this.makeRequest<{ status: string }>(
+      `/accounts/${this.accountId}/schedules/${schId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ schedule }),
+      }
+    )
+  }
+
+  async getVoiceMenus(): Promise<{ voice_menus?: CTMVoiceMenu[] }> {
+    return this.makeRequest<{ voice_menus?: CTMVoiceMenu[] }>(
+      `/accounts/${this.accountId}/voice_menus`
+    )
+  }
+
+  async createVoiceMenu(voiceMenu: {
+    name: string
+    play_message?: string
+    input_maxkeys?: string
+    input_timeout?: string
+    prompt_retries?: string
+    items?: Array<{
+      keypress: string
+      voice_action_type: string
+      dial_number_id?: string
+      next_voice_menu_id?: string
+    }>
+  }): Promise<{ status: string; voice_menu?: CTMVoiceMenu }> {
+    return this.makeRequest<{ status: string; voice_menu?: CTMVoiceMenu }>(
+      `/accounts/${this.accountId}/voice_menus`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ voice_menu: voiceMenu }),
+      }
+    )
+  }
+
+  async updateVoiceMenu(vomId: string, voiceMenu: { name?: string }): Promise<{ status: string }> {
+    return this.makeRequest<{ status: string }>(
+      `/accounts/${this.accountId}/voice_menus/${vomId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ voice_menu: voiceMenu }),
+      }
+    )
+  }
+
+  async setNumberDialRoute(tpnId: string, dialRoute: string, voiceMenuId?: string): Promise<{ status: string }> {
+    const data: Record<string, unknown> = {
+      virtual_phone_number: { dial_route: dialRoute }
+    }
+    if (voiceMenuId) {
+      (data.virtual_phone_number as Record<string, unknown>).voice_menu_id = voiceMenuId
+    }
+
+    return this.makeRequest<{ status: string }>(
+      `/accounts/${this.accountId}/numbers/${tpnId}/dial_routes`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    )
   }
 
   private transformCall(ctmCall: CTMCall): Call {
     return {
       id: String(ctmCall.id),
-      phone: ctmCall.phone_number || ctmCall.caller_id || '',
+      phone: ctmCall.phone_number || ctmCall.caller_id || ctmCall.did_number || '',
       direction: (ctmCall.direction as 'inbound' | 'outbound') || 'inbound',
-      duration: ctmCall.duration || 0,
+      duration: ctmCall.duration || ctmCall.talk_time || 0,
       status: this.mapStatus(ctmCall.status),
       timestamp: ctmCall.started_at ? new Date(ctmCall.started_at) : new Date(),
+      transcript: ctmCall.transcript,
     }
   }
 
@@ -112,6 +437,22 @@ export class CTMClient {
       'voicemail': 'completed',
     }
     return statusMap[ctmStatus.toLowerCase()] || 'completed'
+  }
+
+  getStats(calls: Call[]) {
+    const totalCalls = calls.length
+    const analyzed = calls.filter(c => c.score !== undefined).length
+    const hotLeads = calls.filter(c => c.score && c.score >= 75).length
+    const avgScore = analyzed > 0 
+      ? calls.reduce((sum, c) => sum + (c.score || 0), 0) / analyzed 
+      : 0
+
+    return {
+      totalCalls,
+      analyzed,
+      hotLeads,
+      avgScore: avgScore.toFixed(1),
+    }
   }
 }
 

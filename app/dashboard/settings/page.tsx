@@ -40,13 +40,13 @@ export default function SettingsPage() {
     <div className="p-6 lg:p-8 max-w-3xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-        <p className="text-slate-400">Manage your integrations and preferences</p>
+        <h1 className="text-3xl font-bold text-navy-900 mb-2">Settings</h1>
+        <p className="text-navy-500">Manage your integrations and preferences</p>
       </div>
 
       {/* API Credentials Section */}
       <Card className="p-6 mb-6">
-        <h2 className="text-xl font-bold text-white mb-6">CTM Integrations</h2>
+        <h2 className="text-xl font-bold text-navy-900 mb-6">CTM Integrations</h2>
         
         <div className="space-y-4 mb-6">
           <Input
@@ -92,7 +92,7 @@ export default function SettingsPage() {
 
       {/* AI Configuration Section */}
       <Card className="p-6 mb-6">
-        <h2 className="text-xl font-bold text-white mb-6">AI Analysis</h2>
+        <h2 className="text-xl font-bold text-navy-900 mb-6">AI Analysis</h2>
         
         <div className="space-y-4 mb-6">
           <Input
@@ -112,41 +112,41 @@ export default function SettingsPage() {
 
       {/* Preferences Section */}
       <Card className="p-6 mb-6">
-        <h2 className="text-xl font-bold text-white mb-6">Preferences</h2>
+        <h2 className="text-xl font-bold text-navy-900 mb-6">Preferences</h2>
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-lg bg-navy-900/50">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-navy-50">
             <div>
-              <p className="text-white font-medium">Dark Mode</p>
-              <p className="text-sm text-slate-400">Always enabled</p>
+              <p className="text-navy-900 font-medium">Light Mode</p>
+              <p className="text-sm text-navy-500">Clean white interface</p>
             </div>
-            <div className="w-14 h-8 bg-cyan-500 rounded-full flex items-center justify-end pr-1">
+            <div className="w-14 h-8 bg-navy-900 rounded-full flex items-center justify-end pr-1">
               <div className="w-6 h-6 bg-white rounded-full"></div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-lg bg-navy-900/50">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-navy-50">
             <div>
-              <p className="text-white font-medium">Email Notifications</p>
-              <p className="text-sm text-slate-400">Receive notifications for hot leads</p>
+              <p className="text-navy-900 font-medium">Email Notifications</p>
+              <p className="text-sm text-navy-500">Receive notifications for hot leads</p>
             </div>
-            <div className="w-14 h-8 bg-navy-600 rounded-full flex items-center justify-start pl-1">
-              <div className="w-6 h-6 bg-slate-400 rounded-full"></div>
+            <div className="w-14 h-8 bg-navy-200 rounded-full flex items-center justify-start pl-1">
+              <div className="w-6 h-6 bg-navy-400 rounded-full"></div>
             </div>
           </div>
         </div>
       </Card>
 
       {/* Danger Zone */}
-      <Card className="p-6 border-red-500/30 bg-red-500/5">
-        <h2 className="text-xl font-bold text-red-400 mb-4">Danger Zone</h2>
-        <p className="text-slate-400 mb-4">
+      <Card className="p-6 border-red-200 bg-red-50">
+        <h2 className="text-xl font-bold text-red-600 mb-4">Danger Zone</h2>
+        <p className="text-navy-600 mb-4">
           Clear all stored credentials. This action cannot be undone.
         </p>
         <Button
           variant="secondary"
           size="md"
-          className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+          className="text-red-600 border-red-300 hover:bg-red-50"
         >
           Clear All Credentials
         </Button>
@@ -154,7 +154,7 @@ export default function SettingsPage() {
 
       {/* Save Message */}
       {saveMessage && (
-        <div className="fixed bottom-4 right-4 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 px-4 py-3 rounded-lg">
+        <div className="fixed bottom-4 right-4 bg-navy-100 border border-navy-300 text-navy-900 px-4 py-3 rounded-lg">
           {saveMessage}
         </div>
       )}

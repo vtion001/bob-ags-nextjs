@@ -6,8 +6,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Call Tracking & Analysis',
-  description: 'Transform calls into insights with AI-powered analysis',
+  title: 'BOB - Business Operations Butler',
+  description: 'AI-powered business operations assistant',
   generator: 'v0.app',
   icons: {
     icon: '/icon.svg',
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#00D4FF',
+  themeColor: '#0A1628',
   width: 'device-width',
   initialScale: 1,
   userScalable: false,

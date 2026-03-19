@@ -4,44 +4,41 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Navy & Cyan Color System */
+  /* Navy & White Color System */
   --navy-950: #050D18;
   --navy-900: #0A1628;
   --navy-800: #0F1F33;
   --navy-700: #1A2E47;
   --navy-600: #2A4A6B;
+  --navy-500: #3D5A80;
   
-  --cyan-500: #00D4FF;
-  --cyan-400: #00E0FF;
-  --cyan-300: #33DDFF;
-  
-  --slate-500: #64748B;
-  --slate-400: #94A3B8;
-  
-  --white: #E2E8F0;
+  --white: #FFFFFF;
+  --white-100: #F8FAFC;
+  --white-200: #E2E8F0;
+  --white-300: #CBD5E1;
   
   --green-500: #10B981;
   --amber-500: #F59E0B;
   --red-500: #EF4444;
   
-  /* CSS Variables */
-  --background: #050D18;
-  --foreground: #E2E8F0;
-  --card: #0F1F33;
-  --card-foreground: #E2E8F0;
-  --primary: #00D4FF;
-  --primary-foreground: #050D18;
-  --secondary: #0A1628;
-  --secondary-foreground: #E2E8F0;
-  --muted: #64748B;
-  --muted-foreground: #94A3B8;
-  --accent: #00D4FF;
-  --accent-foreground: #050D18;
+  /* CSS Variables - Navy background, white text */
+  --background: #FFFFFF;
+  --foreground: #0A1628;
+  --card: #F8FAFC;
+  --card-foreground: #0A1628;
+  --primary: #0A1628;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0A1628;
+  --muted: #94A3B8;
+  --muted-foreground: #64748B;
+  --accent: #F1F5F9;
+  --accent-foreground: #0A1628;
   --destructive: #EF4444;
-  --destructive-foreground: #050D18;
-  --border: #1A2E47;
-  --input: #0A1628;
-  --ring: #00D4FF;
+  --destructive-foreground: #FFFFFF;
+  --border: #E2E8F0;
+  --input: #F1F5F9;
+  --ring: #0A1628;
   --radius: 8px;
 }
 

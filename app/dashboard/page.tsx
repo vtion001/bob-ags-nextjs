@@ -1,21 +1,50 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import StatsCard from '@/components/StatsCard'
 import CallTable from '@/components/CallTable'
-import { getCallStats, getRecentCalls } from '@/lib/mockData'
+import { Call } from '@/lib/ctm'
+
+interface DashboardStats {
+  totalCalls: number
+  analyzed: number
+  hotLeads: number
+  avgScore: string
+}
 
 export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const stats = getCallStats()
-  const recentCalls = getRecentCalls(10)
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCalls: 0,
+    analyzed: 0,
+    hotLeads: 0,
+    avgScore: '0',
+  })
+  const [recentCalls, setRecentCalls] = useState<Call[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch('/api/ctm/dashboard/stats?limit=100&hours=168')
+      if (!res.ok) throw new Error('Failed to fetch data')
+      const data = await res.json()
+      setStats(data.stats)
+      setRecentCalls(data.recentCalls || [])
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await fetchData()
     setIsRefreshing(false)
   }
 
@@ -41,6 +70,13 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {error && (
+        <Card className="p-4 mb-6 bg-red-500/10 border border-red-500/20">
+          <p className="text-red-400">{error}</p>
+          <p className="text-slate-400 text-sm mt-1">Please check your CTM credentials in .env</p>
+        </Card>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

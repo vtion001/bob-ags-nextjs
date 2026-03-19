@@ -40,11 +40,11 @@ export default function ScoreCircle({ score, label = 'Score', size = 'md' }: Sco
       <div
         className={`${sizeConfig.container} ${sizeConfig.border} ${getColorStyles()} rounded-full flex items-center justify-center`}
       >
-        <span className={`${sizeConfig.text} font-bold text-white`}>{Math.round(score)}</span>
+        <span className={`${sizeConfig.text} font-bold text-navy-900`}>{Math.round(score)}</span>
       </div>
       <div className="text-center">
-        <p className="text-sm text-slate-400">{label}</p>
-        <p className="text-lg font-semibold text-white">{getLabel()}</p>
+        <p className="text-sm text-navy-500">{label}</p>
+        <p className="text-lg font-semibold text-navy-900">{getLabel()}</p>
       </div>
     </div>
   )

@@ -19,9 +19,9 @@ const Toast = React.forwardRef<HTMLDivElement, ToastProps>(
     }, [duration, onClose])
 
     const bgColors = {
-      success: 'bg-green-500/20 border-green-500/30 text-green-300',
-      error: 'bg-red-500/20 border-red-500/30 text-red-300',
-      info: 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300',
+      success: 'bg-green-500/20 border-green-500/30 text-green-700',
+      error: 'bg-red-500/20 border-red-500/30 text-red-700',
+      info: 'bg-navy-100 border-navy-300 text-navy-900',
     }
 
     const icons = {

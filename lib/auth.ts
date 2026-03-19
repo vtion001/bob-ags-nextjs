@@ -72,13 +72,13 @@ export async function deleteSession() {
   cookieStore.delete('session')
 }
 
-// Demo credentials
-export const DEMO_EMAIL = 'demo@example.com'
-export const DEMO_PASSWORD = 'demo'
+// Developer credentials
+export const DEV_EMAIL = 'agsdev@allianceglobalsolutions.com'
+export const DEV_PASSWORD = 'ags2026@@'
 
 // In-memory user store (in production, use database)
 const users: Map<string, string> = new Map([
-  [DEMO_EMAIL, DEMO_PASSWORD],
+  [DEV_EMAIL, DEV_PASSWORD],
 ])
 
 export function validateCredentials(email: string, password: string): boolean {
