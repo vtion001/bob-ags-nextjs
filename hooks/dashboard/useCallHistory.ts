@@ -96,14 +96,26 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
     fetchAgentsAndGroups()
   }, [])
 
-  const fetchCalls = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
+  const mergeNewCalls = useCallback((incoming: Call[]) => {
+    setAllCalls(prev => {
+      const existingIds = new Set(prev.map(c => c.id))
+      const trulyNew = incoming.filter(c => !existingIds.has(c.id))
+      if (trulyNew.length === 0) return prev
+      const merged = dedupeCalls([...trulyNew, ...prev])
+      merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      return merged
+    })
+  }, [])
+
+  const fetchFromCTM = useCallback(async (mode: 'initial' | 'poll' | 'refresh' = 'poll') => {
     if (mode === 'refresh') setIsRefreshing(true)
-    else setIsLoading(true)
+    else if (mode === 'initial') setIsLoading(true)
     setError(null)
 
     try {
-      const hours = mode === 'refresh' ? 1 : 168
-      let url = `/api/calls?limit=200&hours=${hours}&skipSync=true`
+      let url = mode === 'initial'
+        ? `/api/calls?limit=200&hours=1`
+        : `/api/calls?mode=delta&limit=200`
       if (agentIdFilter) url += `&agentId=${encodeURIComponent(agentIdFilter)}`
 
       const res = await fetch(url)
@@ -115,17 +127,26 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
       const data = await res.json()
       const incoming: Call[] = dedupeCalls(data.calls || [])
 
-      if (mode === 'refresh' && incoming.length > 0) {
-        setAllCalls(prev => {
-          const existingIds = new Set(prev.map(c => c.id))
-          const trulyNew = incoming.filter(c => !existingIds.has(c.id))
-          if (trulyNew.length === 0) return prev
-          const merged = dedupeCalls([...trulyNew, ...prev])
-          merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          return merged
-        })
+      if (mode === 'initial') {
+        if (data.fromCache && incoming.length > 0) {
+          setAllCalls(incoming)
+        }
+        const pollRes = await fetch(`/api/calls?mode=delta&limit=200${agentIdFilter ? `&agentId=${encodeURIComponent(agentIdFilter)}` : ''}`)
+        if (pollRes.ok) {
+          const pollData = await pollRes.json()
+          const newCalls: Call[] = dedupeCalls(pollData.calls || [])
+          if (newCalls.length > 0) mergeNewCalls(newCalls)
+          else {
+            const allRes = await fetch(`/api/calls?limit=200&hours=168${agentIdFilter ? `&agentId=${encodeURIComponent(agentIdFilter)}` : ''}`)
+            if (allRes.ok) {
+              const allData = await allRes.json()
+              const allCalls: Call[] = dedupeCalls(allData.calls || [])
+              setAllCalls(allCalls)
+            }
+          }
+        }
       } else {
-        setAllCalls(incoming)
+        if (incoming.length > 0) mergeNewCalls(incoming)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -133,11 +154,16 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [agentIdFilter])
+  }, [agentIdFilter, mergeNewCalls])
 
   useEffect(() => {
-    fetchCalls('initial')
-  }, [fetchCalls])
+    fetchFromCTM('initial')
+  }, [fetchFromCTM])
+
+  useEffect(() => {
+    const interval = setInterval(() => fetchFromCTM('poll'), 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [fetchFromCTM])
 
   useEffect(() => {
     let results = [...allCalls]
@@ -185,8 +211,8 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
   }, [allCalls, searchQuery, analyzedOnly, groupFilter, scoreFilter, dateRange, userGroups, agentProfiles])
 
   const handleRefresh = useCallback(() => {
-    fetchCalls('refresh')
-  }, [fetchCalls])
+    fetchFromCTM('refresh')
+  }, [fetchFromCTM])
 
   const handleExport = useCallback(() => {
     const csv = [

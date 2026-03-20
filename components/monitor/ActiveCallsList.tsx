@@ -111,9 +111,9 @@ export default function ActiveCallsList({
 
       {filteredCalls.length > 0 ? (
         <div className="space-y-2 max-h-64 overflow-y-auto">
-          {filteredCalls.map((call) => (
+          {filteredCalls.map((call, index) => (
             <CallButton
-              key={call.id}
+              key={`call-${index}-${call.id}`}
               call={call}
               isSelected={call.id === selectedCallId}
               onSelect={() => onSelectCall(call)}

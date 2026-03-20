@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { fetchCallsFromCTM } from '@/lib/calls/fetcher'
-import { getCachedCalls, storeCallsToCache, isCacheStale } from '@/lib/calls/cache'
-
-const SYNC_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+import { getCachedCalls, storeCallsToCache, getLastCallTimestamp } from '@/lib/calls/cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,55 +13,71 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const hours = parseInt(searchParams.get('hours') || '2160')
+    const cacheOnly = searchParams.get('cacheOnly') === 'true'
+    const hours = parseInt(searchParams.get('hours') || '168')
     const agentId = searchParams.get('agentId')
     const limit = parseInt(searchParams.get('limit') || '500')
-    const skipSync = searchParams.get('skipSync') === 'true'
     const ctmCallId = searchParams.get('ctmCallId')
-    const after = searchParams.get('after')
+    const mode = searchParams.get('mode') || 'full'
 
-    if (after) {
-      const calls = await fetchCallsFromCTM({ hours, agentId, limit })
-      const afterDate = new Date(after).getTime()
-      const newer = calls.filter(c => new Date(c.timestamp).getTime() > afterDate)
-      return NextResponse.json({ calls: newer, source: 'ctm', count: newer.length })
-    }
-
-    let cachedData = null
-    try {
-      cachedData = await getCachedCalls(supabase, {
-        userId: user.id,
-        hours,
-        agentId,
-        limit,
-        ctmCallId,
-      })
-    } catch (cacheErr) {
-      console.warn('[calls] Supabase cache unavailable, falling back to CTM:', cacheErr)
-    }
-
-    if (cachedData && cachedData.calls.length > 0) {
-      const isCacheStaleFlag = isCacheStale(cachedData.cacheAge)
-
-      const response: any = {
-        calls: cachedData.calls,
-        source: 'cache',
-        count: cachedData.calls.length,
-        cacheAgeMs: cachedData.cacheAge,
+    if (cacheOnly) {
+      try {
+        const cached = await getCachedCalls(supabase, {
+          userId: user.id,
+          hours,
+          agentId: agentId || undefined,
+          limit,
+          ctmCallId: ctmCallId || undefined,
+        })
+        return NextResponse.json({
+          calls: cached?.calls || [],
+          source: 'cache',
+          count: cached?.calls.length || 0,
+          fromCache: true,
+        })
+      } catch {
+        return NextResponse.json({ calls: [], source: 'cache', count: 0, fromCache: true })
       }
-      if (!skipSync && isCacheStaleFlag) response.needsSync = true
-      return NextResponse.json(response)
     }
 
-    const calls = await fetchCallsFromCTM({ hours, agentId, limit })
+    if (mode === 'delta') {
+      const sinceMs = await getLastCallTimestamp(supabase, user.id)
+      const sinceHours = sinceMs ? Math.max(1, (Date.now() - sinceMs) / 3600000) : 1
+      const calls = await fetchCallsFromCTM({ hours: Math.min(sinceHours, 24), agentId: agentId || undefined, limit: 500 })
+      const filtered = sinceMs
+        ? calls.filter(c => new Date(c.timestamp).getTime() > sinceMs)
+        : calls
+      if (filtered.length > 0) {
+        try { await storeCallsToCache(supabase, user.id, filtered) } catch {}
+      }
+      return NextResponse.json({ calls: filtered, source: 'ctm', count: filtered.length, isDelta: true })
+    }
 
+    const cached = await getCachedCalls(supabase, {
+      userId: user.id,
+      hours,
+      agentId: agentId || undefined,
+      limit,
+      ctmCallId: ctmCallId || undefined,
+    })
+
+    if (cached && cached.calls.length > 0) {
+      return NextResponse.json({
+        calls: cached.calls,
+        source: 'cache',
+        count: cached.calls.length,
+        fromCache: true,
+        cacheAgeMs: cached.cacheAge,
+      })
+    }
+
+    const calls = await fetchCallsFromCTM({ hours, agentId: agentId || undefined, limit })
     try {
       await storeCallsToCache(supabase, user.id, calls)
     } catch (storeErr) {
       console.warn('[calls] Supabase write failed:', storeErr)
     }
-
-    return NextResponse.json({ calls, source: 'ctm', count: calls.length })
+    return NextResponse.json({ calls, source: 'ctm', count: calls.length, fromCache: false })
   } catch (error) {
     console.error('Calls fetch error:', error)
     return NextResponse.json({ error: 'Failed to fetch calls' }, { status: 500 })
@@ -80,22 +94,20 @@ export async function POST(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const hours = parseInt(searchParams.get('hours') || '2160')
     const agentId = searchParams.get('agentId')
 
-    const calls = await fetchCallsFromCTM({ hours: 24, agentId, limit: 500 })
-    
-    if (calls.length === 0) {
-      return NextResponse.json({ calls: [], source: 'ctm', count: 0, isIncremental: true, message: 'No new calls' })
+    const sinceMs = await getLastCallTimestamp(supabase, user.id)
+    const sinceHours = sinceMs ? Math.max(1, (Date.now() - sinceMs) / 3600000) : 1
+    const calls = await fetchCallsFromCTM({ hours: Math.min(sinceHours, 24), agentId: agentId || undefined, limit: 500 })
+    const filtered = sinceMs
+      ? calls.filter(c => new Date(c.timestamp).getTime() > sinceMs)
+      : calls
+
+    if (filtered.length > 0) {
+      try { await storeCallsToCache(supabase, user.id, filtered) } catch {}
     }
 
-    try {
-      await storeCallsToCache(supabase, user.id, calls)
-    } catch (e) {
-      console.warn('[calls] Supabase sync write skipped (table may not exist):', e)
-    }
-
-    return NextResponse.json({ calls, source: 'ctm', count: calls.length, isIncremental: true })
+    return NextResponse.json({ calls: filtered, source: 'ctm', count: filtered.length, isDelta: true })
   } catch (error) {
     console.error('Calls sync error:', error)
     return NextResponse.json({ error: 'Failed to sync calls' }, { status: 500 })

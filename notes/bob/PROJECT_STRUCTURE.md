@@ -50,7 +50,7 @@ bob-ags/
 │   │   ├── layout.tsx           # Dashboard layout with navbar
 │   │   ├── monitor/             # Live monitoring page
 │   │   ├── page.tsx             # Dashboard home
-│   │   └── settings/            # Settings page (936 lines - needs refactor)
+│   │   └── settings/            # Settings page (145 lines - refactored)
 │   ├── layout.tsx               # Root layout
 │   ├── page.tsx                 # Landing/login page
 │   └── auth/callback/           # OAuth callback

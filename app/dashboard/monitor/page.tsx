@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
-import { Call } from "@/lib/ctm";
-import { RUBRIC_CRITERIA } from "@/lib/ai";
-import { useLiveAnalysis } from "@/hooks/monitor";
-import AgentAssistantPanel from "@/components/call-detail/AgentAssistantPanel";
-import NotesDispositionPanel from "@/components/call-detail/NotesDispositionPanel";
+import React from "react"
+import Button from "@/components/ui/Button"
+import Card from "@/components/ui/Card"
+import { Call } from "@/lib/ctm"
+import { RUBRIC_CRITERIA } from "@/lib/ai"
+import { useMonitorPage } from "@/hooks/monitor/useMonitorPage"
+import AgentAssistantPanel from "@/components/call-detail/AgentAssistantPanel"
+import NotesDispositionPanel from "@/components/call-detail/NotesDispositionPanel"
 import {
   ActiveCallsList,
   CallDetailsCard,
@@ -16,153 +16,38 @@ import {
   QAChecklist,
   ScoreProgress,
   TranscriptPanel,
-} from "@/components/monitor";
-
-const ALL_CATEGORIES = ["Opening", "Probing", "Qualification", "Closing", "Compliance"];
-
-const KNOWN_GROUPS = [
-  "Phillies", "Referrals", "Virtual", "Opener", "Alumni", "Finance",
-  "General", "MA", "Hulk Onsite", "Hulk Offsite", "Legit MH",
-  "Legit Beacon", "Travel Liason", "Daylight Misc", "Ember 12 Step",
-  "Marty Direct", "Trost Virtual Admissions", "Retention Team", "Direct"
-];
-
-function extractGroup(agentName: string | undefined, source?: string): string {
-  if (!agentName || agentName === "Unknown Agent") {
-    if (source) return source;
-    return "Unassigned";
-  }
-  for (const group of KNOWN_GROUPS) {
-    if (agentName.endsWith(group)) {
-      return group;
-    }
-  }
-  const parts = agentName.split(" - ");
-  return parts.length > 1 ? parts[parts.length - 1].trim() : "General";
-}
-
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-}
-
-function getSentimentColor(sentiment: string): string {
-  switch (sentiment) {
-    case "positive":
-      return "text-green-600 bg-green-50 border-green-200";
-    case "negative":
-      return "text-red-600 bg-red-50 border-red-200";
-    default:
-      return "text-navy-700 bg-navy-50 border-navy-200";
-  }
-}
-
-function getScoreColor(score: number): string {
-  if (score >= 70) return "text-green-600";
-  if (score >= 40) return "text-navy-700";
-  return "text-red-600";
-}
+} from "@/components/monitor"
+import {
+  extractGroup,
+  formatDuration,
+  getSentimentColor,
+  getScoreColor,
+} from "@/lib/monitor/helpers"
 
 export default function MonitorPage() {
-  const [activeCalls, setActiveCalls] = useState<Call[]>([]);
-  const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
-  const [selectedCallData, setSelectedCallData] = useState<Call | null>(null);
-  const [callsError, setCallsError] = useState<string | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<string>("All");
-  const [pollingInterval] = useState(5);
-  const [insightsExpanded, setInsightsExpanded] = useState(true);
-  const [criteriaExpanded, setCriteriaExpanded] = useState(true);
-  const autoStartDoneRef = React.useRef(false);
-
   const {
+    activeCalls,
+    selectedCallId,
+    selectedCallData,
+    callsError,
+    selectedGroup,
+    setSelectedGroup,
+    groups,
+    filteredCalls,
     isMonitoring,
     isRecording,
     liveState,
     recentInsights,
     error,
-    startMonitoring,
-    stopMonitoring,
-  } = useLiveAnalysis({
-    onError: setCallsError,
-    onClose: () => {},
-  });
+    handleSelectCall,
+    handleStartMonitoring,
+    handleStopMonitoring,
+    isCrisis,
+  } = useMonitorPage()
 
-  const groups = React.useMemo(() => {
-    const seen = new Set<string>();
-    const list: string[] = [];
-    for (const call of activeCalls) {
-      const group = extractGroup(call.agent?.name, call.source);
-      if (!seen.has(group)) {
-        seen.add(group);
-        list.push(group);
-      }
-    }
-    return list.sort();
-  }, [activeCalls]);
-
-  const filteredCalls = React.useMemo(() => {
-    if (selectedGroup === "All") return activeCalls;
-    return activeCalls.filter(
-      (call) => extractGroup(call.agent?.name, call.source) === selectedGroup,
-    );
-  }, [activeCalls, selectedGroup]);
-
-  const fetchActiveCalls = useCallback(async () => {
-    try {
-      setCallsError(null);
-      const res = await fetch("/api/ctm/active-calls");
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      const calls: Call[] = Array.isArray(data) ? data : data.calls || [];
-      setActiveCalls(calls);
-    } catch (err) {
-      setCallsError("Failed to load active calls");
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchActiveCalls();
-    const interval = setInterval(fetchActiveCalls, pollingInterval * 1000);
-    return () => clearInterval(interval);
-  }, [fetchActiveCalls, pollingInterval]);
-
-  useEffect(() => {
-    if (!isMonitoring && selectedCallData && !autoStartDoneRef.current) {
-      autoStartDoneRef.current = true;
-      startMonitoring(selectedCallData.id);
-    }
-  }, [isMonitoring, selectedCallData, startMonitoring]);
-
-  const handleStartMonitoring = useCallback(async () => {
-    autoStartDoneRef.current = true;
-    await startMonitoring(selectedCallId || undefined);
-  }, [startMonitoring, selectedCallId]);
-
-  const handleStopMonitoring = useCallback(() => {
-    stopMonitoring();
-  }, [stopMonitoring]);
-
-  const handleSelectCall = useCallback((call: Call) => {
-    setSelectedCallId(call.id);
-    setSelectedCallData(call);
-    if (isMonitoring) {
-      stopMonitoring();
-      setTimeout(() => {
-        startMonitoring(call.id);
-      }, 100);
-    }
-  }, [isMonitoring, startMonitoring, stopMonitoring]);
-
-  const byCategory = useCallback((category: string) => {
-    return RUBRIC_CRITERIA.filter((c) => c.category === category);
-  }, []);
-
-  const isCrisis = React.useMemo(() => {
-    return (liveState.transcript || []).some(
-      (t) => t.text.toLowerCase().includes("suicide") || t.text.toLowerCase().includes("kill myself")
-    );
-  }, [liveState.transcript]);
+  const byCategory = (category: string) => {
+    return RUBRIC_CRITERIA.filter((c) => c.category === category)
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -319,13 +204,13 @@ export default function MonitorPage() {
                   <LiveInsightsPanel
                     insights={recentInsights}
                     formatDuration={formatDuration}
-                    expanded={insightsExpanded}
-                    onToggle={() => setInsightsExpanded(!insightsExpanded)}
+                    expanded={true}
+                    onToggle={() => {}}
                   />
                 </Card>
 
                 <AgentAssistantPanel
-                  missingCriteria={Object.entries(liveState.criteriaStatus || {}).filter(([, v]) => !v.triggered).map(([k]) => k)}
+                  missingCriteria={Object.entries(liveState.criteriaStatus || {}).filter(([, v]: [string, any]) => !v.triggered).map(([k]) => k)}
                   currentContext={{
                     insurance: liveState.insurance,
                     state: liveState.callerLocation,
@@ -348,14 +233,14 @@ export default function MonitorPage() {
                     sobrietyTime: liveState.sobrietyTime,
                   }}
                   score={liveState.score || 0}
-                  missingCriteria={Object.entries(liveState.criteriaStatus || {}).filter(([, v]) => !v.triggered).map(([k]) => k)}
+                  missingCriteria={Object.entries(liveState.criteriaStatus || {}).filter(([, v]: [string, any]) => !v.triggered).map(([k]) => k)}
                 />
 
                 <QAChecklist
                   criteriaStatus={liveState.criteriaStatus || {}}
                   score={liveState.score || 100}
-                  expanded={criteriaExpanded}
-                  onToggle={() => setCriteriaExpanded(!criteriaExpanded)}
+                  expanded={true}
+                  onToggle={() => {}}
                 />
 
                 <CallDetailsCard
@@ -380,5 +265,5 @@ export default function MonitorPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }
