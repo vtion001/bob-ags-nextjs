@@ -25,11 +25,14 @@ export async function GET(
       return NextResponse.json({ error: 'No recording available' }, { status: 404 })
     }
 
-    const audioResponse = await fetch(call.recordingUrl, {
+    let recordingUrl = call.recordingUrl
+    if (recordingUrl.startsWith('/')) {
+      recordingUrl = `https://recordings.calltrackingmetrics.com${recordingUrl}`
+    }
+
+    const audioResponse = await fetch(recordingUrl, {
       headers: {
-        'Authorization': `Basic ${Buffer.from(
-          process.env.CTM_ACCESS_KEY + ':' + process.env.CTM_SECRET_KEY
-        ).toString('base64')}`,
+        'Accept': 'audio/*,application/octet-stream',
       },
     })
 

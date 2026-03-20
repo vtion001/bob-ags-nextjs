@@ -30,6 +30,7 @@ export function transformCall(ctmCall: CTMCall): Call {
     ringTime: ctmCall.ring_time,
     score: sale?.score,
     analysis: activityAnalysis ? {
+      score: sale?.score ?? 0,
       sentiment: sale?.score && sale.score >= 75 ? 'positive' : sale?.score && sale.score >= 50 ? 'neutral' : 'negative',
       summary: activityAnalysis.general || activityAnalysis.sales || '',
       tags: ctmCall.tag_list || [],

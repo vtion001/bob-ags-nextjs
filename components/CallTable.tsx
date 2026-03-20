@@ -101,7 +101,7 @@ export default function CallTable({ calls, onCallClick }: CallTableProps) {
             const badge = getScoreBadge(call.score)
             return (
               <tr
-                key={`${call.id}-${index}`}
+                key={call.id}
                 className={`transition-colors duration-150 hover:bg-navy-50 cursor-pointer ${
                   index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
                 }`}

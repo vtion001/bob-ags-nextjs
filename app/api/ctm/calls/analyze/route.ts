@@ -15,7 +15,7 @@ async function transcribeWithAssemblyAI(audioUrl: string): Promise<string> {
       'Authorization': apiKey,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ audio_url: audioUrl, speech_model: 'universal-2' }),
+    body: JSON.stringify({ audio_url: audioUrl, speech_models: ['universal-2'] }),
   })
 
   if (!transcriptResponse.ok) {

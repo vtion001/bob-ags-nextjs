@@ -13,9 +13,15 @@ interface AnalysisResult {
 interface AIAnalysisCardProps {
   analysis: AnalysisResult | null
   isAnalyzing: boolean
+  call?: {
+    callerNumber?: string
+    city?: string
+    state?: string
+    trackingLabel?: string
+  }
 }
 
-export default function AIAnalysisCard({ analysis, isAnalyzing }: AIAnalysisCardProps) {
+export default function AIAnalysisCard({ analysis, isAnalyzing, call }: AIAnalysisCardProps) {
   const getSentimentStyles = (sentiment: string) => {
     switch (sentiment) {
       case 'positive':
@@ -116,9 +122,16 @@ export default function AIAnalysisCard({ analysis, isAnalyzing }: AIAnalysisCard
         {cleanDisposition(analysis.disposition) && (
           <div>
             <p className="text-sm text-navy-500 mb-2">Suggested Disposition</p>
-            <p className="text-navy-800 bg-navy-50 rounded-lg p-3">
-              {cleanDisposition(analysis.disposition)}
-            </p>
+            <div className="text-navy-800 bg-navy-50 rounded-lg p-3 space-y-2">
+              <p>{cleanDisposition(analysis.disposition)}</p>
+              {call?.callerNumber && (
+                <p className="text-xs text-navy-400">
+                  Caller: {call.callerNumber}
+                  {call.city && call.state && ` • ${call.city}, ${call.state}`}
+                  {call.trackingLabel && ` • ${call.trackingLabel}`}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>

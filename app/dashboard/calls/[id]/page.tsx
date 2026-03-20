@@ -214,6 +214,7 @@ export default function CallDetailPage() {
           <AIAnalysisCard 
             analysis={analysis}
             isAnalyzing={isAnalyzing}
+            call={call}
           />
           
           <AudioPlayerCard 

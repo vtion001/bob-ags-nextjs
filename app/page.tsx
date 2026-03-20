@@ -88,28 +88,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left side - Brand */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 bg-navy-900">
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 bg-white">
         <div className="max-w-md text-center">
           <div className="mb-8">
             <img
               src="https://res.cloudinary.com/dbviya1rj/image/upload/v1773964807/mlchltgq4cem5dfoogl3.png"
               alt="BOB Logo"
-              className="w-64 h-auto mx-auto"
+              className="w-[440px] h-auto mx-auto"
             />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">BOB</h1>
-          <p className="text-xl text-white/80 mb-6">Business Operations Butler</p>
-          <p className="text-white/60 leading-relaxed">
+          <p className="text-navy-500 leading-relaxed">
             AI-powered business operations assistant. Automate workflows, analyze data, and streamline your business.
           </p>
-        </div>
-        <div className="mt-auto pt-12 flex flex-col items-center">
-          <p className="text-white/40 text-sm mb-3">Powered by</p>
-          <img
-            src="https://res.cloudinary.com/dbviya1rj/image/upload/v1773384037/gpnkwelbdcwfjmw5axtx.webp"
-            alt="Alliance Global Solutions"
-            className="h-12 w-auto"
-          />
         </div>
       </div>
 
@@ -228,15 +218,6 @@ export default function LoginPage() {
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
           </p>
-        </div>
-
-        <div className="mt-auto pt-12 flex flex-col items-center">
-          <p className="text-navy-400 text-sm mb-3">Powered by</p>
-          <img
-            src="https://res.cloudinary.com/dbviya1rj/image/upload/v1773384037/gpnkwelbdcwfjmw5axtx.webp"
-            alt="Alliance Global Solutions"
-            className="h-10 w-auto"
-          />
         </div>
       </div>
     </div>
