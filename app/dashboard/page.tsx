@@ -49,6 +49,7 @@ function formatDateRange(range: TimeRange): string {
 }
 
 export default function DashboardPage() {
+  const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState<string>('')
@@ -71,7 +72,20 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchAgents()
+    const checkAuthAndFetch = async () => {
+      try {
+        const sessionRes = await fetch('/api/auth/session')
+        if (!sessionRes.ok) {
+          window.location.href = '/'
+          return
+        }
+        setIsLoading(false)
+        fetchAgents()
+      } catch {
+        window.location.href = '/'
+      }
+    }
+    checkAuthAndFetch()
   }, [])
 
   const fetchAgents = async () => {
@@ -227,6 +241,16 @@ export default function DashboardPage() {
     } finally {
       setIsAnalyzing(false)
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="w-12 h-12 border-4 border-navy-100 border-t-navy-900 rounded-full animate-spin" />
+        </div>
+      </div>
+    )
   }
 
   return (

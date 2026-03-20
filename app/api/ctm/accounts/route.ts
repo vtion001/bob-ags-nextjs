@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.getAccounts()
+    const data = await ctmClient.accounts.getAccounts()
 
     return NextResponse.json(data)
   } catch (error) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { name, timezoneHint } = body
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.createAccount(name, timezoneHint)
+    const data = await ctmClient.accounts.createAccount(name, timezoneHint)
 
     return NextResponse.json(data)
   } catch (error) {

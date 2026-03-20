@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.purchaseNumber(phone_number, test !== false)
+    const data = await ctmClient.numbers.purchaseNumber(phone_number, test !== false)
 
     return NextResponse.json(data)
   } catch (error) {

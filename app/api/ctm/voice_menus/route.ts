@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.getVoiceMenus()
+    const data = await ctmClient.voiceMenus.getVoiceMenus()
 
     return NextResponse.json(data)
   } catch (error) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { name, play_message, input_maxkeys, input_timeout, prompt_retries, items } = body
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.createVoiceMenu({
+    const data = await ctmClient.voiceMenus.createVoiceMenu({
       name,
       play_message,
       input_maxkeys,

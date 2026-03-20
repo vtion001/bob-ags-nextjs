@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const agentId = searchParams.get('agentId')
 
     const ctmClient = new CTMClient()
-    const calls = await ctmClient.getCalls({ limit, hours, agentId: agentId || undefined })
+    const calls = await ctmClient.calls.getCalls({ limit, hours, agentId: agentId || undefined })
     
     const inboundCalls = calls.filter(c => c.direction === 'inbound')
     const totalCalls = inboundCalls.length

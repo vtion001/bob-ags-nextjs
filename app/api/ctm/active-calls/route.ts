@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const calls = await ctmClient.getActiveCalls()
+    const calls = await ctmClient.calls.getActiveCalls()
 
     return NextResponse.json({ calls })
   } catch (error) {

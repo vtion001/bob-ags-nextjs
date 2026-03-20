@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const pattern = searchParams.get('pattern')
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.searchNumbers({
+    const data = await ctmClient.numbers.searchNumbers({
       country,
       searchby: searchby || undefined,
       areacode: areacode || undefined,

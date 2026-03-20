@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.getReceivingNumbers()
+    const data = await ctmClient.receivingNumbers.getReceivingNumbers()
 
     return NextResponse.json(data)
   } catch (error) {
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.createReceivingNumber(number, name || '')
+    const data = await ctmClient.receivingNumbers.createReceivingNumber(number, name || '')
 
     return NextResponse.json(data)
   } catch (error) {

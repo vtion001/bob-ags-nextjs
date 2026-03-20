@@ -59,7 +59,7 @@ export async function GET(
     const { id } = await params
     const ctmClient = new CTMClient()
     
-    const call = await ctmClient.getCall(id)
+    const call = await ctmClient.calls.getCall(id)
     if (!call) {
       return NextResponse.json({ error: 'Call not found', callId: id }, { status: 404 })
     }
@@ -94,7 +94,7 @@ export async function GET(
 
     // Fallback: try using the CTM transcript if available
     console.log('Trying CTM native transcript...')
-    const transcriptData = await ctmClient.getCallTranscript(id)
+    const transcriptData = await ctmClient.calls.getCallTranscript(id)
     if (transcriptData) {
       return NextResponse.json({ 
         transcript: transcriptData,

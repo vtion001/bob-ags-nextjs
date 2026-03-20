@@ -15,7 +15,7 @@ export async function GET(
 
     const { id } = await params
     const ctmClient = new CTMClient()
-    const call = await ctmClient.getCall(id)
+    const call = await ctmClient.calls.getCall(id)
 
     if (!call) {
       return NextResponse.json({ error: 'Call not found' }, { status: 404 })

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const phone = searchParams.get('phone')
 
     const ctmClient = new CTMClient()
-    let calls = await ctmClient.getCalls({ limit, hours, status, sourceId, agentId })
+    let calls = await ctmClient.calls.getCalls({ limit, hours, status, sourceId, agentId })
 
     const inboundCalls = calls.filter(call => call.direction === 'inbound')
     

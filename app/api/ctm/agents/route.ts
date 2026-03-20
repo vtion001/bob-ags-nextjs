@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const agents = await ctmClient.getAgents()
-    const userGroups = await ctmClient.getUserGroups()
+    const agents = await ctmClient.agents.getAgents()
+    const userGroups = await ctmClient.agents.getUserGroups()
 
     return NextResponse.json({ 
       agents,

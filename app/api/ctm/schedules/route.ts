@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.getSchedules()
+    const data = await ctmClient.schedules.getSchedules()
 
     return NextResponse.json(data)
   } catch (error) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { name, times, timezone } = body
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.createSchedule({
+    const data = await ctmClient.schedules.createSchedule({
       name,
       times,
       timezone,

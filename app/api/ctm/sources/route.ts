@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.getSources()
+    const data = await ctmClient.sources.getSources()
 
     return NextResponse.json(data)
   } catch (error) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { name, online, referring_url, landing_url, position } = body
 
     const ctmClient = new CTMClient()
-    const data = await ctmClient.createSource({
+    const data = await ctmClient.sources.createSource({
       name,
       online: online || '1',
       referring_url: referring_url || '',

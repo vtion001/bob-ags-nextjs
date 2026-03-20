@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const ctmClient = new CTMClient()
-    const userGroups = await ctmClient.getUserGroups()
+    const userGroups = await ctmClient.agents.getUserGroups()
 
     return NextResponse.json({ userGroups })
   } catch (error) {

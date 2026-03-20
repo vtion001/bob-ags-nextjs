@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     for (const callId of callIds) {
       try {
-        const call = await ctmClient.getCall(callId)
+        const call = await ctmClient.calls.getCall(callId)
         
         if (!call) {
           results.push({ callId, success: false, error: 'Call not found' })
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         }
         
         if (!transcript) {
-          const transcriptData = await ctmClient.getCallTranscript(callId)
+          const transcriptData = await ctmClient.calls.getCallTranscript(callId)
           transcript = transcriptData || undefined
         }
 
