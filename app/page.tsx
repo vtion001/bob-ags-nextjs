@@ -154,6 +154,7 @@ export default function LoginPage() {
                   required
                   minLength={6}
                   disabled={isLoading}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"

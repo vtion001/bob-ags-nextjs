@@ -117,7 +117,6 @@ export default function MonitorPage() {
       setMonitorMeta({ isAdmin, assignedAgentId, assignedGroupId });
 
       if (
-        !isAdmin &&
         !selectedCallId &&
         !autoStartDoneRef.current &&
         calls.length > 0
