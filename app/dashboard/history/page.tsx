@@ -1,169 +1,47 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
-import Input from '@/components/ui/Input'
-import Select from '@/components/ui/select'
 import CallTable from '@/components/CallTable'
-import { Call } from '@/lib/ctm'
-import { createClient } from '@/lib/supabase/client'
-
-interface AgentProfile {
-  id: string
-  name: string
-  agent_id: string
-  email?: string
-  groupId?: string
-  groupName?: string
-}
-
-interface UserGroup {
-  id: string
-  name: string
-  userIds: number[]
-}
+import { useCallHistory } from '@/hooks/dashboard/useCallHistory'
+import { HistoryFilters, HistoryStats } from '@/components/history'
 
 export default function HistoryPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [agentIdFilter, setAgentIdFilter] = useState('')
-  const [agentProfiles, setAgentProfiles] = useState<AgentProfile[]>([])
-  const [userGroups, setUserGroups] = useState<UserGroup[]>([])
-  const [groupFilter, setGroupFilter] = useState('')
-  const [analyzedOnly, setAnalyzedOnly] = useState(false)
-  const [dateRange, setDateRange] = useState({ start: '', end: '' })
-  const [scoreFilter, setScoreFilter] = useState({ min: 0, max: 100 })
-  const [filteredCalls, setFilteredCalls] = useState<Call[]>([])
-  const [allCalls, setAllCalls] = useState<Call[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    filteredCalls,
+    agentProfiles,
+    userGroups,
+    isLoading,
+    isRefreshing,
+    error,
+    searchQuery,
+    setSearchQuery,
+    agentIdFilter,
+    setAgentIdFilter,
+    groupFilter,
+    setGroupFilter,
+    analyzedOnly,
+    setAnalyzedOnly,
+    dateRange,
+    setDateRange,
+    scoreFilter,
+    setScoreFilter,
+    handleRefresh,
+    handleExport,
+  } = useCallHistory()
 
-  useEffect(() => {
-    const fetchAgentsAndGroups = async () => {
-      try {
-        const res = await fetch('/api/ctm/agents')
-        if (res.ok) {
-          const data = await res.json()
-          if (data.agents) {
-            const mappedAgents = data.agents.map((agent: any) => ({
-              id: agent.id || agent.uid?.toString() || '',
-              name: agent.name || 'Unknown',
-              agent_id: agent.uid?.toString() || agent.id || '',
-              email: agent.email || '',
-            }))
-            setAgentProfiles(mappedAgents)
-          }
-          if (data.userGroups) {
-            setUserGroups(data.userGroups)
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch agents/groups:', err)
-      }
-    }
-    fetchAgentsAndGroups()
-  }, [])
-
-  useEffect(() => {
-    const fetchCalls = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        // Use /api/calls which reads from Supabase cache
-        // This returns cached data immediately and triggers background sync if needed
-        let url = '/api/calls?limit=500&hours=2160&skipSync=false'
-        if (agentIdFilter) {
-          url += `&agentId=${encodeURIComponent(agentIdFilter)}`
-        }
-        
-        const res = await fetch(url)
-        if (!res.ok) {
-          if (res.status === 401) {
-            throw new Error('Please log in to view calls')
-          }
-          throw new Error('Failed to fetch calls')
-        }
-        const data = await res.json()
-        // Data comes from cache - no need to wait for CTM
-        setAllCalls(data.calls || [])
-        setFilteredCalls(data.calls || [])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
-        setAllCalls([])
-        setFilteredCalls([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    fetchCalls()
-  }, [agentIdFilter])
-
-  const handleSearch = () => {
-    let results = [...allCalls]
-
-    if (searchQuery) {
-      results = results.filter(call =>
-        call.phone.includes(searchQuery) || 
-        call.callerNumber?.includes(searchQuery)
-      )
-    }
-
-    if (analyzedOnly) {
-      results = results.filter(call => call.score !== undefined && call.score !== null && call.score > 0)
-    }
-
-    if (groupFilter) {
-      const group = userGroups.find(g => g.id === groupFilter)
-      if (group) {
-        results = results.filter(call => {
-          const agent = agentProfiles.find(a => a.agent_id === call.agent?.id?.toString())
-          if (!agent) return false
-          return group.userIds.includes(Number(agent.agent_id))
-        })
-      }
-    }
-
-    if (scoreFilter.min > 0 || scoreFilter.max < 100) {
-      results = results.filter(call =>
-        call.score && call.score >= scoreFilter.min && call.score <= scoreFilter.max
-      )
-    }
-
-    if (dateRange.start) {
-      const startDate = new Date(dateRange.start)
-      results = results.filter(call => new Date(call.timestamp) >= startDate)
-    }
-
-    if (dateRange.end) {
-      const endDate = new Date(dateRange.end)
-      endDate.setHours(23, 59, 59, 999)
-      results = results.filter(call => new Date(call.timestamp) <= endDate)
-    }
-
-    setFilteredCalls(results.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()))
-  }
-
-  const handleExport = () => {
-    const csv = [
-      ['Time', 'Phone', 'Direction', 'Duration', 'Score', 'Status'],
-      ...filteredCalls.map(call => [
-        new Date(call.timestamp).toISOString(),
-        call.phone,
-        call.direction,
-        `${Math.floor(call.duration / 60)}m ${call.duration % 60}s`,
-        call.score || 'N/A',
-        call.status,
-      ]),
-    ]
-
-    const csvContent = csv.map(row => row.join(',')).join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'call_history.csv'
-    a.click()
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8">
+        <Card className="text-center py-12">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-navy-100 border-t-navy-900 rounded-full animate-spin" />
+            <p className="text-slate-400">Loading call history...</p>
+          </div>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -188,132 +66,27 @@ export default function HistoryPage() {
 
       <Card className="p-6 mb-6">
         <h3 className="text-lg font-bold text-navy-900 mb-4">Search & Filter</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 mb-4">
-          <Input
-            label="Phone Number"
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Search by phone..."
-          />
-
-          <div>
-            <label className="block text-sm font-medium text-navy-700 mb-2">Group</label>
-            <Select
-              value={groupFilter}
-              onChange={setGroupFilter}
-              placeholder="All Groups"
-              options={[
-                { value: '', label: 'All Groups' },
-                ...userGroups.map((group) => ({
-                  value: group.id,
-                  label: `${group.name} (${group.userIds.length})`,
-                })),
-              ]}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-navy-700 mb-2">Agent</label>
-            <Select
-              value={agentIdFilter}
-              onChange={setAgentIdFilter}
-              placeholder="All Agents"
-              options={[
-                { value: '', label: 'All Agents' },
-                ...agentProfiles.map((agent) => ({
-                  value: agent.agent_id,
-                  label: `${agent.name} (${agent.agent_id})`,
-                })),
-              ]}
-              className="w-full"
-            />
-          </div>
-
-          <Input
-            label="Min Score"
-            type="number"
-            min="0"
-            max="100"
-            value={scoreFilter.min}
-            onChange={(e) => setScoreFilter(prev => ({ ...prev, min: parseInt(e.target.value) || 0 }))}
-          />
-
-          <Input
-            label="Max Score"
-            type="number"
-            min="0"
-            max="100"
-            value={scoreFilter.max}
-            onChange={(e) => setScoreFilter(prev => ({ ...prev, max: parseInt(e.target.value) || 100 }))}
-          />
-
-          <div className="flex items-end">
-            <Button
-              variant="primary"
-              size="md"
-              className="w-full"
-              onClick={handleSearch}
-              isLoading={isLoading}
-            >
-              Search
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-          <Input
-            label="Start Date"
-            type="date"
-            value={dateRange.start}
-            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-          />
-
-          <Input
-            label="End Date"
-            type="date"
-            value={dateRange.end}
-            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-          />
-
-          <div className="flex items-center gap-3 h-[42px]">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={analyzedOnly}
-                onChange={(e) => setAnalyzedOnly(e.target.checked)}
-                className="w-4 h-4 rounded border-navy-300 text-navy-600 focus:ring-navy-500"
-              />
-              <span className="text-sm font-medium text-navy-700">Analyzed Only</span>
-            </label>
-          </div>
-        </div>
+        <HistoryFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          agentIdFilter={agentIdFilter}
+          onAgentIdChange={setAgentIdFilter}
+          agentProfiles={agentProfiles}
+          groupFilter={groupFilter}
+          onGroupFilterChange={setGroupFilter}
+          userGroups={userGroups}
+          scoreFilter={scoreFilter}
+          onScoreFilterChange={setScoreFilter}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          analyzedOnly={analyzedOnly}
+          onAnalyzedOnlyChange={setAnalyzedOnly}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        />
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <Card className="p-4">
-          <p className="text-navy-500 text-sm">Total Results</p>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{filteredCalls.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-navy-500 text-sm">Hot Leads</p>
-          <p className="text-2xl font-bold text-navy-900 mt-1">
-            {filteredCalls.filter(c => c.score && c.score >= 75).length}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-navy-500 text-sm">Avg Score</p>
-          <p className="text-2xl font-bold text-navy-900 mt-1">
-            {filteredCalls.length > 0
-              ? Math.round(filteredCalls.reduce((sum, c) => sum + (c.score || 0), 0) / filteredCalls.length)
-              : 0}
-            %
-          </p>
-        </Card>
-      </div>
+      <HistoryStats calls={[]} filteredCalls={filteredCalls} />
 
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
@@ -332,7 +105,7 @@ export default function HistoryPage() {
 
       {filteredCalls.length > 0 && (
         <div className="text-center text-navy-500 text-sm">
-          Showing {filteredCalls.length} of {allCalls.length} calls
+          Showing {filteredCalls.length} calls
         </div>
       )}
     </div>

@@ -93,6 +93,7 @@ export default function CallDetailPage() {
             c.tags = c.analysis.tags
             c.disposition = c.analysis.disposition
           }
+          await storeCallToSupabase(c)
           return c
         }
       }
@@ -102,6 +103,18 @@ export default function CallDetailPage() {
       throw err
     }
   }, [callId])
+
+  const storeCallToSupabase = useCallback(async (callData: Record<string, unknown>) => {
+    try {
+      await fetch('/api/calls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calls: [callData] }),
+      })
+    } catch (err) {
+      console.warn('Failed to store call to Supabase:', err)
+    }
+  }, [])
 
   const handleTranscribe = useCallback(async () => {
     setTranscriptError(null)
@@ -277,6 +290,7 @@ export default function CallDetailPage() {
           <AudioPlayerCard
             audioUrl={call.recordingUrl || ''}
             callId={call.id}
+            callStatus={call.status}
           />
 
           <TranscriptCard

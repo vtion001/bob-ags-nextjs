@@ -1,79 +1,92 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-import Select from "@/components/ui/select";
 import { Call } from "@/lib/ctm";
-import {
-  AssemblyAIRealtime,
-  type RealtimeTranscript,
-  type RealtimeInsight,
-  type LiveCallState,
-} from "@/lib/realtime/assemblyai-realtime";
 import { RUBRIC_CRITERIA } from "@/lib/ai";
+import { useLiveAnalysis } from "@/hooks/monitor";
 import AgentAssistantPanel from "@/components/call-detail/AgentAssistantPanel";
 import NotesDispositionPanel from "@/components/call-detail/NotesDispositionPanel";
-
-interface MonitorMeta {
-  isAdmin: boolean;
-  assignedAgentId: string | null;
-  assignedGroupId: string | null;
-}
+import {
+  ActiveCallsList,
+  CallDetailsCard,
+  LiveInsightsPanel,
+  MonitorHeader,
+  QAChecklist,
+  ScoreProgress,
+  TranscriptPanel,
+} from "@/components/monitor";
 
 const ALL_CATEGORIES = ["Opening", "Probing", "Qualification", "Closing", "Compliance"];
 
+const KNOWN_GROUPS = [
+  "Phillies", "Referrals", "Virtual", "Opener", "Alumni", "Finance",
+  "General", "MA", "Hulk Onsite", "Hulk Offsite", "Legit MH",
+  "Legit Beacon", "Travel Liason", "Daylight Misc", "Ember 12 Step",
+  "Marty Direct", "Trost Virtual Admissions", "Retention Team", "Direct"
+];
+
+function extractGroup(agentName: string | undefined, source?: string): string {
+  if (!agentName || agentName === "Unknown Agent") {
+    if (source) return source;
+    return "Unassigned";
+  }
+  for (const group of KNOWN_GROUPS) {
+    if (agentName.endsWith(group)) {
+      return group;
+    }
+  }
+  const parts = agentName.split(" - ");
+  return parts.length > 1 ? parts[parts.length - 1].trim() : "General";
+}
+
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+function getSentimentColor(sentiment: string): string {
+  switch (sentiment) {
+    case "positive":
+      return "text-green-600 bg-green-50 border-green-200";
+    case "negative":
+      return "text-red-600 bg-red-50 border-red-200";
+    default:
+      return "text-navy-700 bg-navy-50 border-navy-200";
+  }
+}
+
+function getScoreColor(score: number): string {
+  if (score >= 70) return "text-green-600";
+  if (score >= 40) return "text-navy-700";
+  return "text-red-600";
+}
+
 export default function MonitorPage() {
-  const [isMonitoring, setIsMonitoring] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [monitorMeta, setMonitorMeta] = useState<MonitorMeta>({
-    isAdmin: true,
-    assignedAgentId: null,
-    assignedGroupId: null,
-  });
-  const [liveState, setLiveState] = useState<Partial<LiveCallState>>({
-    isConnected: false,
-    isRecording: false,
-    duration: 0,
-    transcript: [],
-    insights: [],
-    sentiment: "neutral",
-    sentimentScore: 50,
-    criteriaStatus: {},
-    score: 100,
-  });
-  const [recentInsights, setRecentInsights] = useState<RealtimeInsight[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [activeCalls, setActiveCalls] = useState<Call[]>([]);
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
   const [selectedCallData, setSelectedCallData] = useState<Call | null>(null);
   const [callsError, setCallsError] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
   const [pollingInterval] = useState(5);
-  const realtimeRef = useRef<AssemblyAIRealtime | null>(null);
-  const durationRef = useRef<NodeJS.Timeout | null>(null);
-  const transcriptEndRef = useRef<HTMLDivElement>(null);
   const [insightsExpanded, setInsightsExpanded] = useState(true);
   const [criteriaExpanded, setCriteriaExpanded] = useState(true);
-  const autoStartDoneRef = useRef(false);
+  const autoStartDoneRef = React.useRef(false);
 
-  const extractGroup = (
-    agentName: string | undefined,
-    source?: string,
-  ): string => {
-    if (!agentName || agentName === "Unknown Agent") {
-      if (source) return source;
-      return "Unassigned";
-    }
-    const KNOWN_GROUPS = ["Phillies", "Referrals", "Virtual", "Opener", "Alumni", "Finance", "General", "MA", "Hulk Onsite", "Hulk Offsite", "Legit MH", "Legit Beacon", "Travel Liason", "Daylight Misc", "Ember 12 Step", "Marty Direct", "Trost Virtual Admissions", "Retention Team", "Direct"];
-    for (const group of KNOWN_GROUPS) {
-      if (agentName.endsWith(group)) {
-        return group;
-      }
-    }
-    const parts = agentName.split(" - ");
-    return parts.length > 1 ? parts[parts.length - 1].trim() : "General";
-  };
+  const {
+    isMonitoring,
+    isRecording,
+    liveState,
+    recentInsights,
+    error,
+    startMonitoring,
+    stopMonitoring,
+  } = useLiveAnalysis({
+    onError: setCallsError,
+    onClose: () => {},
+  });
 
   const groups = React.useMemo(() => {
     const seen = new Set<string>();
@@ -98,245 +111,58 @@ export default function MonitorPage() {
   const fetchActiveCalls = useCallback(async () => {
     try {
       setCallsError(null);
-      const params = new URLSearchParams();
-      if (monitorMeta.assignedAgentId)
-        params.set("agentId", monitorMeta.assignedAgentId);
-      if (monitorMeta.assignedGroupId)
-        params.set("groupId", monitorMeta.assignedGroupId);
-
-      const url = `/api/ctm/monitor/active-calls${params.toString() ? `?${params}` : ""}`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        setCallsError(`API error: ${res.status} ${res.statusText}`);
-        return;
-      }
+      const res = await fetch("/api/ctm/active-calls");
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
-      if (data.error) {
-        setCallsError(data.error);
-        return;
-      }
-      const calls: Call[] = data.calls || [];
+      const calls: Call[] = Array.isArray(data) ? data : data.calls || [];
       setActiveCalls(calls);
-
-      const isAdmin = data.meta?.isAdmin ?? true;
-      const assignedAgentId = data.meta?.assignedAgentId ?? null;
-      const assignedGroupId = data.meta?.assignedGroupId ?? null;
-      setMonitorMeta({ isAdmin, assignedAgentId, assignedGroupId });
-
-      if (
-        !selectedCallId &&
-        !autoStartDoneRef.current &&
-        calls.length > 0
-      ) {
-        autoStartDoneRef.current = true;
-        setSelectedCallId(calls[0].id);
-        setSelectedCallData(calls[0]);
-      }
     } catch (err) {
-      console.error("Error fetching active calls:", err);
-      setCallsError(String(err));
+      setCallsError("Failed to load active calls");
     }
-  }, [
-    monitorMeta.assignedAgentId,
-    monitorMeta.assignedGroupId,
-    selectedCallId,
-  ]);
+  }, []);
 
   useEffect(() => {
     fetchActiveCalls();
     const interval = setInterval(fetchActiveCalls, pollingInterval * 1000);
     return () => clearInterval(interval);
-  }, [pollingInterval, fetchActiveCalls]);
+  }, [fetchActiveCalls, pollingInterval]);
 
-  const handleStartMonitoring = async () => {
-    const apiKey = process.env.NEXT_PUBLIC_ASSEMBLYAI_API_KEY;
-
-    if (!apiKey) {
-      setError("AssemblyAI API key not configured. Check NEXT_PUBLIC_ASSEMBLYAI_API_KEY in your environment variables.");
-      return;
+  useEffect(() => {
+    if (!isMonitoring && selectedCallData && !autoStartDoneRef.current) {
+      autoStartDoneRef.current = true;
+      startMonitoring(selectedCallData.id);
     }
+  }, [isMonitoring, selectedCallData, startMonitoring]);
 
-    setError(null);
-    setIsMonitoring(true);
-    setIsRecording(false);
-    setLiveState({
-      isConnected: false,
-      isRecording: false,
-      duration: 0,
-      transcript: [],
-      insights: [],
-      sentiment: "neutral",
-      sentimentScore: 50,
-      criteriaStatus: {},
-      score: 100,
-    });
-    setRecentInsights([]);
+  const handleStartMonitoring = useCallback(async () => {
+    autoStartDoneRef.current = true;
+    await startMonitoring(selectedCallId || undefined);
+  }, [startMonitoring, selectedCallId]);
 
-    const rt = new AssemblyAIRealtime({
-      apiKey,
-      onTranscript: (t: RealtimeTranscript) => {
-        setLiveState((prev) => ({
-          ...prev,
-          transcript: [...(prev.transcript || []), t],
-        }));
-      },
-      onInsight: (i: RealtimeInsight) => {
-        setRecentInsights((prev) => [i, ...prev].slice(0, 50));
-        setLiveState((prev) => ({
-          ...prev,
-          insights: [i, ...(prev.insights || [])].slice(0, 50),
-        }));
-      },
-      onStateChange: (s: Partial<LiveCallState>) => {
-        setLiveState((prev) => ({ ...prev, ...s }));
-      },
-      onError: (e: Error) => {
-        setError(e.message);
-        setIsRecording(false);
-        setIsMonitoring(false);
-      },
-      onClose: () => {
-        setIsRecording(false);
-        setIsMonitoring(false);
-      },
-    });
+  const handleStopMonitoring = useCallback(() => {
+    stopMonitoring();
+  }, [stopMonitoring]);
 
-    realtimeRef.current = rt;
-
-    try {
-      await rt.connect(selectedCallId || undefined);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start live analysis. Please check your microphone and API key.");
-      setIsMonitoring(false);
-      setIsRecording(false);
+  const handleSelectCall = useCallback((call: Call) => {
+    setSelectedCallId(call.id);
+    setSelectedCallData(call);
+    if (isMonitoring) {
+      stopMonitoring();
+      setTimeout(() => {
+        startMonitoring(call.id);
+      }, 100);
     }
+  }, [isMonitoring, startMonitoring, stopMonitoring]);
 
-    durationRef.current = setInterval(() => {
-      setLiveState((prev) => ({
-        ...prev,
-        duration: (prev.duration || 0) + 1,
-      }));
-    }, 1000);
-  };
+  const byCategory = useCallback((category: string) => {
+    return RUBRIC_CRITERIA.filter((c) => c.category === category);
+  }, []);
 
-  const handleStopMonitoring = () => {
-    if (realtimeRef.current) {
-      realtimeRef.current.stop();
-      realtimeRef.current = null;
-    }
-    if (durationRef.current) {
-      clearInterval(durationRef.current);
-      durationRef.current = null;
-    }
-    setIsMonitoring(false);
-    setIsRecording(false);
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const getSentimentColor = (sentiment: string) => {
-    switch (sentiment) {
-      case "positive":
-        return "text-green-600 bg-green-50 border-green-200";
-      case "negative":
-        return "text-red-600 bg-red-50 border-red-200";
-      default:
-        return "text-navy-700 bg-navy-50 border-navy-200";
-    }
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 70) return "text-green-600";
-    if (score >= 40) return "text-navy-700";
-    return "text-red-600";
-  };
-
-  const getInsightIcon = (type: string) => {
-    switch (type) {
-      case "pass":
-        return (
-          <svg
-            className="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={3}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-        );
-      case "fail":
-        return (
-          <svg
-            className="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        );
-      case "warning":
-        return (
-          <svg
-            className="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-        );
-      default:
-        return (
-          <svg
-            className="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        );
-    }
-  };
-
-  const getInsightColor = (type: string) => {
-    switch (type) {
-      case "pass":
-        return "bg-green-50 border-green-200 text-green-800";
-      case "fail":
-        return "bg-red-50 border-red-200 text-red-800";
-      default:
-        return "bg-navy-50 border-navy-200 text-navy-800";
-    }
-  };
-
-  const byCategory = (category: string) =>
-    RUBRIC_CRITERIA.filter((c) => c.category === category);
+  const isCrisis = React.useMemo(() => {
+    return (liveState.transcript || []).some(
+      (t) => t.text.toLowerCase().includes("suicide") || t.text.toLowerCase().includes("kill myself")
+    );
+  }, [liveState.transcript]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -357,70 +183,23 @@ export default function MonitorPage() {
                   {selectedCallData ? (
                     <div className="flex items-center gap-2 px-3 py-2 bg-navy-50 border border-navy-200 rounded-lg">
                       <div className="flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4 text-navy-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
+                        <svg className="w-4 h-4 text-navy-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         <span className="text-sm font-semibold text-navy-900">
                           {selectedCallData.agent?.name || "Unknown Agent"}
                         </span>
                       </div>
                       <div className="w-px h-4 bg-navy-200" />
-                      <div className="flex items-center gap-1.5">
-                        <svg
-                          className="w-3.5 h-3.5 text-navy-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                          />
-                        </svg>
-                        <span className="text-xs text-navy-600 font-mono">
-                          {selectedCallData.trackingNumber ||
-                            selectedCallData.phone}
-                        </span>
-                      </div>
+                      <span className="text-xs text-navy-600 font-mono">
+                        {selectedCallData.trackingNumber || selectedCallData.phone}
+                      </span>
                       {selectedCallData.destinationNumber && (
                         <>
                           <div className="w-px h-4 bg-navy-200" />
-                          <div className="flex items-center gap-1.5">
-                            <svg
-                              className="w-3.5 h-3.5 text-navy-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                            </svg>
-                            <span className="text-xs text-navy-600 font-mono">
-                              {selectedCallData.destinationNumber}
-                            </span>
-                          </div>
+                          <span className="text-xs text-navy-600 font-mono">
+                            {selectedCallData.destinationNumber}
+                          </span>
                         </>
                       )}
                       {selectedCallData.trackingLabel && (
@@ -437,33 +216,15 @@ export default function MonitorPage() {
                       Select a call from the list below to monitor
                     </span>
                   )}
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={handleStartMonitoring}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                      />
+                  <Button variant="primary" size="md" onClick={handleStartMonitoring}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
                     Start Live Analysis
                   </Button>
                 </>
               ) : (
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={handleStopMonitoring}
-                >
+                <Button variant="secondary" size="md" onClick={handleStopMonitoring}>
                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   Stop Monitoring
                 </Button>
@@ -483,18 +244,8 @@ export default function MonitorPage() {
                 <Card className="p-8 text-center">
                   <div className="max-w-md mx-auto">
                     <div className="w-20 h-20 rounded-2xl bg-navy-100 flex items-center justify-center mx-auto mb-6">
-                      <svg
-                        className="w-10 h-10 text-navy-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                        />
+                      <svg className="w-10 h-10 text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                       </svg>
                     </div>
                     <h2 className="text-2xl font-bold text-navy-900 mb-3">
@@ -508,51 +259,18 @@ export default function MonitorPage() {
                     </p>
                     <div className="grid grid-cols-2 gap-4 text-left">
                       {[
-                        {
-                          icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
-                          label: "Live Transcription",
-                          desc: "Real-time speaker detection",
-                        },
-                        {
-                          icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
-                          label: "Live QA Scoring",
-                          desc: "25-criteria real-time evaluation",
-                        },
-                        {
-                          icon: "M13 10V3L4 14h7v7l9-11h-7z",
-                          label: "Instant Insights",
-                          desc: "Flag pass/fail as call happens",
-                        },
-                        {
-                          icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
-                          label: "Duration Tracking",
-                          desc: "Know exactly where you are",
-                        },
-                      ].map((feature) => (
-                        <div
-                          key={feature.label}
-                          className="flex items-start gap-3 p-3 rounded-lg bg-navy-50"
-                        >
-                          <svg
-                            className="w-5 h-5 text-navy-600 mt-0.5 flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d={feature.icon}
-                            />
+                        { icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", label: "Live Transcription", desc: "Real-time speaker detection" },
+                        { icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z", label: "Live QA Scoring", desc: "25-criteria real-time evaluation" },
+                        { icon: "M13 10V3L4 14h7v7l9-11h-7z", label: "Instant Insights", desc: "Flag pass/fail as call happens" },
+                        { icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", label: "Duration Tracking", desc: "Know exactly where you are" },
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 bg-navy-50 rounded-lg">
+                          <svg className="w-5 h-5 text-navy-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
                           </svg>
                           <div>
-                            <p className="text-sm font-semibold text-navy-900">
-                              {feature.label}
-                            </p>
-                            <p className="text-xs text-navy-500">
-                              {feature.desc}
-                            </p>
+                            <p className="text-sm font-semibold text-navy-900">{item.label}</p>
+                            <p className="text-xs text-navy-500">{item.desc}</p>
                           </div>
                         </div>
                       ))}
@@ -561,552 +279,51 @@ export default function MonitorPage() {
                 </Card>
               </div>
               <div>
-                <Card className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-navy-900">
-                      Active Calls
-                    </h3>
-                    {groups.length > 0 && (
-                      <Select
-                        value={selectedGroup}
-                        onChange={setSelectedGroup}
-                        options={[
-                          { value: "All", label: `All Groups (${activeCalls.length})` },
-                          ...groups.map((group) => ({
-                            value: group,
-                            label: `${group} (${activeCalls.filter((c) => extractGroup(c.agent?.name) === group).length})`,
-                          })),
-                        ]}
-                        className="w-48"
-                      />
-                    )}
+                <ActiveCallsList
+                  calls={activeCalls}
+                  selectedCallId={selectedCallId}
+                  selectedGroup={selectedGroup}
+                  groups={groups}
+                  onSelectCall={handleSelectCall}
+                  onGroupChange={setSelectedGroup}
+                />
+                {activeCalls.length === 0 && callsError && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                    <p className="font-medium">Error loading calls:</p>
+                    <p>{callsError}</p>
                   </div>
-                  {callsError && (
-                    <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
-                      <p className="font-semibold mb-1">Error loading calls:</p>
-                      <p>{callsError}</p>
-                      <p className="mt-1 text-red-600">
-                        User:{" "}
-                        {monitorMeta.isAdmin
-                          ? "Admin (dev)"
-                          : `Agent ID: ${monitorMeta.assignedAgentId || "none"}, Group: ${monitorMeta.assignedGroupId || "none"}`}
-                      </p>
-                    </div>
-                  )}
-                  {filteredCalls.length > 0 ? (
-                    <div className="space-y-3">
-                      <div className="text-xs text-navy-400 mb-2">
-                        {selectedGroup === "All"
-                          ? monitorMeta.isAdmin
-                            ? "Admin view — all agents"
-                            : `Filtered: agent ${monitorMeta.assignedAgentId || "all"}, group ${monitorMeta.assignedGroupId || "all"}`
-                          : `Showing: ${selectedGroup} (${filteredCalls.length} of ${activeCalls.length} calls)`}
-                      </div>
-                      {filteredCalls.map((call, idx) => {
-                        const isSelected = selectedCallId === call.id;
-                        return (
-                          <button
-                            key={`${call.id}-${idx}`}
-                            onClick={() => {
-                              setSelectedCallId(call.id);
-                              setSelectedCallData(call);
-                            }}
-                            className={`w-full text-left p-4 rounded-xl border transition-all ${
-                              isSelected
-                                ? "bg-navy-900 text-white border-navy-900 shadow-md"
-                                : "bg-white hover:bg-navy-50 border-navy-100 hover:border-navy-200"
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div className="flex-1 min-w-0">
-                                <p
-                                  className={`font-mono font-bold text-base truncate ${isSelected ? "text-white" : "text-navy-900"}`}
-                                >
-                                  {call.phone}
-                                </p>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  <svg
-                                    className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? "text-white/60" : "text-navy-400"}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                    />
-                                  </svg>
-                                  <p
-                                    className={`text-xs font-semibold truncate ${isSelected ? "text-white/90" : "text-navy-700"}`}
-                                  >
-                                    {call.agent?.name || "Unknown Agent"}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex-shrink-0 text-right">
-                                <span
-                                  className={`text-xs font-mono ${isSelected ? "text-white/70" : "text-navy-400"}`}
-                                >
-                                  {formatDuration(call.duration || 0)}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              {call.trackingNumber && (
-                                <div className="flex items-center gap-1.5">
-                                  <svg
-                                    className={`w-3 h-3 flex-shrink-0 ${isSelected ? "text-green-400" : "text-green-600"}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                    />
-                                  </svg>
-                                  <span
-                                    className={`text-xs ${isSelected ? "text-white/70" : "text-navy-500"}`}
-                                  >
-                                    <span
-                                      className={`font-medium ${isSelected ? "text-white/50" : "text-navy-400"}`}
-                                    >
-                                      Called:{" "}
-                                    </span>
-                                    <span className="font-mono">
-                                      {call.trackingNumber}
-                                    </span>
-                                  </span>
-                                </div>
-                              )}
-                              {call.destinationNumber && (
-                                <div className="flex items-center gap-1.5">
-                                  <svg
-                                    className={`w-3 h-3 flex-shrink-0 ${isSelected ? "text-navy-300" : "text-navy-500"}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                    />
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                    />
-                                  </svg>
-                                  <span
-                                    className={`text-xs ${isSelected ? "text-white/70" : "text-navy-500"}`}
-                                  >
-                                    <span
-                                      className={`font-medium ${isSelected ? "text-white/50" : "text-navy-400"}`}
-                                    >
-                                      Route to:{" "}
-                                    </span>
-                                    <span className="font-mono">
-                                      {call.destinationNumber}
-                                    </span>
-                                  </span>
-                                </div>
-                              )}
-                              {call.poolNumber && (
-                                <div className="flex items-center gap-1.5">
-                                  <svg
-                                    className={`w-3 h-3 flex-shrink-0 ${isSelected ? "text-navy-300" : "text-navy-500"}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2M5 11a2 2 0 00-2 2v6a2 2 0 002 2m14-10V5a2 2 0 00-2-2M9 7a2 2 0 100-4 2 2 0 000 4zM7 3v4M11 3v4M15 3v4"
-                                    />
-                                  </svg>
-                                  <span
-                                    className={`text-xs ${isSelected ? "text-white/70" : "text-navy-500"}`}
-                                  >
-                                    <span
-                                      className={`font-medium ${isSelected ? "text-white/50" : "text-navy-400"}`}
-                                    >
-                                      Pool:{" "}
-                                    </span>
-                                    <span className="font-mono">
-                                      {call.poolNumber}
-                                    </span>
-                                  </span>
-                                </div>
-                              )}
-                              {call.trackingLabel && (
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <svg
-                                    className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? "text-white/60" : "text-navy-400"}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                    />
-                                  </svg>
-                                  <p
-                                    className={`text-xs font-semibold truncate ${isSelected ? "text-white/90" : "text-navy-700"}`}
-                                  >
-                                    {call.agent?.name || "Unknown Agent"}
-                                  </p>
-                                  <span
-                                    className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${isSelected ? "bg-white/20 text-white/80" : "bg-navy-100 text-navy-500"}`}
-                                  >
-                                    {extractGroup(
-                                      call.agent?.name,
-                                      call.source,
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                              {call.source && (
-                                <div className="flex items-center gap-1.5">
-                                  <svg
-                                    className={`w-3 h-3 flex-shrink-0 ${isSelected ? "text-navy-300" : "text-navy-500"}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-                                    />
-                                  </svg>
-                                  <span
-                                    className={`text-xs truncate ${isSelected ? "text-white/70" : "text-navy-500"}`}
-                                  >
-                                    <span
-                                      className={`font-medium ${isSelected ? "text-white/50" : "text-navy-400"}`}
-                                    >
-                                      Source:{" "}
-                                    </span>
-                                    {call.source}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {isSelected && (
-                              <div className="mt-3 pt-3 border-t border-white/20">
-                                <span className="text-xs text-white/60 font-medium">
-                                  Click Start Live Analysis to begin monitoring
-                                </span>
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : activeCalls.length === 0 ? (
-                    <>
-                      <p className="text-navy-400 text-sm text-center py-6">
-                        No active calls detected.
-                        <br />
-                        Select a call above, or start analysis to test the
-                        microphone.
-                      </p>
-                      <button
-                        onClick={handleStartMonitoring}
-                        className="w-full mt-2 px-4 py-2 text-sm border-2 border-dashed border-navy-200 rounded-lg text-navy-500 hover:border-navy-400 hover:text-navy-600 transition-colors"
-                      >
-                        Test Microphone
-                      </button>
-                    </>
-                  ) : (
-                    <div className="text-center py-6">
-                      <p className="text-navy-400 text-sm">
-                        No calls for group <strong>{selectedGroup}</strong>
-                      </p>
-                      <button
-                        onClick={() => setSelectedGroup("All")}
-                        className="mt-2 text-xs text-navy-600 underline hover:text-navy-800"
-                      >
-                        Show all groups
-                      </button>
-                    </div>
-                  )}
-                </Card>
+                )}
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
               <div className="xl:col-span-7 space-y-4">
                 <Card className="p-0 overflow-hidden">
-                  <div className="p-4 border-b border-navy-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`w-2.5 h-2.5 rounded-full ${isRecording ? "bg-red-500 animate-pulse" : "bg-slate-400"}`}
-                        />
-                        <span className="text-sm font-semibold text-navy-900">
-                          {isRecording ? "Recording" : "Connecting..."}
-                        </span>
-                      </div>
-                      {liveState.duration !== undefined &&
-                        liveState.duration > 0 && (
-                          <span className="px-2 py-0.5 bg-navy-100 text-navy-700 rounded text-sm font-mono">
-                            {formatDuration(liveState.duration)}
-                          </span>
-                        )}
-                      {selectedCallData?.agent?.name && (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-sm font-semibold">
-                          {selectedCallData.agent.name}
-                          <span className="ml-1.5 text-xs font-normal opacity-70">
-                            {extractGroup(selectedCallData.agent.name)}
-                          </span>
-                        </span>
-                      )}
-                      {selectedCallData?.trackingNumber && (
-                        <span className="px-2 py-0.5 bg-navy-100 text-navy-700 rounded text-sm font-mono">
-                          {selectedCallData.trackingNumber}
-                        </span>
-                      )}
-                      {selectedCallData?.destinationNumber && (
-                        <span className="px-2 py-0.5 bg-navy-50 text-navy-700 rounded text-sm font-mono">
-                          → {selectedCallData.destinationNumber}
-                        </span>
-                      )}
-                      {selectedCallData?.trackingLabel && (
-                        <span className="px-2 py-0.5 bg-navy-100 text-navy-700 rounded text-sm font-medium">
-                          {selectedCallData.trackingLabel}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {liveState.sentiment && (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border ${getSentimentColor(liveState.sentiment)}`}
-                        >
-                          {liveState.sentiment === "positive"
-                            ? "Positive"
-                            : liveState.sentiment === "negative"
-                              ? "Negative"
-                              : "Neutral"}
-                        </span>
-                      )}
-                      {liveState.score !== undefined && (
-                        <span
-                          className={`text-xl font-bold ${getScoreColor(liveState.score)}`}
-                        >
-                          {liveState.score}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="h-[400px] overflow-y-auto p-4 bg-slate-50/50">
-                    {(liveState.transcript || []).length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center">
-                        <div className="w-12 h-12 rounded-full bg-navy-100 flex items-center justify-center mb-3 animate-pulse">
-                          <svg
-                            className="w-6 h-6 text-navy-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                            />
-                          </svg>
-                        </div>
-                        <p className="text-navy-500 font-medium">
-                          Waiting for audio...
-                        </p>
-                        <p className="text-navy-400 text-sm">
-                          Start speaking to see the transcript
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-navy-200">
-                            <div className="w-6 h-6 rounded-full bg-navy-900 flex items-center justify-center text-xs font-bold text-white">
-                              A
-                            </div>
-                            <span className="text-sm font-semibold text-navy-900">
-                              Agent
-                            </span>
-                          </div>
-                          <div className="flex-1 overflow-y-auto space-y-3">
-                            {(liveState.transcript || [])
-                              .filter((t) => t.speaker === "Agent")
-                              .map((t, i) => (
-                                <div key={i} className="flex gap-2">
-                                  <div className="flex-1">
-                                    <div className="inline-block px-3 py-2 rounded-2xl rounded-bl-sm text-sm bg-navy-900 text-white">
-                                      {t.text}
-                                    </div>
-                                    <p className="text-xs mt-1 text-navy-400">
-                                      {formatDuration(t.startTime)}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
-                            {(liveState.transcript || []).filter(
-                              (t) => t.speaker === "Agent",
-                            ).length === 0 && (
-                              <p className="text-sm text-navy-400 italic">
-                                Agent messages will appear here
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-col border-l border-navy-200 pl-4">
-                          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-navy-200">
-                            <div className="w-6 h-6 rounded-full bg-navy-700 flex items-center justify-center text-xs font-bold text-white">
-                              C
-                            </div>
-                            <span className="text-sm font-semibold text-navy-900">
-                              Caller
-                            </span>
-                          </div>
-                          <div className="flex-1 overflow-y-auto space-y-3">
-                            {(liveState.transcript || [])
-                              .filter((t) => t.speaker === "Caller")
-                              .map((t, i) => (
-                                <div key={i} className="flex gap-2">
-                                  <div className="flex-1">
-                                    <div className="inline-block px-3 py-2 rounded-2xl rounded-br-sm text-sm bg-navy-100 text-navy-900">
-                                      {t.text}
-                                    </div>
-                                    <p className="text-xs mt-1 text-navy-400">
-                                      {formatDuration(t.startTime)}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
-                            {(liveState.transcript || []).filter(
-                              (t) => t.speaker === "Caller",
-                            ).length === 0 && (
-                              <p className="text-sm text-navy-400 italic">
-                                Caller messages will appear here
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <div ref={transcriptEndRef} />
-                  </div>
+                  <MonitorHeader
+                    call={selectedCallData}
+                    liveState={liveState}
+                    isRecording={isRecording}
+                    isMonitoring={isMonitoring}
+                    formatDuration={formatDuration}
+                    getSentimentColor={getSentimentColor}
+                    getScoreColor={getScoreColor}
+                    extractGroup={extractGroup}
+                  />
+                  <TranscriptPanel
+                    transcript={liveState.transcript || []}
+                    formatDuration={formatDuration}
+                  />
                 </Card>
 
                 <Card className="p-0 overflow-hidden">
-                  <button
-                    onClick={() => setInsightsExpanded(!insightsExpanded)}
-                    className="w-full p-4 flex items-center justify-between hover:bg-navy-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5 text-navy-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 10V3L4 14h7v7l9-11h-7z"
-                        />
-                      </svg>
-                      <h3 className="text-lg font-bold text-navy-900">
-                        Live Insights
-                      </h3>
-                      {recentInsights.length > 0 && (
-                        <span className="px-2 py-0.5 bg-navy-900 text-white text-xs rounded-full">
-                          {recentInsights.length}
-                        </span>
-                      )}
-                    </div>
-                    <svg
-                      className={`w-5 h-5 text-navy-400 transition-transform ${insightsExpanded ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                  {insightsExpanded && (
-                    <div className="max-h-60 overflow-y-auto divide-y divide-navy-100">
-                      {recentInsights.length === 0 ? (
-                        <p className="text-navy-400 text-sm text-center py-6">
-                          Insights will appear as the call progresses
-                        </p>
-                      ) : (
-                        recentInsights.map((insight) => (
-                          <div
-                            key={insight.id}
-                            className={`px-4 py-3 flex items-start gap-3 ${getInsightColor(insight.type)}`}
-                          >
-                            <span
-                              className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                                insight.type === "pass"
-                                  ? "bg-green-500 text-white"
-                                  : insight.type === "fail"
-                                    ? "bg-red-500 text-white"
-                                    : "bg-navy-600 text-white"
-                              }`}
-                            >
-                              {getInsightIcon(insight.type)}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span
-                                  className="text-xs px-1.5 py-0.5 rounded font-semibold bg-navy-800 text-white"
-                                >
-                                  {insight.category}
-                                </span>
-                                <span className="text-sm font-semibold text-navy-900">
-                                  {insight.criterion}
-                                </span>
-                                {insight.ztp && (
-                                  <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-bold">
-                                    ZTP
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-navy-600 mt-0.5 truncate">
-                                {insight.message}
-                              </p>
-                            </div>
-                            <span className="text-xs text-navy-400 flex-shrink-0">
-                              {formatDuration(insight.timestamp)}
-                            </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
+                  <LiveInsightsPanel
+                    insights={recentInsights}
+                    formatDuration={formatDuration}
+                    expanded={insightsExpanded}
+                    onToggle={() => setInsightsExpanded(!insightsExpanded)}
+                  />
                 </Card>
+
                 <AgentAssistantPanel
                   missingCriteria={Object.entries(liveState.criteriaStatus || {}).filter(([, v]) => !v.triggered).map(([k]) => k)}
                   currentContext={{
@@ -1114,7 +331,7 @@ export default function MonitorPage() {
                     state: liveState.callerLocation,
                     substance: liveState.substance,
                     callerName: liveState.callerName || selectedCallData?.name,
-                    isCrisis: (liveState.transcript || []).some(t => t.text.toLowerCase().includes('suicide') || t.text.toLowerCase().includes('kill myself'))
+                    isCrisis,
                   }}
                   lastTranscript={liveState.transcript?.[liveState.transcript.length - 1]?.text}
                 />
@@ -1133,251 +350,30 @@ export default function MonitorPage() {
                   score={liveState.score || 0}
                   missingCriteria={Object.entries(liveState.criteriaStatus || {}).filter(([, v]) => !v.triggered).map(([k]) => k)}
                 />
-                <Card className="p-0 overflow-hidden">
-                  <button
-                    onClick={() => setCriteriaExpanded(!criteriaExpanded)}
-                    className="w-full p-4 flex items-center justify-between hover:bg-navy-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5 text-navy-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                        />
-                      </svg>
-                      <h3 className="text-lg font-bold text-navy-900">
-                        QA Checklist
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-lg font-bold ${getScoreColor(liveState.score || 100)}`}
-                      >
-                        {liveState.score || 100}
-                      </span>
-                      <svg
-                        className={`w-5 h-5 text-navy-400 transition-transform ${criteriaExpanded ? "rotate-180" : ""}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
-                  </button>
-                  {criteriaExpanded && (
-                    <div className="divide-y divide-navy-100">
-                      {ALL_CATEGORIES.map((category) => (
-                        <div key={category}>
-                          <div
-                            className="px-4 py-2 text-xs font-bold uppercase tracking-wide border-l-4 border-l-navy-800 bg-navy-50/30"
-                          >
-                            {category}
-                          </div>
-                          {byCategory(category).map((criterion) => {
-                            const status =
-                              liveState.criteriaStatus?.[criterion.id];
-                            const isPending = !status?.triggered;
-                            const isPass = status?.triggered && status.pass;
-                            const isFail = status?.triggered && !status.pass;
 
-                            return (
-                              <div
-                                key={criterion.id}
-                                className="px-4 py-2.5 flex items-center gap-3"
-                              >
-                                <div
-                                  className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                    isPass
-                                      ? "bg-green-500 text-white"
-                                      : isFail
-                                        ? "bg-red-500 text-white"
-                                        : "bg-navy-200"
-                                  }`}
-                                >
-                                  {isPass ? (
-                                    <svg
-                                      className="w-3 h-3"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={3}
-                                        d="M5 13l4 4L19 7"
-                                      />
-                                    </svg>
-                                  ) : isFail ? (
-                                    <svg
-                                      className="w-3 h-3"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={3}
-                                        d="M6 18L18 6M6 6l12 12"
-                                      />
-                                    </svg>
-                                  ) : (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-navy-400" />
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p
-                                    className={`text-sm ${isFail ? "text-red-700 font-medium" : isPass ? "text-green-700" : "text-navy-600"}`}
-                                  >
-                                    {criterion.name}
-                                  </p>
-                                </div>
-                                {criterion.ztp && (
-                                  <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-bold">
-                                    ZTP
-                                  </span>
-                                )}
-                                <span className="text-[10px] text-navy-400 font-mono">
-                                  {criterion.id}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
+                <QAChecklist
+                  criteriaStatus={liveState.criteriaStatus || {}}
+                  score={liveState.score || 100}
+                  expanded={criteriaExpanded}
+                  onToggle={() => setCriteriaExpanded(!criteriaExpanded)}
+                />
 
-                <Card className="p-0 overflow-hidden">
-                  <div className="p-4 border-b border-navy-100">
-                    <h3 className="text-lg font-bold text-navy-900">
-                      Call Details
-                    </h3>
-                  </div>
-                  <div className="divide-y divide-navy-100">
-                    {[
-                      {
-                        label: "Agent",
-                        value:
-                          selectedCallData?.agent?.name || liveState.callerName,
-                        icon: "👤",
-                        highlight: true,
-                      },
-                      {
-                        label: "Tracking Number",
-                        value:
-                          selectedCallData?.trackingNumber ||
-                          liveState.callerPhone,
-                        icon: "📞",
-                      },
-                      {
-                        label: "Destination",
-                        value: selectedCallData?.destinationNumber || null,
-                        icon: "📍",
-                      },
-                      {
-                        label: "Pool Number",
-                        value: selectedCallData?.poolNumber || null,
-                        icon: "🔗",
-                      },
-                      {
-                        label: "Source / Label",
-                        value:
-                          selectedCallData?.trackingLabel ||
-                          selectedCallData?.source ||
-                          null,
-                        icon: "🏷️",
-                      },
-                      {
-                        label: "Caller Location",
-                        value: liveState.callerLocation,
-                        icon: "🗺️",
-                      },
-                      {
-                        label: "Insurance Type",
-                        value: liveState.insurance,
-                        icon: "🏥",
-                      },
-                      {
-                        label: "Duration",
-                        value:
-                          liveState.duration !== undefined
-                            ? formatDuration(liveState.duration)
-                            : null,
-                        icon: "⏱️",
-                      },
-                    ].map((item) => (
-                      <div
-                        key={item.label}
-                        className="px-4 py-3 flex items-center gap-3"
-                      >
-                        <span className="text-lg">{item.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-navy-500">{item.label}</p>
-                          <p
-                            className={`text-sm font-semibold truncate ${item.value ? (item.highlight ? "text-navy-900" : "text-navy-800") : "text-navy-300"}`}
-                          >
-                            {item.value || "—"}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+                <CallDetailsCard
+                  call={selectedCallData}
+                  liveState={{
+                    callerName: liveState.callerName,
+                    callerPhone: liveState.callerPhone,
+                    callerLocation: liveState.callerLocation,
+                    insurance: liveState.insurance,
+                    duration: liveState.duration,
+                  }}
+                  formatDuration={formatDuration}
+                />
 
-                <Card className="p-4">
-                  <h3 className="text-sm font-bold text-navy-900 mb-3">
-                    Score Progress
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-navy-500">
-                      <span>QA Score</span>
-                      <span
-                        className={`font-bold ${getScoreColor(liveState.score || 100)}`}
-                      >
-                        {liveState.score || 100}
-                      </span>
-                    </div>
-                    <div className="h-3 bg-navy-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          (liveState.score || 100) >= 70
-                            ? "bg-green-500"
-                            : (liveState.score || 100) >= 40
-                              ? "bg-navy-600"
-                              : "bg-red-500"
-                        }`}
-                        style={{ width: `${liveState.score || 100}` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-xs text-navy-500">
-                      <span>Criteria</span>
-                      <span>
-                        {
-                          Object.values(liveState.criteriaStatus || {}).filter(
-                            (s) => s.triggered,
-                          ).length
-                        }{" "}
-                        / {RUBRIC_CRITERIA.length}
-                      </span>
-                    </div>
-                  </div>
-                </Card>
+                <ScoreProgress
+                  score={liveState.score || 100}
+                  criteriaStatus={liveState.criteriaStatus || {}}
+                />
               </div>
             </div>
           )}

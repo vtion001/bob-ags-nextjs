@@ -60,23 +60,28 @@ export default function QAAnalysisCard({ rubricResults, rubricBreakdown, isAnaly
           </div>
         ) : (
           <div className="bg-navy-50 rounded-lg p-6 text-center">
-            <p className="text-navy-700 font-medium mb-1">No QA analysis yet</p>
-            <p className="text-navy-400 text-sm mb-4">
-              {hasTranscript
-                ? 'Score this call against the 25-point QA rubric.'
-                : 'A transcript is required to run QA analysis.'}
-            </p>
+            <svg className="w-10 h-10 text-navy-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            <p className="text-navy-600 font-medium mb-1">No QA analysis yet</p>
             {hasTranscript ? (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={onRunAnalysis}
-                isLoading={isAnalyzing}
-              >
-                Run QA Analysis
-              </Button>
+              <>
+                <p className="text-navy-400 text-sm mb-4">
+                  Score this call against the 25-point QA rubric.
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={onRunAnalysis}
+                  isLoading={isAnalyzing}
+                >
+                  Run QA Analysis
+                </Button>
+              </>
             ) : (
-              <p className="text-navy-400 text-xs">Transcribe the call recording first.</p>
+              <p className="text-navy-400 text-sm">
+                A transcript is required to run QA analysis. Transcription will be available once the call recording is processed by CTM.
+              </p>
             )}
           </div>
         )}

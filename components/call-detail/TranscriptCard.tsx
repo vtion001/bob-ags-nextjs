@@ -55,8 +55,16 @@ export default function TranscriptCard({
           </div>
         </div>
       ) : (
-        <div className="bg-navy-50 rounded-lg p-4 text-navy-400 text-sm text-center">
-          No transcript available. {hasRecording && 'Click Transcribe to generate one.'}
+        <div className="bg-navy-50 rounded-lg p-6 text-center">
+          <svg className="w-10 h-10 text-navy-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          </svg>
+          <p className="text-navy-500 text-sm font-medium mb-1">No transcript available</p>
+          <p className="text-navy-400 text-xs">
+            {hasRecording 
+              ? 'Click Transcribe to generate a transcript from the recording.'
+              : 'Transcript will be available once CTM processes the call recording.'}
+          </p>
         </div>
       )}
     </Card>

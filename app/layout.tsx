@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
-import { Analytics } from '@/components/Analytics'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], display: 'swap', preload: true })
@@ -37,7 +36,6 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Analytics />
         </ThemeProvider>
       </body>
     </html>
