@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import Select from "@/components/ui/select";
 import { Call } from "@/lib/ctm";
 import {
   AssemblyAIRealtime,
@@ -566,26 +567,18 @@ export default function MonitorPage() {
                       Active Calls
                     </h3>
                     {groups.length > 0 && (
-                      <select
+                      <Select
                         value={selectedGroup}
-                        onChange={(e) => setSelectedGroup(e.target.value)}
-                        className="text-xs border border-navy-200 rounded-lg px-2 py-1.5 bg-white text-navy-700 font-medium focus:outline-none focus:ring-2 focus:ring-navy-300 cursor-pointer"
-                      >
-                        <option value="All">
-                          All Groups ({activeCalls.length})
-                        </option>
-                        {groups.map((group) => (
-                          <option key={group} value={group}>
-                            {group} (
-                            {
-                              activeCalls.filter(
-                                (c) => extractGroup(c.agent?.name) === group,
-                              ).length
-                            }
-                            )
-                          </option>
-                        ))}
-                      </select>
+                        onChange={setSelectedGroup}
+                        options={[
+                          { value: "All", label: `All Groups (${activeCalls.length})` },
+                          ...groups.map((group) => ({
+                            value: group,
+                            label: `${group} (${activeCalls.filter((c) => extractGroup(c.agent?.name) === group).length})`,
+                          })),
+                        ]}
+                        className="w-48"
+                      />
                     )}
                   </div>
                   {callsError && (

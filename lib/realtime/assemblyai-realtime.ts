@@ -368,7 +368,8 @@ export class AssemblyAIRealtime {
       if (!transcriptText) return;
 
       this.turnCount++;
-      const speaker = this.detectSpeaker(transcriptText);
+      const speakerLabel = data.speaker_label as string | undefined;
+      const speaker = this.resolveSpeaker(speakerLabel, transcriptText);
       const now = Date.now();
       const elapsed = Math.round((now - this.startTime) / 1000);
 
@@ -410,7 +411,21 @@ export class AssemblyAIRealtime {
     }
   }
 
-  private detectSpeaker(text: string): string {
+  private resolveSpeaker(speakerLabel: string | undefined, text: string): string {
+    if (speakerLabel) {
+      const label = speakerLabel.toUpperCase();
+      if (label === "A" || label === "AGENT" || label === "SPK_00") {
+        return "Agent";
+      }
+      if (label === "B" || label === "CALLER" || label === "SPK_01") {
+        return "Caller";
+      }
+      return label;
+    }
+    return this.detectSpeakerFallback(text);
+  }
+
+  private detectSpeakerFallback(text: string): string {
     const lower = text.toLowerCase();
 
     if (
