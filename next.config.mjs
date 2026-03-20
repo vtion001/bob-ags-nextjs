@@ -6,6 +6,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  turbopack: {
+    root: '/Users/archerterminez/Desktop/REPOSITORY/bob-ags',
+  },
 }
 
 export default nextConfig

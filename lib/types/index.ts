@@ -79,6 +79,10 @@ export interface Call {
   ringTime?: number
   score?: number
   analysis?: CallAnalysis
+  destinationNumber?: string
+  poolNumber?: string
+  didNumber?: string
+  trackingNumberFormat?: string
 }
 
 export interface CallAnalysis {

@@ -18,7 +18,7 @@ export function transformCall(ctmCall: CTMCall): Call {
     source: ctmCall.source,
     sourceId: ctmCall.source_id ? String(ctmCall.source_id) : undefined,
     accountId: ctmCall.account_id ? String(ctmCall.account_id) : undefined,
-    agent: ctmCall.agent,
+    agent: ctmCall.agent ?? (ctmCall.source ? { id: '', name: ctmCall.source, email: '' } : undefined),
     recordingUrl: ctmCall.audio || ctmCall.recording_url,
     transcript: ctmCall.transcript,
     city: ctmCall.city,
@@ -36,6 +36,10 @@ export function transformCall(ctmCall: CTMCall): Call {
       tags: ctmCall.tag_list || [],
       disposition: sale?.name || '',
     } : undefined,
+    destinationNumber: ctmCall.destination_number,
+    poolNumber: ctmCall.pool_number,
+    didNumber: ctmCall.did_number,
+    trackingNumberFormat: ctmCall.tracking_number_format,
   }
 }
 

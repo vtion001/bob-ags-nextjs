@@ -8,6 +8,7 @@ import {
   CallScoreCard,
   CallerInfoCard,
   AIAnalysisCard,
+  QAAnalysisCard,
   TranscriptCard,
   AudioPlayerCard,
   ActionButtonsCard,
@@ -20,6 +21,29 @@ interface AnalysisResult {
   summary: string
   tags: string[]
   disposition: string
+  rubric_results?: Array<{
+    id: string
+    criterion: string
+    pass: boolean
+    ztp: boolean
+    autoFail: boolean
+    details: string
+    deduction: number
+    severity: string
+    category: string
+  }>
+  rubric_breakdown?: {
+    opening_score: number
+    opening_max: number
+    probing_score: number
+    probing_max: number
+    qualification_score_detail: number
+    qualification_max: number
+    closing_score: number
+    closing_max: number
+    compliance_score: number
+    compliance_max: number
+  }
 }
 
 export default function CallDetailPage() {
@@ -39,11 +63,28 @@ export default function CallDetailPage() {
   const fetchCallDetails = async () => {
     try {
       const res = await fetch(`/api/calls?ctmCallId=${callId}&skipSync=true`)
-      if (!res.ok) throw new Error('Call not found')
       const data = await res.json()
+      
       if (data.calls && data.calls.length > 0) {
         return data.calls[0]
       }
+      
+      const ctmRes = await fetch(`/api/ctm/calls/${callId}`)
+      if (ctmRes.ok) {
+        const ctmData = await ctmRes.json()
+        if (ctmData.call) {
+          const call = ctmData.call
+          if (call.analysis) {
+            call.score = call.analysis.score
+            call.sentiment = call.analysis.sentiment
+            call.summary = call.analysis.summary
+            call.tags = call.analysis.tags
+            call.disposition = call.analysis.disposition
+          }
+          return call
+        }
+      }
+      
       throw new Error('Call not found')
     } catch (err) {
       throw err
@@ -215,6 +256,12 @@ export default function CallDetailPage() {
             analysis={analysis}
             isAnalyzing={isAnalyzing}
             call={call}
+          />
+
+          <QAAnalysisCard
+            rubricResults={analysis?.rubric_results}
+            rubricBreakdown={analysis?.rubric_breakdown}
+            isAnalyzing={isAnalyzing}
           />
           
           <AudioPlayerCard 

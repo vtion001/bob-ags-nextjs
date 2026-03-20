@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Button from '@/components/ui/Button'
 import StatsCard from '@/components/StatsCard'
 import CallTable from '@/components/CallTable'
@@ -81,6 +81,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [liveMeta, setLiveMeta] = useState<LiveCallsMeta | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const pendingOverrideRef = useRef<{ groupId?: string; agentUid?: number } | null>(null)
 
   // Check auth and load initial data
   useEffect(() => {
@@ -183,16 +184,21 @@ export default function DashboardPage() {
       // Use meta.isAdmin to control filter visibility
       let calls: Call[] = data.calls || []
 
-      // Client-side filter if server didn't filter (admin or no group/agent assignment)
-      if (meta.isAdmin && !manualOverride?.groupId && !manualOverride?.agentUid) {
+      // Client-side filter if admin (CTM API doesn't support agent_id/group_id filtering)
+      if (meta.isAdmin) {
         if (selectedGroup !== 'all') {
           const group = userGroups.find(g => g.id === selectedGroup)
           if (group) {
             calls = calls.filter(call => {
               const aid = (call.agent as any)?.id || call.agent?.id
               if (!aid) return false
-              const agent = allAgents.find(a => a.id === String(aid))
-              return agent ? group.userIds.includes(agent.uid) : false
+              const agentUid = Number(aid)
+              // Match agent by id or uid
+              const agent = allAgents.find(a => 
+                a.id === String(aid) || a.uid === agentUid
+              )
+              if (!agent || agent.uid === undefined) return false
+              return group.userIds.includes(agent.uid)
             })
           }
         }
@@ -249,8 +255,10 @@ export default function DashboardPage() {
   }, [isLoading, userEmail])
 
   useEffect(() => {
-    if (!isLoading) {
-      fetchCTMCalls()
+    if (!isLoading && userEmail) {
+      const override = pendingOverrideRef.current
+      pendingOverrideRef.current = null
+      fetchCTMCalls(override || undefined)
     }
   }, [timeRange, customStartDate, customEndDate, selectedAgentUid, selectedGroup])
 
@@ -266,6 +274,7 @@ export default function DashboardPage() {
     setSelectedGroup(groupId)
     setSelectedAgent('all')
     setSelectedAgentUid(null)
+    pendingOverrideRef.current = { groupId }
     fetchCTMCalls({ groupId })
   }
 
@@ -276,11 +285,13 @@ export default function DashboardPage() {
     if (agent?.uid) {
       setSelectedGroup('all')
     }
+    pendingOverrideRef.current = agent?.uid ? { agentUid: agent.uid } : null
     fetchCTMCalls({ agentUid: agent?.uid || undefined })
   }
 
   const handleSyncNow = async () => {
     setIsRefreshing(true)
+    pendingOverrideRef.current = null
     try {
       await fetchCTMCalls()
     } finally {
