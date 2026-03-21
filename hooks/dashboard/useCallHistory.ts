@@ -130,20 +130,23 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
       if (mode === 'initial') {
         if (data.fromCache && incoming.length > 0) {
           setAllCalls(incoming)
-        }
-        const pollRes = await fetch(`/api/calls?mode=delta&limit=200${agentIdFilter ? `&agentId=${encodeURIComponent(agentIdFilter)}` : ''}`)
-        if (pollRes.ok) {
-          const pollData = await pollRes.json()
-          const newCalls: Call[] = dedupeCalls(pollData.calls || [])
-          if (newCalls.length > 0) mergeNewCalls(newCalls)
-          else {
-            const allRes = await fetch(`/api/calls?limit=200&hours=168${agentIdFilter ? `&agentId=${encodeURIComponent(agentIdFilter)}` : ''}`)
-            if (allRes.ok) {
-              const allData = await allRes.json()
-              const allCalls: Call[] = dedupeCalls(allData.calls || [])
-              setAllCalls(allCalls)
-            }
+          const pollRes = await fetch(`/api/calls?mode=delta&limit=200${agentIdFilter ? `&agentId=${encodeURIComponent(agentIdFilter)}` : ''}`)
+          if (pollRes.ok) {
+            const pollData = await pollRes.json()
+            const newCalls: Call[] = dedupeCalls(pollData.calls || [])
+            if (newCalls.length > 0) mergeNewCalls(newCalls)
           }
+        } else {
+          const [deltaRes, fullRes] = await Promise.all([
+            fetch(`/api/calls?mode=delta&limit=200${agentIdFilter ? `&agentId=${encodeURIComponent(agentIdFilter)}` : ''}`),
+            fetch(`/api/calls?limit=200&hours=168${agentIdFilter ? `&agentId=${encodeURIComponent(agentIdFilter)}` : ''}`),
+          ])
+          const deltaData = deltaRes.ok ? await deltaRes.json() : null
+          const fullData = fullRes.ok ? await fullRes.json() : null
+          const deltaCalls: Call[] = dedupeCalls(deltaData?.calls || [])
+          const fullCalls: Call[] = dedupeCalls(fullData?.calls || [])
+          if (deltaCalls.length > 0) setAllCalls(deltaCalls)
+          else if (fullCalls.length > 0) setAllCalls(fullCalls)
         }
       } else {
         if (incoming.length > 0) mergeNewCalls(incoming)

@@ -112,18 +112,20 @@ export function useDashboard(): UseDashboardReturn {
   useEffect(() => {
     const init = async () => {
       try {
-        const sessionRes = await fetch('/api/auth/session')
+        const [sessionRes, permsRes, agentsRes, settingsRes] = await Promise.all([
+          fetch('/api/auth/session'),
+          fetch('/api/users/permissions'),
+          fetch('/api/ctm/agents'),
+          fetch('/api/users/settings'),
+        ])
+
         if (!sessionRes.ok) {
           window.location.href = '/'
           return
         }
+
         const sessionData = await sessionRes.json()
         setUserEmail(sessionData.email)
-
-        const [permsRes, agentsRes] = await Promise.all([
-          fetch('/api/users/permissions'),
-          fetch('/api/ctm/agents'),
-        ])
 
         let isAdmin = false
         let assignedGroupId: string | null = null
@@ -140,23 +142,20 @@ export function useDashboard(): UseDashboardReturn {
           setUserGroups(agentsData.userGroups || [])
         }
 
-        if (!isAdmin) {
-          const settingsRes = await fetch('/api/users/settings')
-          if (settingsRes.ok) {
-            const settingsData = await settingsRes.json()
-            const settings = settingsData.settings || {}
-            assignedGroupId = settings.ctm_user_group_id || null
-            assignedAgentId = settings.ctm_agent_id || null
+        if (settingsRes.ok && !isAdmin) {
+          const settingsData = await settingsRes.json()
+          const settings = settingsData.settings || {}
+          assignedGroupId = settings.ctm_user_group_id || null
+          assignedAgentId = settings.ctm_agent_id || null
 
-            if (assignedAgentId) {
-              setSelectedAgent(assignedAgentId)
-              setSelectedAgentUid(Number(assignedAgentId))
-              setSelectedGroup('all')
-            } else if (assignedGroupId) {
-              setSelectedGroup(String(assignedGroupId))
-              setSelectedAgent('all')
-              setSelectedAgentUid(null)
-            }
+          if (assignedAgentId) {
+            setSelectedAgent(assignedAgentId)
+            setSelectedAgentUid(Number(assignedAgentId))
+            setSelectedGroup('all')
+          } else if (assignedGroupId) {
+            setSelectedGroup(String(assignedGroupId))
+            setSelectedAgent('all')
+            setSelectedAgentUid(null)
           }
         }
 

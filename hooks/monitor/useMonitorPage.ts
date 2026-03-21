@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Call } from "@/lib/ctm"
 import { useLiveAnalysis } from "@/hooks/monitor"
 import { extractGroup, KNOWN_GROUPS } from "@/lib/monitor/helpers"
@@ -34,7 +34,6 @@ export function useMonitorPage(): UseMonitorPageReturn {
   const [callsError, setCallsError] = useState<string | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string>("All")
   const [pollingInterval] = useState(5)
-  const autoStartDoneRef = useRef(false)
 
   const {
     isMonitoring,
@@ -88,24 +87,20 @@ export function useMonitorPage(): UseMonitorPageReturn {
     return () => clearInterval(interval)
   }, [fetchActiveCalls, pollingInterval])
 
-  useEffect(() => {
-    if (!isMonitoring && selectedCallData && !autoStartDoneRef.current) {
-      autoStartDoneRef.current = true
-      startMonitoring(selectedCallData.id)
-    }
-  }, [isMonitoring, selectedCallData, startMonitoring])
-
   const handleStartMonitoring = useCallback(async () => {
-    autoStartDoneRef.current = true
-    await startMonitoring(selectedCallId || undefined)
-  }, [startMonitoring, selectedCallId])
+    const callIdToUse = selectedCallId || selectedCallData?.id
+    if (!callIdToUse) {
+      setCallsError('Please select a call first')
+      return
+    }
+    await startMonitoring(callIdToUse)
+  }, [selectedCallId, selectedCallData, startMonitoring])
 
   const handleStopMonitoring = useCallback(() => {
     stopMonitoring()
   }, [stopMonitoring])
 
   const handleSelectCall = useCallback((call: Call) => {
-    autoStartDoneRef.current = false
     setSelectedCallId(call.id)
     setSelectedCallData(call)
     if (isMonitoring) {

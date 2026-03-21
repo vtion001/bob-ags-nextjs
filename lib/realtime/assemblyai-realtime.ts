@@ -344,22 +344,24 @@ export class AssemblyAIRealtime {
   stop(): void {
     this.isManualStop = true;
 
-    if (this.ws) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify({ type: "Terminate" }));
       } catch {
         // ignore
       }
       setTimeout(() => {
-        if (this.ws) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           try {
             this.ws.close();
           } catch {
             /* ignore */
           }
-          this.ws = null;
         }
+        this.ws = null;
       }, 1000);
+    } else {
+      this.ws = null;
     }
 
     if (this.processor) {
