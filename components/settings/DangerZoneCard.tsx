@@ -8,8 +8,8 @@ interface DangerZoneCardProps {
 
 export default function DangerZoneCard({ onClearCredentials }: DangerZoneCardProps) {
   return (
-    <Card className="p-6 border-red-200">
-      <h2 className="text-lg font-bold text-red-600 mb-4">Danger Zone</h2>
+    <Card className="p-6 border-navy-300">
+      <h2 className="text-lg font-bold text-navy-900 mb-4">Danger Zone</h2>
       <p className="text-navy-600 mb-4">
         Clear all stored credentials. This action cannot be undone.
       </p>
@@ -17,7 +17,7 @@ export default function DangerZoneCard({ onClearCredentials }: DangerZoneCardPro
         variant="secondary"
         size="md"
         onClick={onClearCredentials}
-        className="text-red-600 border-red-300 hover:bg-red-50"
+        className="text-navy-700 border-navy-300 hover:bg-navy-50"
       >
         Clear All Credentials
       </Button>

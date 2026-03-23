@@ -28,7 +28,7 @@ function AssignmentStatusBadge({
 }) {
   if (ctmAgentId) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium">
+      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-navy-100 text-navy-800 text-xs font-medium">
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
@@ -38,7 +38,7 @@ function AssignmentStatusBadge({
   }
   if (ctmUserGroupId) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-navy-200 text-navy-800 text-xs font-medium">
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
@@ -47,7 +47,7 @@ function AssignmentStatusBadge({
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-50 text-red-700 text-xs font-medium">
+      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-navy-100 text-navy-700 text-xs font-medium">
       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
@@ -91,20 +91,20 @@ export default function CTMAssignmentsCard({
 
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-red-50 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-red-700">{needsAssignment.length}</div>
-          <div className="text-xs text-red-600 font-medium">Need Assignment</div>
-          <div className="text-xs text-red-500 mt-1">No calls visible</div>
+        <div className="bg-navy-100 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-navy-700">{needsAssignment.length}</div>
+          <div className="text-xs text-navy-600 font-medium">Need Assignment</div>
+          <div className="text-xs text-navy-500 mt-1">No calls visible</div>
         </div>
-        <div className="bg-green-50 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-green-700">{hasAgentAssignment.length}</div>
-          <div className="text-xs text-green-600 font-medium">Agent Linked</div>
-          <div className="text-xs text-green-500 mt-1">See own calls</div>
+        <div className="bg-navy-50 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-navy-700">{hasAgentAssignment.length}</div>
+          <div className="text-xs text-navy-600 font-medium">Agent Linked</div>
+          <div className="text-xs text-navy-500 mt-1">See own calls</div>
         </div>
-        <div className="bg-blue-50 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-blue-700">{hasGroupAssignment.length}</div>
-          <div className="text-xs text-blue-600 font-medium">Group Linked</div>
-          <div className="text-xs text-blue-500 mt-1">See group calls</div>
+        <div className="bg-navy-50 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-navy-700">{hasGroupAssignment.length}</div>
+          <div className="text-xs text-navy-600 font-medium">Group Linked</div>
+          <div className="text-xs text-navy-500 mt-1">See group calls</div>
         </div>
       </div>
 
@@ -134,9 +134,9 @@ export default function CTMAssignmentsCard({
                   </td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      assignment.role === 'admin' ? 'bg-amber-100 text-amber-700' :
-                      assignment.role === 'manager' ? 'bg-blue-100 text-blue-700' :
-                      'bg-slate-100 text-slate-600'
+                      assignment.role === 'admin' ? 'bg-navy-900 text-white' :
+                      assignment.role === 'manager' ? 'bg-navy-700 text-white' :
+                      'bg-navy-200 text-navy-800'
                     }`}>
                       {assignment.role}
                     </span>
@@ -227,8 +227,8 @@ export default function CTMAssignmentsCard({
         </div>
       )}
 
-      <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-        <p className="text-sm text-amber-700">
+      <div className="mt-4 p-3 bg-navy-50 border border-navy-200 rounded-lg">
+        <p className="text-sm text-navy-700">
           <strong>How it works:</strong> Assigning a CTM agent restricts a user to only see calls from that specific agent. Assigning a group gives them access to all calls from agents in that group. Users without assignment see no calls in live monitoring.
         </p>
       </div>

@@ -65,7 +65,7 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+        <div className="mb-6 p-4 bg-navy-100 border border-navy-300 rounded-lg text-navy-700">
           {error}
         </div>
       )}
