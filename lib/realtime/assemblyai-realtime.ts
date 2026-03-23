@@ -1,19 +1,11 @@
+import { StreamingTranscriber } from 'assemblyai'
 import { RealtimeTranscript, RealtimeInsight, LiveCallState } from './types'
-import {
-  RUBRIC_KEYWORDS,
-  INSURANCE_PATTERNS,
-  STATE_PATTERNS,
-  NAME_PATTERNS,
-} from './constants'
-import { detectSentiment, recalculateScore, getCriterionName, analyzeTextForInsights } from './analyzer'
-
-interface AAIRealtimeMessage {
-  type: string;
-  [key: string]: unknown;
-}
+import { analyzeTextForInsights } from './analyzer'
 
 export class AssemblyAIRealtime {
-  private ws: WebSocket | null = null;
+  private static instanceCount = 0;
+  private instanceId: number;
+  private transcriber: StreamingTranscriber | null = null;
   private mediaStream: MediaStream | null = null;
   private audioContext: AudioContext | null = null;
   private microphone: MediaStreamAudioSourceNode | null = null;
@@ -24,17 +16,11 @@ export class AssemblyAIRealtime {
   private onStateChange: (s: Partial<LiveCallState>) => void;
   private onError: (e: Error) => void;
   private onClose: () => void;
-  private state: Partial<LiveCallState> = {};
   private startTime = 0;
-  private turnCount = 0;
-  private lastSpeaker = "";
-  private apiKey: string;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 3;
-  private isManualStop = false;
-  private isReconnecting = false;
-  private bufferQueue: Int16Array[] = [];
-  private sessionBegun = false;
+  private state: any = {};
+  private bufferFlushInterval: ReturnType<typeof setInterval> | null = null;
+  private audioBuffer: Int16Array[] = [];
+  private flushAudioBuffer: () => void = () => {};
 
   constructor(opts: {
     apiKey: string;
@@ -44,12 +30,14 @@ export class AssemblyAIRealtime {
     onError: (e: Error) => void;
     onClose: () => void;
   }) {
-    this.apiKey = opts.apiKey;
+    AssemblyAIRealtime.instanceCount++;
+    this.instanceId = AssemblyAIRealtime.instanceCount;
     this.onTranscript = opts.onTranscript;
     this.onInsight = opts.onInsight;
     this.onStateChange = opts.onStateChange;
     this.onError = opts.onError;
     this.onClose = opts.onClose;
+    console.log(`[AAI] Instance #${this.instanceId} created`);
   }
 
   async connect(callId?: string): Promise<void> {
@@ -77,73 +65,130 @@ export class AssemblyAIRealtime {
 
     try {
       console.log('[AAI] Fetching temporary token from server...');
-      const tokenResponse = await fetch('/api/assemblyai/token', { method: 'POST' });
+      const tokenResponse = await fetch('/api/assemblyai/token', { method: 'GET' });
       if (!tokenResponse.ok) {
-        throw new Error('Failed to get AssemblyAI token');
+        const errorText = await tokenResponse.text();
+        throw new Error(`Failed to get AssemblyAI token: ${tokenResponse.status} ${errorText}`);
       }
-      const { token } = await tokenResponse.json();
-      console.log('[AAI] Got temporary token');
+      const data = await tokenResponse.json();
       
+      if (!data.token) {
+        throw new Error('No token in response. Response: ' + JSON.stringify(data));
+      }
+      const token = data.token;
+      console.log('[AAI] Got temporary token');
+
       this.audioContext = new AudioContext({ sampleRate: 48000 });
       await this.audioContext.resume();
 
-      const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=${this.sampleRate}&speech_model=u3-rt-pro&token=${token}`;
-      console.log('[AAI] Connecting to AssemblyAI WebSocket...');
-      
-      this.ws = new WebSocket(wsUrl);
-      this.ws.binaryType = "arraybuffer";
-
-      await new Promise<void>((resolve, reject) => {
-        if (!this.ws) {
-          reject(new Error('WebSocket not created'));
-          return;
-        }
-
-        let settled = false;
-        const settle = (fn: () => void) => {
-          if (!settled) {
-            settled = true;
-            fn();
-          }
-        };
-
-        this.ws.onopen = () => {
-          console.log('[AAI] WebSocket CONNECTED successfully');
-          settle(resolve);
-        };
-
-        this.ws.onerror = (error) => {
-          console.error('[AAI] WebSocket ERROR:', error);
-          settle(() => reject(new Error('WebSocket connection failed')));
-        };
-
-        this.ws.onclose = (event) => {
-          console.log('[AAI] WebSocket CLOSED during setup. Code:', event.code, 'Reason:', event.reason, 'WasClean:', event.wasClean);
-          if (!settled) {
-            settle(() => reject(new Error(`WebSocket closed: ${event.code} - ${event.reason || 'no reason'}`)));
-          }
-        };
-
-        setTimeout(() => {
-          if (!settled) {
-            settle(() => reject(new Error('WebSocket connection timeout')));
-          }
-        }, 10000);
-      }).catch((err) => {
-        console.error('[AAI] Promise rejected:', err.message);
-        this.onError(new Error(`Failed to connect to AssemblyAI: ${err.message}`));
-        return; // Stop execution
+      console.log('[AAI] Creating StreamingTranscriber...');
+      this.transcriber = new StreamingTranscriber({
+        token: token,
+        sampleRate: this.sampleRate,
+        speechModel: 'u3-rt-pro',
+        formatTurns: true,
       });
-      
-      // Only proceed if WebSocket is open
-      if (this.ws?.readyState !== WebSocket.OPEN) {
-        console.error('[AAI] WebSocket not open after Promise, state:', this.ws?.readyState);
-        return;
-      }
-      
-      console.log('[AAI] Promise resolved, WebSocket should be ready. State:', this.ws?.readyState);
+
+      let isReady = false;
+      let sessionId: string | null = null;
+
+      this.transcriber.on('open', (event) => {
+        console.log('[AAI] StreamingTranscriber OPEN. Session ID:', event.id);
+        sessionId = event.id;
+        this.startTime = Date.now();
+        isReady = true;
+        this.onStateChange({ isConnected: true, isRecording: true });
+      });
+
+      this.transcriber.on('turn', (event) => {
+        console.log('[AAI] Turn received:', event.transcript);
+        if (event.transcript) {
+          const now = Date.now();
+          const elapsed = Math.round((now - this.startTime) / 1000);
+          const transcriptText = event.transcript.trim();
+          
+          const transcript: RealtimeTranscript = {
+            text: transcriptText,
+            speaker: event.speaker_label || 'Agent',
+            timestamp: now,
+            confidence: event.end_of_turn_confidence ?? 1,
+            startTime: elapsed - Math.round(transcriptText.split(" ").length * 0.4),
+            endTime: elapsed,
+          };
+
+          this.onTranscript(transcript);
+          this.analyzeText(transcriptText, event.speaker_label || 'Agent', elapsed);
+        }
+      });
+
+      this.transcriber.on('error', (error) => {
+        console.error('[AAI] StreamingTranscriber ERROR:', error);
+        this.onError(new Error(`AssemblyAI streaming error: ${error.message}`));
+      });
+
+      this.transcriber.on('close', (code, reason) => {
+        console.log('[AAI] StreamingTranscriber CLOSED. Code:', code, 'Reason:', reason);
+        isReady = false;
+        this.onStateChange({ isConnected: false, isRecording: false });
+        this.onClose();
+      });
+
+      console.log('[AAI] Connecting to AssemblyAI...');
+      await this.transcriber.connect();
+      console.log('[AAI] connect() returned, waiting for open event...');
+
+      // Wait for the 'open' event before starting audio
+      await new Promise<void>((resolve) => {
+        const checkReady = () => {
+          if (isReady) {
+            console.log('[AAI] Session ready, waiting 5 seconds for socket to be fully ready...');
+            setTimeout(() => {
+              console.log('[AAI] Starting audio processor now');
+              resolve();
+            }, 5000);
+          } else {
+            setTimeout(checkReady, 50);
+          }
+        };
+        checkReady();
+      });
 
       this.microphone = this.audioContext.createMediaStreamSource(this.mediaStream);
+
+      const sendAudioSafe = (buffer: ArrayBufferLike) => {
+        if (!this.transcriber || !isReady) return;
+        try {
+          this.transcriber.sendAudio(buffer as ArrayBuffer);
+        } catch (err) {
+          console.warn('[AAI] sendAudio error (socket may not be ready):', err);
+        }
+      };
+
+      // Buffer audio to accumulate at least 50ms worth of samples before sending
+      // At 16kHz, 50ms = 800 samples
+      const minSamplesPerChunk = 800;
+      this.audioBuffer = [];
+      
+      this.flushAudioBuffer = () => {
+        if (this.audioBuffer.length === 0) return;
+        const totalSamples = this.audioBuffer.reduce((sum, arr) => sum + arr.length, 0);
+        if (totalSamples < minSamplesPerChunk) return;
+        
+        // Combine all buffers into one
+        const combined = new Int16Array(totalSamples);
+        let offset = 0;
+        for (const chunk of this.audioBuffer) {
+          combined.set(chunk, offset);
+          offset += chunk.length;
+        }
+        
+        console.log('[AAI] Sending buffered audio:', combined.length, 'samples (~' + (combined.length / 16).toFixed(0) + 'ms)');
+        sendAudioSafe(combined.buffer);
+        this.audioBuffer.length = 0;
+      };
+
+      // Set up interval to flush buffer every 50ms
+      this.bufferFlushInterval = setInterval(this.flushAudioBuffer, 50);
 
       let useWorklet = true;
       try {
@@ -153,13 +198,9 @@ export class AssemblyAIRealtime {
           numberOfOutputs: 0,
         });
         this.processor.port.onmessage = (event) => {
-          if (event.data.type === 'audio' && this.ws?.readyState === WebSocket.OPEN) {
+          if (event.data.type === 'audio' && this.transcriber && isReady) {
             const int16Array = new Int16Array(event.data.buffer);
-            console.log('[AAI] Sending audio chunk, bytes:', int16Array.length);
-            this.ws.send(int16Array);
-          } else if (event.data.type === 'audio') {
-            console.log('[AAI] Audio ready but WebSocket not open, queuing. State:', this.ws?.readyState);
-            this.bufferQueue.push(new Int16Array(event.data.buffer));
+            this.audioBuffer.push(int16Array);
           }
         };
         console.log('[AAI] Using AudioWorkletNode');
@@ -169,13 +210,11 @@ export class AssemblyAIRealtime {
         const bufferSize = 4096;
         this.processor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
         (this.processor as ScriptProcessorNode).onaudioprocess = (e: any) => {
+          if (!this.transcriber || !isReady) return;
           const inputData = e.inputBuffer.getChannelData(0);
           const downsampled = this.downsample(inputData, 48000, this.sampleRate);
-          if (this.ws?.readyState === WebSocket.OPEN) {
-            const int16Array = this.toInt16Array(downsampled);
-            console.log('[AAI] ScriptProcessor sending audio chunk, bytes:', int16Array.length);
-            this.ws.send(int16Array);
-          }
+          const int16Array = this.toInt16Array(downsampled);
+          this.audioBuffer.push(int16Array);
         };
         console.log('[AAI] Using ScriptProcessorNode');
       }
@@ -183,223 +222,9 @@ export class AssemblyAIRealtime {
       this.microphone.connect(this.processor);
       console.log('[AAI] Microphone connected to processor');
 
-      this.ws.onmessage = (event) => {
-        try {
-          const data: AAIRealtimeMessage =
-            typeof event.data === "string"
-              ? JSON.parse(event.data)
-              : JSON.parse(new TextDecoder().decode(event.data as ArrayBuffer));
-          this.handleMessage(data);
-        } catch { /* ignore parse errors */ }
-      };
-
-      this.ws.onerror = (error) => {
-        console.error('[AAI] WebSocket error:', error);
-        if (!this.isManualStop && !this.isReconnecting && this.reconnectAttempts < this.maxReconnectAttempts) {
-          this.reconnectAttempts++;
-          this.isReconnecting = true;
-          setTimeout(() => {
-            this.isReconnecting = false;
-            if (!this.isManualStop) this.attemptReconnect(callId);
-          }, 2000 * this.reconnectAttempts);
-        } else if (!this.isManualStop) {
-          this.onError(new Error("AssemblyAI WebSocket connection failed. Check your API key and internet connection."));
-        }
-      };
-
-      this.ws.onclose = (event) => {
-        console.log('[AAI] WebSocket closed. Code:', event.code, 'Reason:', event.reason, 'Clean:', event.wasClean);
-        this.ws = null; // Clear the closed WebSocket so reconnect can work
-        if (!this.isManualStop && this.reconnectAttempts < this.maxReconnectAttempts) {
-          this.reconnectAttempts++;
-          this.isReconnecting = true;
-          console.log(`[AAI] WebSocket closed, attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-          setTimeout(() => {
-            this.isReconnecting = false;
-            if (!this.isManualStop) this.attemptReconnect(callId);
-          }, 2000 * this.reconnectAttempts);
-        } else if (!this.isManualStop) {
-          console.log('[AAI] WebSocket closed, max reconnects reached');
-          this.onClose();
-        }
-      };
     } catch (err) {
       this.onError(new Error(`Failed to start live analysis: ${err instanceof Error ? err.message : "Unknown error"}`));
     }
-  }
-
-  private attemptReconnect(callId?: string): void {
-    if (this.isManualStop || this.ws) return;
-    try {
-      const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=${this.sampleRate}&speech_model=u3-rt-pro&token=${this.apiKey}`;
-      this.ws = new WebSocket(wsUrl);
-      this.ws.binaryType = "arraybuffer";
-
-      this.ws.onopen = () => {
-        this.startTime = Date.now();
-        this.sessionBegun = false;
-        this.isReconnecting = false;
-        this.onStateChange({ isConnected: true, isRecording: true });
-        this.flushBufferQueue();
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          let data: AAIRealtimeMessage;
-          if (typeof event.data === "string") {
-            data = JSON.parse(event.data);
-          } else {
-            const text = new TextDecoder().decode(event.data as ArrayBuffer);
-            data = JSON.parse(text);
-          }
-          this.handleMessage(data);
-        } catch (err) {
-          console.warn("[AAI] Reconnect parse error:", err);
-        }
-      };
-
-      this.ws.onerror = () => {
-        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          this.onError(new Error("AssemblyAI WebSocket reconnect failed"));
-        }
-      };
-
-      this.ws.onclose = () => {
-        if (!this.isManualStop && this.reconnectAttempts < this.maxReconnectAttempts) {
-          this.reconnectAttempts++;
-          console.log(`[AAI] Reconnect closed, attempting ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-          setTimeout(() => {
-            if (!this.isManualStop) this.attemptReconnect(callId);
-          }, 2000 * this.reconnectAttempts);
-        } else if (!this.isManualStop) {
-          this.onClose();
-        }
-      };
-    } catch {
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        this.onError(new Error("AssemblyAI WebSocket reconnect failed"));
-      }
-    }
-  }
-
-  private flushBufferQueue(): void {
-    for (const buffer of this.bufferQueue) {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send(buffer);
-      }
-    }
-    this.bufferQueue = [];
-  }
-
-  private handleMessage(data: AAIRealtimeMessage): void {
-    const msgType = data.type;
-    console.log('[AAI] Message received:', msgType);
-
-    if (msgType === "Begin") {
-      this.sessionBegun = true;
-      const sessionId = data.id as string | undefined;
-      this.onStateChange({ sessionId });
-      return;
-    }
-
-    if (msgType === "Turn") {
-      const transcriptText = (data.transcript as string | undefined)?.trim();
-      const isFormatted =
-        (data.turn_is_formatted as boolean | undefined) ?? false;
-
-      if (!transcriptText) return;
-
-      this.turnCount++;
-      const speakerLabel = data.speaker_label as string | undefined;
-      const speaker = this.resolveSpeaker(speakerLabel, transcriptText);
-      const now = Date.now();
-      const elapsed = Math.round((now - this.startTime) / 1000);
-
-      const transcript: RealtimeTranscript = {
-        text: transcriptText,
-        speaker,
-        timestamp: now,
-        confidence: 1,
-        startTime: elapsed - Math.round(transcriptText.split(" ").length * 0.4),
-        endTime: elapsed,
-      };
-
-      this.onTranscript(transcript);
-      this.analyzeText(transcriptText, speaker, elapsed);
-      return;
-    }
-
-    if (msgType === "PartialTurn") {
-      const partialText = (data.transcript as string | undefined)?.trim();
-      if (!partialText) return;
-      return;
-    }
-
-    if (msgType === "Termination") {
-      const audioDuration =
-        (data.audio_duration_seconds as number | undefined) ?? 0;
-      const sessionDuration =
-        (data.session_duration_seconds as number | undefined) ?? 0;
-      this.onStateChange({
-        audioDuration,
-        isConnected: false,
-        isRecording: false,
-      });
-      return;
-    }
-
-    if (msgType === "SessionBegins") {
-      return;
-    }
-  }
-
-  private resolveSpeaker(speakerLabel: string | undefined, text: string): string {
-    if (speakerLabel) {
-      const label = speakerLabel.toUpperCase();
-      if (label === "A" || label === "AGENT" || label === "SPK_00") {
-        return "Agent";
-      }
-      if (label === "B" || label === "CALLER" || label === "SPK_01") {
-        return "Caller";
-      }
-      return label;
-    }
-    return this.detectSpeakerFallback(text);
-  }
-
-  private detectSpeakerFallback(text: string): string {
-    const lower = text.toLowerCase();
-
-    if (
-      lower.includes("flyland") ||
-      lower.includes("thank you for calling") ||
-      lower.includes("my name is") ||
-      lower.includes("this is ") ||
-      lower.includes("how can i help") ||
-      lower.includes("what can i do for you") ||
-      lower.includes("hi ") ||
-      lower.includes("hello ")
-    ) {
-      return "Agent";
-    }
-
-    if (
-      lower.includes("i need") ||
-      lower.includes("i am") ||
-      lower.includes("i'm") ||
-      lower.includes("i was") ||
-      lower.includes("my husband") ||
-      lower.includes("my son") ||
-      lower.includes("my daughter") ||
-      lower.includes("my mom") ||
-      lower.includes("my dad")
-    ) {
-      return "Caller";
-    }
-
-    this.turnCount++;
-    const speaker = this.turnCount % 2 === 1 ? "Agent" : "Caller";
-    return speaker;
   }
 
   private analyzeText(text: string, speaker: string, elapsed: number): void {
@@ -440,26 +265,15 @@ export class AssemblyAIRealtime {
   }
 
   stop(): void {
-    this.isManualStop = true;
-
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      try {
-        this.ws.send(JSON.stringify({ type: "Terminate" }));
-      } catch {
-        // ignore
-      }
-      setTimeout(() => {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-          try {
-            this.ws.close();
-          } catch {
-            /* ignore */
-          }
-        }
-        this.ws = null;
-      }, 1000);
-    } else {
-      this.ws = null;
+    if (this.bufferFlushInterval) {
+      clearInterval(this.bufferFlushInterval);
+      this.bufferFlushInterval = null;
+    }
+    this.flushAudioBuffer();
+    
+    if (this.transcriber) {
+      this.transcriber.close();
+      this.transcriber = null;
     }
 
     if (this.processor) {

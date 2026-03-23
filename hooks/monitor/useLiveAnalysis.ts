@@ -79,6 +79,7 @@ export function useLiveAnalysis(options: UseLiveAnalysisOptions = {}): UseLiveAn
       });
       setRecentInsights([]);
 
+      console.log('[LiveAnalysis] Creating AssemblyAIRealtime instance...');
       const rt = new AssemblyAIRealtime({
         apiKey,
         onTranscript: (t: RealtimeTranscript) => {
@@ -98,12 +99,14 @@ export function useLiveAnalysis(options: UseLiveAnalysisOptions = {}): UseLiveAn
           setLiveState((prev) => ({ ...prev, ...s }));
         },
         onError: (e: Error) => {
+          console.error('[LiveAnalysis] onError:', e.message);
           setError(e.message);
           setIsRecording(false);
           setIsMonitoring(false);
           onErrorRef.current?.(e.message);
         },
         onClose: () => {
+          console.log('[LiveAnalysis] onClose called');
           setIsRecording(false);
           setIsMonitoring(false);
           onCloseRef.current?.();
@@ -111,10 +114,13 @@ export function useLiveAnalysis(options: UseLiveAnalysisOptions = {}): UseLiveAn
       });
 
       realtimeRef.current = rt;
+      console.log('[LiveAnalysis] Calling rt.connect()...');
 
       try {
         await rt.connect(callId || undefined);
+        console.log('[LiveAnalysis] rt.connect() completed successfully');
       } catch (err) {
+        console.error('[LiveAnalysis] rt.connect() threw error:', err);
         const errMsg = err instanceof Error ? err.message : "Failed to start live analysis. Please check your microphone and API key.";
         setError(errMsg);
         setIsMonitoring(false);

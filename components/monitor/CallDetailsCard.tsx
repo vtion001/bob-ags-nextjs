@@ -22,16 +22,19 @@ interface DetailItem {
 }
 
 export default function CallDetailsCard({ call, liveState, formatDuration }: CallDetailsCardProps) {
+  const callerLocation = liveState.callerLocation || (call?.city || call?.state ? [call?.city, call?.state].filter(Boolean).join(', ') : null)
+  const insurance = liveState.insurance || call?.analysis?.detected_insurance || null
+
   const items: DetailItem[] = [
     {
       label: "Agent",
-      value: call?.agent?.name || liveState.callerName || null,
+      value: call?.agent?.name || null,
       icon: "A",
       highlight: true,
     },
     {
       label: "Tracking Number",
-      value: call?.trackingNumber || liveState.callerPhone || null,
+      value: call?.trackingNumber || null,
       icon: "T",
     },
     {
@@ -46,17 +49,17 @@ export default function CallDetailsCard({ call, liveState, formatDuration }: Cal
     },
     {
       label: "Source / Label",
-      value: call?.trackingLabel || call?.source || null,
+      value: call?.trackingLabel || null,
       icon: "S",
     },
     {
       label: "Caller Location",
-      value: liveState.callerLocation || null,
+      value: callerLocation,
       icon: "L",
     },
     {
       label: "Insurance Type",
-      value: liveState.insurance || null,
+      value: insurance,
       icon: "I",
     },
     {
