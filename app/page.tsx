@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Card from '@/components/ui/Card'
+import AuthMessageHandler from '@/components/AuthMessageHandler'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -28,6 +29,9 @@ export default function LoginPage() {
     }
     checkUser()
   }, [])
+
+  const handleSetError = (msg: string) => setError(msg)
+  const handleSetPending = (msg: string) => setMessage(msg)
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -113,6 +117,10 @@ export default function LoginPage() {
               {message}
             </div>
           )}
+
+          <Suspense fallback={null}>
+            <AuthMessageHandler onError={handleSetError} onPending={handleSetPending} />
+          </Suspense>
 
           <Card hoverable={false} className="mb-6 !border-0 shadow-none">
             <form onSubmit={handleSignIn} className="space-y-4">

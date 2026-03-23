@@ -7,7 +7,6 @@ import { Call } from "@/lib/ctm"
 import { RUBRIC_CRITERIA } from "@/lib/ai"
 import { useMonitorPage } from "@/hooks/monitor/useMonitorPage"
 import { useLiveAIInsights } from "@/hooks/monitor/useLiveAIInsights"
-import AgentAssistantPanel from "@/components/call-detail/AgentAssistantPanel"
 import NotesDispositionPanel from "@/components/call-detail/NotesDispositionPanel"
 import LiveAIInsightsPanel from "@/components/monitor/LiveAIInsightsPanel"
 import {
@@ -242,13 +241,6 @@ export default function MonitorPage() {
                     onToggle={() => {}}
                   />
                 </Card>
-
-                <AgentAssistantPanel
-                  aiInsights={aiInsights}
-                  transcript={liveState.transcript || []}
-                  callerName={liveState.callerName || selectedCallData?.name}
-                  isCrisis={isCrisis}
-                />
               </div>
 
               <div className="xl:col-span-5 space-y-4">
