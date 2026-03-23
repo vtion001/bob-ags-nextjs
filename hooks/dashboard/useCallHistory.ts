@@ -201,10 +201,13 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
     let results = [...allCalls]
 
     if (searchQuery) {
-      results = results.filter(call =>
-        call.phone.includes(searchQuery) ||
-        call.callerNumber?.includes(searchQuery)
-      )
+      const normalizedQuery = searchQuery.replace(/\D/g, '')
+      results = results.filter(call => {
+        const normalizedPhone = call.phone.replace(/\D/g, '')
+        const normalizedCaller = call.callerNumber?.replace(/\D/g, '') || ''
+        return normalizedPhone.includes(normalizedQuery) ||
+               normalizedCaller.includes(normalizedQuery)
+      })
     }
 
     if (analyzedOnly) {
