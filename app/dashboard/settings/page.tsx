@@ -3,7 +3,6 @@
 import React from 'react'
 import { useSettings } from '@/hooks/settings/useSettings'
 import {
-  CTMIntegrationsCard,
   AIAnalysisCard,
   SyncSettingsCard,
   PreferencesCard,
@@ -70,13 +69,6 @@ export default function SettingsPage() {
           {error}
         </div>
       )}
-
-      <CTMIntegrationsCard
-        settings={settings}
-        setSettings={setSettings}
-        isSaving={isSaving}
-        onSave={handleSave}
-      />
 
       <AIAnalysisCard
         settings={settings}

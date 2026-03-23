@@ -98,7 +98,8 @@ export default function CallTable({ calls, onCallClick }: CallTableProps) {
         </thead>
         <tbody className="divide-y divide-navy-100">
           {calls.map((call, index) => {
-            const badge = getScoreBadge(call.score)
+            const score = call.analysis?.score ?? call.score
+            const badge = getScoreBadge(score)
             return (
               <tr
                 key={`${call.id}-${index}`}
@@ -140,7 +141,7 @@ export default function CallTable({ calls, onCallClick }: CallTableProps) {
                 </td>
                 <td className="px-5 py-4">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badge.className}`}>
-                    {call.score !== undefined && call.score !== null ? Math.round(call.score) : badge.label}
+                    {score !== undefined && score !== null ? Math.round(score) : badge.label}
                   </span>
                 </td>
                 <td className="px-5 py-4">
