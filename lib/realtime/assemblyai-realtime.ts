@@ -87,6 +87,8 @@ export class AssemblyAIRealtime {
         sampleRate: this.sampleRate,
         speechModel: 'u3-rt-pro',
         speakerLabels: true,
+        maxSpeakers: 2,
+        prompt: "This is a phone call. There are two speakers: the insurance agent and the caller.",
       });
 
       let isReady = false;
@@ -101,7 +103,11 @@ export class AssemblyAIRealtime {
       });
 
       this.transcriber.on('turn', (event) => {
-        console.log('[AAI] Turn received:', event.transcript);
+        console.log('[AAI] Turn received:', {
+          transcript: event.transcript,
+          speaker_label: event.speaker_label,
+          confidence: event.end_of_turn_confidence,
+        });
         if (event.transcript) {
           const now = Date.now();
           const elapsed = Math.round((now - this.startTime) / 1000);
