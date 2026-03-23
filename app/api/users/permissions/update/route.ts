@@ -45,17 +45,48 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot modify admin user' }, { status: 400 })
     }
 
-    const { data, error } = await supabase
+    // Try UPDATE first, then INSERT if no rows affected
+    const { data: existing, error: fetchError } = await supabase
       .from('user_roles')
-      .upsert({
-        user_id: targetUserId,
-        email: email,
-        role: role,
-        permissions: permissions,
-        updated_at: new Date().toISOString(),
-      })
-      .select()
+      .select('id')
+      .eq('user_id', targetUserId)
       .single()
+
+    let data, error
+
+    if (existing) {
+      // Update existing record
+      const result = await supabase
+        .from('user_roles')
+        .update({
+          email,
+          role,
+          permissions,
+          approved: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', targetUserId)
+        .select()
+        .single()
+      data = result.data
+      error = result.error
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: targetUserId,
+          email,
+          role,
+          permissions,
+          approved: true,
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
+      data = result.data
+      error = result.error
+    }
 
     if (error) {
       console.error('Error updating user role:', error)

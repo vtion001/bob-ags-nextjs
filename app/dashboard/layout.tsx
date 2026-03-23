@@ -56,6 +56,12 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { email, role, permissions, isLoading } = useAuth()
 
+  React.useEffect(() => {
+    if (!isLoading && role === 'viewer' && pathname === '/dashboard') {
+      window.location.href = '/dashboard/monitor'
+    }
+  }, [isLoading, role, pathname])
+
   const getFilteredNavItems = (): NavItem[] => {
     return allNavItems.filter(item => {
       if (item.permission === 'settings') return permissions.can_manage_settings || role === 'admin'

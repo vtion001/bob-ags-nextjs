@@ -3,6 +3,12 @@ import { Call } from "@/lib/ctm"
 import { useLiveAnalysis } from "@/hooks/monitor"
 import { extractGroup, KNOWN_GROUPS } from "@/lib/monitor/helpers"
 
+interface UseMonitorPageOptions {
+  role?: 'admin' | 'manager' | 'viewer'
+  assignedAgentId?: string | null
+  onNewCallAutoStart?: (call: Call) => void
+}
+
 interface UseMonitorPageReturn {
   activeCalls: Call[]
   selectedCallId: string | null
@@ -25,9 +31,12 @@ interface UseMonitorPageReturn {
   byCategory: (category: string) => any[]
   isCrisis: boolean
   pollingInterval: number
+  isViewerWithAssignment: boolean
+  hasAgentAssignment: boolean
 }
 
-export function useMonitorPage(): UseMonitorPageReturn {
+export function useMonitorPage(options?: UseMonitorPageOptions): UseMonitorPageReturn {
+  const { role = 'viewer', assignedAgentId = null, onNewCallAutoStart } = options || {}
   const [activeCalls, setActiveCalls] = useState<Call[]>([])
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
   const [selectedCallData, setSelectedCallData] = useState<Call | null>(null)
@@ -35,8 +44,31 @@ export function useMonitorPage(): UseMonitorPageReturn {
   const [selectedGroup, setSelectedGroup] = useState<string>("All")
   const [pollingInterval] = useState(5)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
+  const previousCallsRef = useRef<Call[]>([])
+  const hasAutoStartedRef = useRef(false)
+  const isViewerWithAssignment = role === 'viewer' && !!assignedAgentId
+  const hasAgentAssignment = !!assignedAgentId
+
+  const playBeep = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      oscillator.frequency.value = 880
+      oscillator.type = 'sine'
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.3)
+    } catch (e) {
+      console.warn('Audio beep failed:', e)
+    }
+  }, [])
 
   const handleClose = useCallback(() => {
+    hasAutoStartedRef.current = false
     setSelectedCallId(null)
     setSelectedCallData(null)
   }, [])
@@ -81,11 +113,27 @@ export function useMonitorPage(): UseMonitorPageReturn {
       if (!res.ok) throw new Error("Failed to fetch")
       const data = await res.json()
       const calls: Call[] = Array.isArray(data) ? data : data.calls || []
+
+      const prevCallIds = new Set(previousCallsRef.current.map(c => c.id))
+      const newCalls = calls.filter(c => !prevCallIds.has(c.id))
+
+      if (newCalls.length > 0 && isViewerWithAssignment && !isMonitoring && !hasAutoStartedRef.current) {
+        const newCall = newCalls[0]
+        hasAutoStartedRef.current = true
+        playBeep()
+        setSelectedCallId(newCall.id)
+        setSelectedCallData(newCall)
+        setTimeout(() => {
+          startMonitoring(newCall.id)
+        }, 100)
+      }
+
+      previousCallsRef.current = calls
       setActiveCalls(calls)
     } catch (err) {
       setCallsError("Failed to load active calls")
     }
-  }, [])
+  }, [isViewerWithAssignment, isMonitoring, startMonitoring, playBeep])
 
   useEffect(() => {
     if (isMonitoring) {
@@ -116,6 +164,7 @@ export function useMonitorPage(): UseMonitorPageReturn {
   }, [selectedCallId, selectedCallData, startMonitoring])
 
   const handleStopMonitoring = useCallback(() => {
+    hasAutoStartedRef.current = false
     stopMonitoring()
   }, [stopMonitoring])
 
@@ -163,5 +212,7 @@ export function useMonitorPage(): UseMonitorPageReturn {
     byCategory,
     isCrisis,
     pollingInterval,
+    isViewerWithAssignment,
+    hasAgentAssignment,
   }
 }
