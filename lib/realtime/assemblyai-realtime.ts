@@ -76,8 +76,73 @@ export class AssemblyAIRealtime {
     }
 
     try {
+      console.log('[AAI] Fetching temporary token from server...');
+      const tokenResponse = await fetch('/api/assemblyai/token', { method: 'POST' });
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to get AssemblyAI token');
+      }
+      const { token } = await tokenResponse.json();
+      console.log('[AAI] Got temporary token');
+      
       this.audioContext = new AudioContext({ sampleRate: 48000 });
       await this.audioContext.resume();
+
+      const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=${this.sampleRate}&speech_model=u3-rt-pro&token=${token}`;
+      console.log('[AAI] Connecting to AssemblyAI WebSocket...');
+      
+      this.ws = new WebSocket(wsUrl);
+      this.ws.binaryType = "arraybuffer";
+
+      await new Promise<void>((resolve, reject) => {
+        if (!this.ws) {
+          reject(new Error('WebSocket not created'));
+          return;
+        }
+
+        let settled = false;
+        const settle = (fn: () => void) => {
+          if (!settled) {
+            settled = true;
+            fn();
+          }
+        };
+
+        this.ws.onopen = () => {
+          console.log('[AAI] WebSocket CONNECTED successfully');
+          settle(resolve);
+        };
+
+        this.ws.onerror = (error) => {
+          console.error('[AAI] WebSocket ERROR:', error);
+          settle(() => reject(new Error('WebSocket connection failed')));
+        };
+
+        this.ws.onclose = (event) => {
+          console.log('[AAI] WebSocket CLOSED during setup. Code:', event.code, 'Reason:', event.reason, 'WasClean:', event.wasClean);
+          if (!settled) {
+            settle(() => reject(new Error(`WebSocket closed: ${event.code} - ${event.reason || 'no reason'}`)));
+          }
+        };
+
+        setTimeout(() => {
+          if (!settled) {
+            settle(() => reject(new Error('WebSocket connection timeout')));
+          }
+        }, 10000);
+      }).catch((err) => {
+        console.error('[AAI] Promise rejected:', err.message);
+        this.onError(new Error(`Failed to connect to AssemblyAI: ${err.message}`));
+        return; // Stop execution
+      });
+      
+      // Only proceed if WebSocket is open
+      if (this.ws?.readyState !== WebSocket.OPEN) {
+        console.error('[AAI] WebSocket not open after Promise, state:', this.ws?.readyState);
+        return;
+      }
+      
+      console.log('[AAI] Promise resolved, WebSocket should be ready. State:', this.ws?.readyState);
+
       this.microphone = this.audioContext.createMediaStreamSource(this.mediaStream);
 
       let useWorklet = true;
@@ -87,16 +152,16 @@ export class AssemblyAIRealtime {
           numberOfInputs: 1,
           numberOfOutputs: 0,
         });
-      this.processor.port.onmessage = (event) => {
-        if (event.data.type === 'audio' && this.ws?.readyState === WebSocket.OPEN) {
-          const int16Array = new Int16Array(event.data.buffer);
-          console.log('[AAI] Sending audio chunk, bytes:', int16Array.length);
-          this.ws.send(int16Array);
-        } else if (event.data.type === 'audio') {
-          console.log('[AAI] Audio ready but WebSocket not open, queuing. State:', this.ws?.readyState);
-          this.bufferQueue.push(new Int16Array(event.data.buffer));
-        }
-      };
+        this.processor.port.onmessage = (event) => {
+          if (event.data.type === 'audio' && this.ws?.readyState === WebSocket.OPEN) {
+            const int16Array = new Int16Array(event.data.buffer);
+            console.log('[AAI] Sending audio chunk, bytes:', int16Array.length);
+            this.ws.send(int16Array);
+          } else if (event.data.type === 'audio') {
+            console.log('[AAI] Audio ready but WebSocket not open, queuing. State:', this.ws?.readyState);
+            this.bufferQueue.push(new Int16Array(event.data.buffer));
+          }
+        };
         console.log('[AAI] Using AudioWorkletNode');
       } catch (err) {
         console.warn('[AAI] AudioWorklet not supported, falling back to ScriptProcessorNode:', err);
@@ -116,21 +181,7 @@ export class AssemblyAIRealtime {
       }
 
       this.microphone.connect(this.processor);
-
-      const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=${this.sampleRate}&speech_model=universal&token=${this.apiKey}`;
-      this.ws = new WebSocket(wsUrl);
-      this.ws.binaryType = "arraybuffer";
-
-      this.ws.onopen = () => {
-        console.log('[AAI] WebSocket connected');
-        this.startTime = Date.now();
-        this.reconnectAttempts = 0;
-        this.isReconnecting = false;
-        this.sessionBegun = false;
-        this.onStateChange({ isConnected: true, isRecording: true, duration: 0 });
-        if (callId) this.onStateChange({ callerPhone: callId });
-        this.flushBufferQueue();
-      };
+      console.log('[AAI] Microphone connected to processor');
 
       this.ws.onmessage = (event) => {
         try {
@@ -142,7 +193,8 @@ export class AssemblyAIRealtime {
         } catch { /* ignore parse errors */ }
       };
 
-      this.ws.onerror = () => {
+      this.ws.onerror = (error) => {
+        console.error('[AAI] WebSocket error:', error);
         if (!this.isManualStop && !this.isReconnecting && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++;
           this.isReconnecting = true;
@@ -156,6 +208,8 @@ export class AssemblyAIRealtime {
       };
 
       this.ws.onclose = (event) => {
+        console.log('[AAI] WebSocket closed. Code:', event.code, 'Reason:', event.reason, 'Clean:', event.wasClean);
+        this.ws = null; // Clear the closed WebSocket so reconnect can work
         if (!this.isManualStop && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++;
           this.isReconnecting = true;
@@ -177,7 +231,7 @@ export class AssemblyAIRealtime {
   private attemptReconnect(callId?: string): void {
     if (this.isManualStop || this.ws) return;
     try {
-      const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=${this.sampleRate}&speech_model=universal&token=${this.apiKey}`;
+      const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=${this.sampleRate}&speech_model=u3-rt-pro&token=${this.apiKey}`;
       this.ws = new WebSocket(wsUrl);
       this.ws.binaryType = "arraybuffer";
 
