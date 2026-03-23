@@ -93,6 +93,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const body = await request.json().catch(() => null)
+
+    if (body?.calls && Array.isArray(body.calls)) {
+      const callsWithUser = body.calls.map((c: Record<string, unknown>) => ({
+        ctm_call_id: c.id,
+        user_id: user.id,
+        phone: (c.phone as string) || '',
+        direction: (c.direction as string) || 'inbound',
+        duration: (c.duration as number) || 0,
+        status: (c.status as string) || 'completed',
+        timestamp: (c.timestamp as string) || new Date().toISOString(),
+        caller_number: (c.callerNumber as string) || null,
+        tracking_number: (c.trackingNumber as string) || null,
+        tracking_label: (c.trackingLabel as string) || null,
+        source: (c.source as string) || null,
+        source_id: (c.sourceId as string) || null,
+        agent_id: (c.agentId as string) || null,
+        agent_name: (c.agentName as string) || null,
+        recording_url: (c.recordingUrl as string) || null,
+        transcript: (c.transcript as string) || null,
+        city: (c.city as string) || null,
+        state: (c.state as string) || null,
+        postal_code: (c.postalCode as string) || null,
+        notes: (c.notes as string) || null,
+        talk_time: (c.talkTime as number) || null,
+        wait_time: (c.waitTime as number) || null,
+        ring_time: (c.ringTime as number) || null,
+        score: (c.score as number) || null,
+        sentiment: (c.sentiment as string) || null,
+        summary: (c.summary as string) || null,
+        tags: (c.tags as string[]) || null,
+        disposition: (c.disposition as string) || null,
+        rubric_results: (c.rubricResults as unknown) || null,
+        rubric_breakdown: (c.rubricBreakdown as unknown) || null,
+        synced_at: new Date().toISOString(),
+      }))
+
+      const { error } = await supabase
+        .from('calls')
+        .upsert(callsWithUser, { onConflict: 'ctm_call_id' })
+
+      if (error) console.warn('[calls] Analysis upsert failed:', error)
+      return NextResponse.json({ success: true, count: callsWithUser.length })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const agentId = searchParams.get('agentId')
 

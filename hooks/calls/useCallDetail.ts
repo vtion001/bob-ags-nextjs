@@ -44,6 +44,7 @@ interface UseCallDetailReturn {
   analysis: AnalysisResult | null
   isAnalyzing: boolean
   isLoading: boolean
+  isSyncing: boolean
   error: string | null
   handleTranscribe: () => Promise<string | null>
   handleAnalyze: () => Promise<boolean>
@@ -57,23 +58,36 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSyncing, setIsSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const storeCallToSupabase = useCallback(async (callData: Record<string, unknown>) => {
+  const storeAnalysisToSupabase = useCallback(async (analysisData: AnalysisResult) => {
     try {
-      await fetch('/api/calls', {
+      const res = await fetch('/api/calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ calls: [callData] }),
+        body: JSON.stringify({
+          calls: [{
+            id: callId,
+            score: analysisData.score,
+            sentiment: analysisData.sentiment,
+            summary: analysisData.summary,
+            tags: analysisData.tags,
+            disposition: analysisData.disposition,
+            rubricResults: analysisData.rubric_results,
+            rubricBreakdown: analysisData.rubric_breakdown,
+          }],
+        }),
       })
+      if (!res.ok) console.warn('Failed to store analysis to Supabase')
     } catch (err) {
-      console.warn('Failed to store call to Supabase:', err)
+      console.warn('Failed to store analysis to Supabase:', err)
     }
-  }, [])
+  }, [callId])
 
   const fetchCallDetails = useCallback(async () => {
     try {
-      const res = await fetch(`/api/calls?ctmCallId=${callId}&skipSync=true`)
+      const res = await fetch(`/api/calls?ctmCallId=${callId}&cacheOnly=true`)
       const data = await res.json()
 
       if (data.calls && data.calls.length > 0) {
@@ -87,29 +101,23 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
         }
         return c
       }
+      return null
+    } catch {
+      return null
+    }
+  }, [callId])
 
+  const fetchCallFromCTM = useCallback(async () => {
+    try {
       const ctmRes = await fetch(`/api/ctm/calls/${callId}`)
-      if (ctmRes.ok) {
-        const ctmData = await ctmRes.json()
-        if (ctmData.call) {
-          const c = ctmData.call
-          if (c.analysis) {
-            c.score = c.analysis.score
-            c.sentiment = c.analysis.sentiment
-            c.summary = c.analysis.summary
-            c.tags = c.analysis.tags
-            c.disposition = c.analysis.disposition
-          }
-          await storeCallToSupabase(c)
-          return c
-        }
-      }
-
-      throw new Error('Call not found')
+      if (!ctmRes.ok) throw new Error('Call not found')
+      const ctmData = await ctmRes.json()
+      if (!ctmData.call) throw new Error('Call not found')
+      return ctmData.call
     } catch (err) {
       throw err
     }
-  }, [callId, storeCallToSupabase])
+  }, [callId])
 
   const handleTranscribe = useCallback(async (): Promise<string | null> => {
     setTranscriptError(null)
@@ -147,10 +155,17 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
         const data = await res.json()
         const result = data.results?.[0]
         if (result?.success && result.analysis) {
-          setAnalysis((prev) => ({
-            ...prev,
-            ...result.analysis,
-          }))
+          const newAnalysis: AnalysisResult = {
+            score: result.analysis.score ?? 0,
+            sentiment: result.analysis.sentiment ?? 'neutral',
+            summary: result.analysis.summary ?? '',
+            tags: result.analysis.tags ?? [],
+            disposition: result.analysis.disposition ?? '',
+            rubric_results: result.analysis.rubric_results,
+            rubric_breakdown: result.analysis.rubric_breakdown,
+          }
+          setAnalysis((prev) => ({ ...prev, ...newAnalysis }))
+          await storeAnalysisToSupabase(newAnalysis)
           return true
         } else if (result?.error) {
           setError(`Analysis error: ${result.error}`)
@@ -163,47 +178,105 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
     } finally {
       setIsAnalyzing(false)
     }
-  }, [callId])
+  }, [callId, storeAnalysisToSupabase])
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const fetchedCall = await fetchCallDetails()
-        setCall(fetchedCall)
+    let cancelled = false
 
-        if (fetchedCall.analysis) {
+    const init = async () => {
+      setIsLoading(true)
+      setIsSyncing(true)
+      setError(null)
+
+      const cachedCall = await fetchCallDetails()
+
+      if (cancelled) return
+
+      if (cachedCall) {
+        setCall(cachedCall)
+        if (cachedCall.analysis) {
           setAnalysis({
-            score: fetchedCall.score || 0,
-            sentiment: fetchedCall.sentiment || 'neutral',
-            summary: fetchedCall.summary || '',
-            tags: fetchedCall.tags || [],
-            disposition: fetchedCall.disposition || '',
-            rubric_results: (fetchedCall.analysis as AnalysisResult).rubric_results,
-            rubric_breakdown: (fetchedCall.analysis as AnalysisResult).rubric_breakdown,
+            score: cachedCall.score || 0,
+            sentiment: cachedCall.sentiment || 'neutral',
+            summary: cachedCall.summary || '',
+            tags: cachedCall.tags || [],
+            disposition: cachedCall.disposition || '',
+            rubric_results: (cachedCall.analysis as AnalysisResult).rubric_results,
+            rubric_breakdown: (cachedCall.analysis as AnalysisResult).rubric_breakdown,
+          })
+        }
+        if (cachedCall.transcript) {
+          setTranscript(cachedCall.transcript)
+        }
+      }
+
+      const ctmCall = await fetchCallFromCTM()
+      if (cancelled) return
+
+      if (ctmCall) {
+        if (ctmCall.analysis) {
+          ctmCall.score = ctmCall.analysis.score
+          ctmCall.sentiment = ctmCall.analysis.sentiment
+          ctmCall.summary = ctmCall.analysis.summary
+          ctmCall.tags = ctmCall.analysis.tags
+          ctmCall.disposition = ctmCall.analysis.disposition
+        }
+        if (ctmCall.transcript) {
+          setTranscript(ctmCall.transcript)
+        }
+        setCall(ctmCall)
+
+        if (ctmCall.analysis && !cachedCall?.analysis) {
+          setAnalysis({
+            score: ctmCall.score || 0,
+            sentiment: ctmCall.sentiment || 'neutral',
+            summary: ctmCall.summary || '',
+            tags: ctmCall.tags || [],
+            disposition: ctmCall.disposition || '',
+            rubric_results: (ctmCall.analysis as AnalysisResult).rubric_results,
+            rubric_breakdown: (ctmCall.analysis as AnalysisResult).rubric_breakdown,
           })
         }
 
-        if (fetchedCall.transcript) {
-          setTranscript(fetchedCall.transcript)
-          if (!fetchedCall.analysis?.score && !fetchedCall.analysis?.sentiment) {
-            await handleAnalyze()
-          }
-        } else if (fetchedCall.recordingUrl) {
-          setIsTranscribing(true)
-          const transcriptText = await handleTranscribe()
-          if (transcriptText) {
-            await handleAnalyze()
-          }
+        await fetch('/api/calls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ calls: [ctmCall] }),
+        })
+      }
+
+      if (cancelled) return
+
+      const fetchedCall = ctmCall || cachedCall
+      if (!fetchedCall) {
+        setError('Call not found')
+        return
+      }
+
+      if (fetchedCall.transcript) {
+        if (!fetchedCall.analysis?.score && !fetchedCall.analysis?.sentiment) {
+          await handleAnalyze()
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
-      } finally {
-        setIsLoading(false)
+      } else if (fetchedCall.recordingUrl) {
+        setIsTranscribing(true)
+        const transcriptText = await handleTranscribe()
+        if (transcriptText) {
+          await handleAnalyze()
+        }
       }
     }
 
     init()
-  }, [callId, fetchCallDetails, handleTranscribe, handleAnalyze])
+      .catch((err) => setError(err instanceof Error ? err.message : 'An error occurred'))
+      .finally(() => {
+        setIsLoading(false)
+        setIsSyncing(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [callId, fetchCallDetails, fetchCallFromCTM, handleTranscribe, handleAnalyze])
 
   return {
     call,
@@ -213,6 +286,7 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
     analysis,
     isAnalyzing,
     isLoading,
+    isSyncing,
     error,
     handleTranscribe,
     handleAnalyze,
