@@ -45,6 +45,12 @@ interface UseCallHistoryReturn {
   handleExport: () => void
 }
 
+// Extended Call interface to include agentId from CallAPIResponse
+interface CallWithAgentId extends Call {
+  agentId?: string | null
+  agentName?: string | null
+}
+
 function dedupeCalls(calls: Call[]): Call[] {
   const seen = new Set<string>()
   return calls.filter(call => {
@@ -78,6 +84,12 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
         const res = await fetch('/api/ctm/agents')
         if (res.ok) {
           const data = await res.json()
+          console.log('[useCallHistory] API /api/ctm/agents response:', {
+            agentsCount: data.agents?.length,
+            userGroupsCount: data.userGroups?.length,
+            firstAgent: data.agents?.[0],
+            firstGroup: data.userGroups?.[0]
+          })
           if (data.agents) {
             const mappedAgents = data.agents.map((agent: any) => ({
               id: agent.id || agent.uid?.toString() || '',
@@ -85,9 +97,16 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
               agent_id: agent.uid?.toString() || agent.id || '',
               email: agent.email || '',
             }))
+            console.log('[useCallHistory] Mapped agentProfiles:', mappedAgents.slice(0, 3))
             setAgentProfiles(mappedAgents)
           }
           if (data.userGroups) {
+            console.log('[useCallHistory] userGroups:', data.userGroups.map((g: any) => ({
+              id: g.id,
+              name: g.name,
+              userIdsCount: g.userIds?.length,
+              firstFewUserIds: g.userIds?.slice(0, 5)
+            })))
             setUserGroups(data.userGroups)
           }
         }
@@ -192,13 +211,70 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
       results = results.filter(call => call.score !== undefined && call.score !== null && call.score > 0)
     }
 
+    // DEBUG: Log group filter state
+    console.log('[useCallHistory] Group filter DEBUG:', {
+      groupFilter,
+      userGroupsCount: userGroups.length,
+      userGroups: userGroups.map(g => ({ id: g.id, name: g.name, userIds: g.userIds })),
+      agentProfilesCount: agentProfiles.length,
+      totalCalls: allCalls.length,
+      hasGroupFilter: !!groupFilter
+    })
+
     if (groupFilter) {
       const group = userGroups.find(g => g.id === groupFilter)
+      console.log('[useCallHistory] Selected group:', group)
+      
       if (group) {
+        const callsWithAgentData = allCalls.filter(call => {
+          // The API returns CallAPIResponse with flat agentId field, not call.agent object
+          const callAgentId = (call as any).agentId ?? call.agent?.id ?? ''
+          return callAgentId && callAgentId !== ''
+        })
+        console.log('[useCallHistory] Calls with agentId:', {
+          count: callsWithAgentData.length,
+          sample: callsWithAgentData.slice(0, 2).map(c => ({
+            id: c.id,
+            agentId: (c as any).agentId,
+            agentObjId: c.agent?.id,
+            agentName: c.agent?.name ?? (c as any).agentName
+          }))
+        })
+
         results = results.filter(call => {
-          const agent = agentProfiles.find(a => a.agent_id === call.agent?.id?.toString())
-          if (!agent) return false
-          return group.userIds.includes(Number(agent.agent_id))
+          // Try both call.agent?.id (for Call type) and call.agentId (for CallAPIResponse)
+          const callAgentId = (call as any).agentId ?? call.agent?.id ?? ''
+          
+          console.log('[useCallHistory] Filtering call:', {
+            callId: call.id,
+            'call.agent': call.agent,
+            'call.agent?.id': call.agent?.id,
+            'call.agentId (from API)': (call as any).agentId,
+            callAgentId,
+            agentProfilesSample: agentProfiles.slice(0, 3).map(a => a.agent_id)
+          })
+
+          // agent_id is stored as uid (number) as string, e.g., "123"
+          const matchingAgent = agentProfiles.find(a => a.agent_id === callAgentId)
+          
+          if (!matchingAgent) {
+            console.log('[useCallHistory] No agent match for callAgentId:', callAgentId)
+            return false
+          }
+          
+          console.log('[useCallHistory] Found matching agent:', matchingAgent)
+          
+          // group.userIds contains numbers (uid values), matchingAgent.agent_id is also a string number
+          const agentUid = Number(matchingAgent.agent_id)
+          const isInGroup = group.userIds.includes(agentUid)
+          
+          console.log('[useCallHistory] Group membership check:', {
+            agentUid,
+            groupUserIds: group.userIds,
+            isInGroup
+          })
+          
+          return isInGroup
         })
       }
     }
@@ -219,6 +295,11 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
       endDate.setHours(23, 59, 59, 999)
       results = results.filter(call => new Date(call.timestamp) <= endDate)
     }
+
+    console.log('[useCallHistory] Filter results:', {
+      inputCount: allCalls.length,
+      outputCount: results.length
+    })
 
     setFilteredCalls(results)
   }, [allCalls, searchQuery, analyzedOnly, groupFilter, scoreFilter, dateRange, userGroups, agentProfiles])
