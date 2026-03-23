@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import { useDashboard } from '@/hooks/dashboard/useDashboard'
 import { DashboardHeader, DashboardStats, DashboardRecentCalls } from '@/components/dashboard'
+import AgentAssignmentWarning from '@/components/dashboard/AgentAssignmentWarning'
 
 export default function DashboardPage() {
   const {
@@ -92,6 +93,12 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      <AgentAssignmentWarning 
+        assignedAgentId={liveMeta?.assignedAgentId} 
+        assignedGroupId={liveMeta?.assignedGroupId}
+        isAdmin={isAdmin} 
+      />
 
       <DashboardStats
         totalCalls={stats.totalCalls}

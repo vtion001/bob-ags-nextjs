@@ -17,7 +17,7 @@ export class AssemblyAIRealtime {
   private mediaStream: MediaStream | null = null;
   private audioContext: AudioContext | null = null;
   private microphone: MediaStreamAudioSourceNode | null = null;
-  private processor: AudioWorkletNode | null = null;
+  private processor: AudioWorkletNode | ScriptProcessorNode | null = null;
   private sampleRate = 16000;
   private onTranscript: (t: RealtimeTranscript) => void;
   private onInsight: (i: RealtimeInsight) => void;
@@ -77,20 +77,43 @@ export class AssemblyAIRealtime {
 
     try {
       this.audioContext = new AudioContext({ sampleRate: 48000 });
+      await this.audioContext.resume();
       this.microphone = this.audioContext.createMediaStreamSource(this.mediaStream);
 
-      await this.audioContext.audioWorklet.addModule('/audio-worklet-processor.js');
-      this.processor = new AudioWorkletNode(this.audioContext, 'audio-processing-worklet', {
-        numberOfInputs: 1,
-        numberOfOutputs: 0,
-      });
-
+      let useWorklet = true;
+      try {
+        await this.audioContext.audioWorklet.addModule('/audio-worklet-processor.js');
+        this.processor = new AudioWorkletNode(this.audioContext, 'audio-processing-worklet', {
+          numberOfInputs: 1,
+          numberOfOutputs: 0,
+        });
       this.processor.port.onmessage = (event) => {
         if (event.data.type === 'audio' && this.ws?.readyState === WebSocket.OPEN) {
           const int16Array = new Int16Array(event.data.buffer);
+          console.log('[AAI] Sending audio chunk, bytes:', int16Array.length);
           this.ws.send(int16Array);
+        } else if (event.data.type === 'audio') {
+          console.log('[AAI] Audio ready but WebSocket not open, queuing. State:', this.ws?.readyState);
+          this.bufferQueue.push(new Int16Array(event.data.buffer));
         }
       };
+        console.log('[AAI] Using AudioWorkletNode');
+      } catch (err) {
+        console.warn('[AAI] AudioWorklet not supported, falling back to ScriptProcessorNode:', err);
+        useWorklet = false;
+        const bufferSize = 4096;
+        this.processor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
+        (this.processor as ScriptProcessorNode).onaudioprocess = (e: any) => {
+          const inputData = e.inputBuffer.getChannelData(0);
+          const downsampled = this.downsample(inputData, 48000, this.sampleRate);
+          if (this.ws?.readyState === WebSocket.OPEN) {
+            const int16Array = this.toInt16Array(downsampled);
+            console.log('[AAI] ScriptProcessor sending audio chunk, bytes:', int16Array.length);
+            this.ws.send(int16Array);
+          }
+        };
+        console.log('[AAI] Using ScriptProcessorNode');
+      }
 
       this.microphone.connect(this.processor);
 
@@ -99,8 +122,10 @@ export class AssemblyAIRealtime {
       this.ws.binaryType = "arraybuffer";
 
       this.ws.onopen = () => {
+        console.log('[AAI] WebSocket connected');
         this.startTime = Date.now();
         this.reconnectAttempts = 0;
+        this.isReconnecting = false;
         this.sessionBegun = false;
         this.onStateChange({ isConnected: true, isRecording: true, duration: 0 });
         if (callId) this.onStateChange({ callerPhone: callId });
@@ -131,7 +156,18 @@ export class AssemblyAIRealtime {
       };
 
       this.ws.onclose = (event) => {
-        if (!this.isManualStop) this.onClose();
+        if (!this.isManualStop && this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          this.isReconnecting = true;
+          console.log(`[AAI] WebSocket closed, attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+          setTimeout(() => {
+            this.isReconnecting = false;
+            if (!this.isManualStop) this.attemptReconnect(callId);
+          }, 2000 * this.reconnectAttempts);
+        } else if (!this.isManualStop) {
+          console.log('[AAI] WebSocket closed, max reconnects reached');
+          this.onClose();
+        }
       };
     } catch (err) {
       this.onError(new Error(`Failed to start live analysis: ${err instanceof Error ? err.message : "Unknown error"}`));
@@ -148,6 +184,7 @@ export class AssemblyAIRealtime {
       this.ws.onopen = () => {
         this.startTime = Date.now();
         this.sessionBegun = false;
+        this.isReconnecting = false;
         this.onStateChange({ isConnected: true, isRecording: true });
         this.flushBufferQueue();
       };
@@ -174,7 +211,13 @@ export class AssemblyAIRealtime {
       };
 
       this.ws.onclose = () => {
-        if (!this.isManualStop) {
+        if (!this.isManualStop && this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          console.log(`[AAI] Reconnect closed, attempting ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+          setTimeout(() => {
+            if (!this.isManualStop) this.attemptReconnect(callId);
+          }, 2000 * this.reconnectAttempts);
+        } else if (!this.isManualStop) {
           this.onClose();
         }
       };
@@ -196,6 +239,7 @@ export class AssemblyAIRealtime {
 
   private handleMessage(data: AAIRealtimeMessage): void {
     const msgType = data.type;
+    console.log('[AAI] Message received:', msgType);
 
     if (msgType === "Begin") {
       this.sessionBegun = true;

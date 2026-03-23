@@ -13,7 +13,6 @@ import {
   CallDetailsCard,
   LiveInsightsPanel,
   MonitorHeader,
-  QAChecklist,
   ScoreProgress,
   TranscriptPanel,
 } from "@/components/monitor"
@@ -234,13 +233,6 @@ export default function MonitorPage() {
                   }}
                   score={liveState.score || 0}
                   missingCriteria={Object.entries(liveState.criteriaStatus || {}).filter(([, v]: [string, any]) => !v.triggered).map(([k]) => k)}
-                />
-
-                <QAChecklist
-                  criteriaStatus={liveState.criteriaStatus || {}}
-                  score={liveState.score || 100}
-                  expanded={true}
-                  onToggle={() => {}}
                 />
 
                 <CallDetailsCard

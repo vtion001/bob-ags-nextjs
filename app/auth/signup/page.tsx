@@ -9,11 +9,13 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Card from '@/components/ui/Card'
 
-export default function LoginPage() {
+export default function SignUpPage() {
   const router = useRouter()
   const supabase = createClient()
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -29,19 +31,40 @@ export default function LoginPage() {
     checkUser()
   }, [])
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
     setMessage(null)
 
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      setIsLoading(false)
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback-email`,
+          data: {
+            full_name: name,
+            signup_type: 'email',
+          },
+        },
       })
-      if (error) throw error
-      router.push('/dashboard')
+
+      if (signUpError) throw signUpError
+
+      setMessage('Check your email for a confirmation link. After confirming, your account will be reviewed by an admin and you will gain access.')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -52,7 +75,7 @@ export default function LoginPage() {
   const handleGoogleOAuth = async () => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -74,7 +97,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left side - Brand */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 bg-white">
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 bg-navy-50">
         <div className="max-w-md text-center">
           <div className="mb-8">
             <Image
@@ -88,18 +111,54 @@ export default function LoginPage() {
               sizes="(max-width: 768px) 100vw, 440px"
             />
           </div>
-          <p className="text-navy-500 leading-relaxed">
-            AI-powered business operations assistant. Automate workflows, analyze data, and streamline your business.
+          <h1 className="text-2xl font-bold text-navy-900 mb-4">Join BOB</h1>
+          <p className="text-navy-600 leading-relaxed">
+            Create your account to get started. After registration, your account will be reviewed by an administrator to assign your CTM agent permissions.
           </p>
+          <div className="mt-8 space-y-4 text-left">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-navy-900 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">1</div>
+              <div>
+                <p className="font-medium text-navy-800">Sign up with your email</p>
+                <p className="text-sm text-navy-500">Create an account using your company email</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-navy-900 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">2</div>
+              <div>
+                <p className="font-medium text-navy-800">Confirm your email</p>
+                <p className="text-sm text-navy-500">Click the link sent to your inbox</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-navy-900 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">3</div>
+              <div>
+                <p className="font-medium text-navy-800">Admin assigns your agent</p>
+                <p className="text-sm text-navy-500">An admin links your account to a CTM agent</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-navy-900 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">4</div>
+              <div>
+                <p className="font-medium text-navy-800">Access granted</p>
+                <p className="text-sm text-navy-500">Start monitoring your calls</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Right side - Login Form */}
+      {/* Right side - Sign Up Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 sm:p-12">
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-navy-900 mb-2">Welcome Back</h2>
-            <p className="text-navy-500">Enter your credentials to continue</p>
+            <h2 className="text-3xl font-bold text-navy-900 mb-2">Create Account</h2>
+            <p className="text-navy-500">
+              Already have an account?{' '}
+              <Link href="/" className="text-navy-700 font-medium hover:underline">
+                Sign in
+              </Link>
+            </p>
           </div>
 
           {error && (
@@ -109,19 +168,28 @@ export default function LoginPage() {
           )}
 
           {message && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm">
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
               {message}
             </div>
           )}
 
           <Card hoverable={false} className="mb-6 !border-0 shadow-none">
-            <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleSignUp} className="space-y-4">
               <Input
-                label="Email"
+                label="Full Name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                required
+                disabled={isLoading}
+              />
+              <Input
+                label="Work Email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="you@company.com"
                 required
                 disabled={isLoading}
               />
@@ -131,11 +199,11 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder="Min. 6 characters"
                   required
                   minLength={6}
                   disabled={isLoading}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -154,15 +222,26 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              <Input
+                label="Confirm Password"
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter password"
+                required
+                minLength={6}
+                disabled={isLoading}
+                autoComplete="new-password"
+              />
               <Button
                 type="submit"
                 variant="primary"
                 size="lg"
-                className="w-full"
+                className="w-full mt-6"
                 isLoading={isLoading}
                 disabled={isLoading}
               >
-                Sign In
+                Create Account
               </Button>
             </form>
           </Card>
@@ -180,7 +259,7 @@ export default function LoginPage() {
             onClick={handleGoogleOAuth}
             variant="secondary"
             size="lg"
-            className="w-full mb-4"
+            className="w-full"
             disabled={isLoading}
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -192,11 +271,8 @@ export default function LoginPage() {
             Google
           </Button>
 
-          <p className="text-center text-sm text-navy-500 mt-6">
-            Don&apos;t have an account?{' '}
-            <Link href="/auth/signup" className="text-navy-700 font-medium hover:underline">
-              Create one
-            </Link>
+          <p className="text-center text-xs text-navy-400 mt-8">
+            By creating an account, you agree to our Terms of Service and Privacy Policy.
           </p>
         </div>
       </div>
