@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       can_view_agents: false,
       can_manage_settings: false,
       can_manage_users: false,
-      can_run_analysis: false,
+      can_run_analysis: true,
     }
 
     return NextResponse.json({

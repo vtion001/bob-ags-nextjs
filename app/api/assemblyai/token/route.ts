@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AssemblyAI } from 'assemblyai'
+import { createServerSupabase } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createServerSupabase(request)
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const apiKey = process.env.ASSEMBLYAI_API_KEY || process.env.NEXT_PUBLIC_ASSEMBLYAI_API_KEY
     
     if (!apiKey) {
