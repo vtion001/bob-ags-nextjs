@@ -28,7 +28,7 @@ export default function MonitorHeader({
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <span
-            className={`w-2.5 h-2.5 rounded-full ${isRecording ? "bg-red-500 animate-pulse" : "bg-slate-400"}`}
+            className={`w-2.5 h-2.5 rounded-full ${isRecording ? "bg-navy-900 animate-pulse" : "bg-navy-300"}`}
           />
           <span className="text-sm font-semibold text-navy-900">
             {isMonitoring ? (isRecording ? "Recording" : "Connecting...") : "Idle"}
@@ -40,7 +40,7 @@ export default function MonitorHeader({
           </span>
         )}
         {call?.agent?.name && (
-          <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-sm font-semibold">
+          <span className="px-2 py-0.5 bg-navy-900 text-white rounded text-sm font-semibold">
             {call.agent.name}
             <span className="ml-1.5 text-xs font-normal opacity-70">
               {extractGroup(call.agent.name)}
@@ -65,12 +65,12 @@ export default function MonitorHeader({
       </div>
       <div className="flex items-center gap-2">
         {liveState.sentiment && (
-          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getSentimentColor(liveState.sentiment)}`}>
+          <span className="px-3 py-1 rounded-full text-xs font-semibold border border-navy-200 bg-navy-50 text-navy-700">
             {liveState.sentiment === "positive" ? "Positive" : liveState.sentiment === "negative" ? "Negative" : "Neutral"}
           </span>
         )}
         {liveState.score !== undefined && (
-          <span className={`text-xl font-bold ${getScoreColor(liveState.score)}`}>
+          <span className="text-xl font-bold text-navy-900">
             {liveState.score}
           </span>
         )}

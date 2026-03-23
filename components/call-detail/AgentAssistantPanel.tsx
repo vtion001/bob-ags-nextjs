@@ -73,13 +73,13 @@ export default function AgentAssistantPanel({
   const getTypeColor = (type: LiveAIInsight['type']) => {
     switch (type) {
       case 'warning':
-        return 'text-red-600 bg-red-50 border-red-200'
+        return 'text-navy-700 bg-navy-100 border-navy-200'
       case 'disposition':
-        return 'text-purple-600 bg-purple-50 border-purple-200'
+        return 'text-navy-700 bg-navy-100 border-navy-200'
       case 'suggestion':
-        return 'text-blue-600 bg-blue-50 border-blue-200'
+        return 'text-navy-700 bg-navy-100 border-navy-200'
       default:
-        return 'text-green-600 bg-green-50 border-green-200'
+        return 'text-navy-700 bg-navy-100 border-navy-200'
     }
   }
 
@@ -97,12 +97,12 @@ export default function AgentAssistantPanel({
           </svg>
           <h3 className="text-lg font-bold text-navy-900">AI Agent Assistant</h3>
           {prioritizedInsights.length > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${hasHighPriority ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${hasHighPriority ? 'bg-navy-900 text-white' : 'bg-navy-200 text-navy-700'}`}>
               {prioritizedInsights.length} suggestion{prioritizedInsights.length > 1 ? 's' : ''}
             </span>
           )}
           {isCrisis && (
-            <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-bold animate-pulse">
+            <span className="px-2 py-0.5 bg-navy-900 text-white text-xs rounded-full font-bold animate-pulse">
               CRISIS
             </span>
           )}
@@ -123,36 +123,36 @@ export default function AgentAssistantPanel({
             <div className="p-4 text-center">
               {transcript.length === 0 ? (
                 <>
-                  <div className="w-12 h-12 rounded-full bg-cyan-100 flex items-center justify-center mx-auto mb-3">
-                    <svg className="w-6 h-6 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 rounded-full bg-navy-100 flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-6 h-6 text-navy-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                   </div>
-                  <p className="text-cyan-600 font-medium">Ready to assist</p>
+                  <p className="text-navy-700 font-medium">Ready to assist</p>
                   <p className="text-navy-500 text-sm mt-1">
                     AI suggestions will appear as the conversation progresses
                   </p>
                 </>
               ) : conversationSummary?.agentCount && conversationSummary.agentCount < 3 ? (
                 <>
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-2">
-                    <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center mx-auto mb-2">
+                    <svg className="w-5 h-5 text-navy-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <p className="text-amber-600 font-medium">Listening to conversation...</p>
+                  <p className="text-navy-700 font-medium">Listening to conversation...</p>
                   <p className="text-navy-500 text-sm mt-1">
                     {conversationSummary.agentCount} agent utterance{conversationSummary.agentCount !== 1 ? 's' : ''} detected
                   </p>
                 </>
               ) : (
                 <>
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
-                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center mx-auto mb-2">
+                    <svg className="w-5 h-5 text-navy-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <p className="text-green-600 font-medium">Call proceeding well</p>
+                  <p className="text-navy-700 font-medium">Call proceeding well</p>
                   <p className="text-navy-500 text-sm mt-1">
                     Continue building rapport and gather qualifying information
                   </p>
@@ -163,7 +163,7 @@ export default function AgentAssistantPanel({
             prioritizedInsights.map((insight) => (
               <div
                 key={insight.id}
-                className={`p-4 border-l-4 ${insight.priority === 'high' ? 'border-l-red-500' : insight.priority === 'medium' ? 'border-l-amber-500' : 'border-l-blue-500'}`}
+                className={`p-4 border-l-4 ${insight.priority === 'high' ? 'border-l-navy-900' : insight.priority === 'medium' ? 'border-l-navy-600' : 'border-l-navy-400'}`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`mt-0.5 p-1.5 rounded-lg ${getTypeColor(insight.type)}`}>
@@ -173,10 +173,10 @@ export default function AgentAssistantPanel({
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className="text-sm font-semibold text-navy-900">{insight.title}</p>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase ${
-                        insight.type === 'warning' ? 'bg-red-100 text-red-600' :
-                        insight.type === 'disposition' ? 'bg-purple-100 text-purple-600' :
-                        insight.type === 'suggestion' ? 'bg-blue-100 text-blue-600' :
-                        'bg-green-100 text-green-600'
+                        insight.type === 'warning' ? 'bg-navy-200 text-navy-800' :
+                        insight.type === 'disposition' ? 'bg-navy-200 text-navy-800' :
+                        insight.type === 'suggestion' ? 'bg-navy-200 text-navy-800' :
+                        'bg-navy-200 text-navy-800'
                       }`}>
                         {insight.type}
                       </span>

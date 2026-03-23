@@ -8,15 +8,15 @@ interface ScoreProgressProps {
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 70) return "text-green-600";
+  if (score >= 70) return "text-navy-900";
   if (score >= 40) return "text-navy-600";
-  return "text-red-600";
+  return "text-navy-400";
 }
 
 function getProgressBarColor(score: number): string {
-  if (score >= 70) return "bg-green-500";
+  if (score >= 70) return "bg-navy-900";
   if (score >= 40) return "bg-navy-600";
-  return "bg-red-500";
+  return "bg-navy-400";
 }
 
 export default function ScoreProgress({ score, criteriaStatus }: ScoreProgressProps) {

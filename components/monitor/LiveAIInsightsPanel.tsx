@@ -14,13 +14,13 @@ interface LiveAIInsightsPanelProps {
 function getInsightColor(type: LiveAIInsight['type']): string {
   switch (type) {
     case 'warning':
-      return 'bg-red-50 border-red-200'
+      return 'bg-navy-50 border-navy-200'
     case 'disposition':
-      return 'bg-purple-50 border-purple-200'
+      return 'bg-navy-100 border-navy-200'
     case 'suggestion':
-      return 'bg-blue-50 border-blue-200'
+      return 'bg-navy-50 border-navy-200'
     default:
-      return 'bg-green-50 border-green-200'
+      return 'bg-navy-50 border-navy-200'
   }
 }
 
@@ -40,11 +40,11 @@ function getInsightIcon(type: LiveAIInsight['type']): string {
 function getPriorityBadge(priority: LiveAIInsight['priority']): string {
   switch (priority) {
     case 'high':
-      return 'bg-red-100 text-red-700'
+      return 'bg-navy-900 text-white'
     case 'medium':
-      return 'bg-amber-100 text-amber-700'
+      return 'bg-navy-700 text-white'
     case 'low':
-      return 'bg-blue-100 text-blue-700'
+      return 'bg-navy-500 text-white'
   }
 }
 
@@ -74,7 +74,7 @@ export default function LiveAIInsightsPanel({
       >
         <div className="flex items-center gap-2">
           <svg
-            className="w-5 h-5 text-cyan-600"
+            className="w-5 h-5 text-navy-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -86,15 +86,15 @@ export default function LiveAIInsightsPanel({
               d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
             />
           </svg>
-          <h3 className="text-lg font-bold text-navy-900">AI Live Insights</h3>
+          <h3 className="text-lg font-bold text-navy-900">AI Recommendations</h3>
           {isAnalyzing && (
-            <span className="flex items-center gap-1 px-2 py-0.5 bg-cyan-100 text-cyan-700 text-xs rounded-full">
-              <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+            <span className="flex items-center gap-1 px-2 py-0.5 bg-navy-100 text-navy-700 text-xs rounded-full">
+              <span className="w-1.5 h-1.5 bg-navy-500 rounded-full animate-pulse" />
               Analyzing
             </span>
           )}
           {insights.length > 0 && (
-            <span className="px-2 py-0.5 bg-cyan-900 text-white text-xs rounded-full">
+            <span className="px-2 py-0.5 bg-navy-900 text-white text-xs rounded-full">
               {insights.length}
             </span>
           )}
@@ -117,13 +117,13 @@ export default function LiveAIInsightsPanel({
       {expanded && (
         <div className="max-h-80 overflow-y-auto divide-y divide-navy-100">
           {suggestedDisposition && (
-            <div className="px-4 py-3 bg-purple-50 border-b border-purple-200">
+            <div className="px-4 py-3 bg-navy-50 border-b border-navy-200">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                <span className="text-xs font-semibold text-navy-700 uppercase tracking-wide">
                   Suggested Disposition
                 </span>
               </div>
-              <p className="text-sm font-semibold text-purple-900">
+              <p className="text-sm font-semibold text-navy-900">
                 {formatDisposition(suggestedDisposition)}
               </p>
             </div>
@@ -152,12 +152,12 @@ export default function LiveAIInsightsPanel({
                 <span
                   className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
                     insight.type === 'warning'
-                      ? 'bg-red-500 text-white'
+                      ? 'bg-navy-900 text-white'
                       : insight.type === 'disposition'
-                        ? 'bg-purple-500 text-white'
+                        ? 'bg-navy-700 text-white'
                         : insight.type === 'suggestion'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-green-500 text-white'
+                          ? 'bg-navy-600 text-white'
+                          : 'bg-navy-500 text-white'
                   }`}
                 >
                   {getInsightIcon(insight.type)}
@@ -181,8 +181,8 @@ export default function LiveAIInsightsPanel({
 
           {isAnalyzing && insights.length === 0 && (
             <div className="p-4 text-center">
-              <div className="w-8 h-8 border-2 border-cyan-200 border-t-cyan-600 rounded-full animate-spin mx-auto" />
-              <p className="text-cyan-600 text-sm mt-2 font-medium">Analyzing conversation...</p>
+              <div className="w-8 h-8 border-2 border-navy-200 border-t-navy-600 rounded-full animate-spin mx-auto" />
+              <p className="text-navy-600 text-sm mt-2 font-medium">Analyzing conversation...</p>
             </div>
           )}
         </div>

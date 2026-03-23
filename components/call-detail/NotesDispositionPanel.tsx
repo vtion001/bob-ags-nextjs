@@ -35,22 +35,22 @@ interface NotesDispositionPanelProps {
 const DISPOSITIONS: Record<string, { label: string; color: string; description: string }> = {
   'qualified-transfer': {
     label: 'Qualified Transfer',
-    color: 'bg-green-100 text-green-800 border-green-200',
+    color: 'bg-navy-900 text-white border-navy-900',
     description: 'Transfer to admissions'
   },
   'warm-lead': {
     label: 'Warm Lead',
-    color: 'bg-amber-100 text-amber-800 border-amber-200',
+    color: 'bg-navy-700 text-white border-navy-700',
     description: 'Schedule callback within 24h'
   },
   'informational': {
     label: 'Informational',
-    color: 'bg-blue-100 text-blue-800 border-blue-200',
+    color: 'bg-navy-500 text-white border-navy-500',
     description: 'Provide resources only'
   },
   'supervisor-review': {
     label: 'Supervisor Review',
-    color: 'bg-red-100 text-red-800 border-red-200',
+    color: 'bg-navy-200 text-navy-900 border-navy-300',
     description: 'ZTP violation - immediate review'
   }
 }
@@ -209,7 +209,7 @@ export default function NotesDispositionPanel({ currentState, score, missingCrit
               <button className="px-3 py-1.5 text-sm font-medium bg-navy-100 text-navy-700 rounded-lg hover:bg-navy-200 transition-colors">
                 Save to Salesforce
               </button>
-              <button className="px-3 py-1.5 text-sm font-medium bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition-colors">
+              <button className="px-3 py-1.5 text-sm font-medium bg-navy-100 text-navy-700 rounded-lg hover:bg-navy-200 transition-colors">
                 Schedule Callback
               </button>
             </div>

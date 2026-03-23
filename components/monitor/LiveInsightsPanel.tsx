@@ -11,11 +11,11 @@ interface LiveInsightsPanelProps {
 function getInsightColor(type: RealtimeInsight["type"]): string {
   switch (type) {
     case "pass":
-      return "bg-green-50 border-green-200";
+      return "bg-navy-50 border-navy-200";
     case "fail":
-      return "bg-red-50 border-red-200";
+      return "bg-navy-100 border-navy-300";
     case "warning":
-      return "bg-yellow-50 border-yellow-200";
+      return "bg-navy-50 border-navy-200";
     default:
       return "bg-navy-50 border-navy-200";
   }
@@ -40,9 +40,9 @@ function InsightItem({ insight, formatDuration }: { insight: RealtimeInsight; fo
       <span
         className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
           insight.type === "pass"
-            ? "bg-green-500 text-white"
+            ? "bg-navy-900 text-white"
             : insight.type === "fail"
-              ? "bg-red-500 text-white"
+              ? "bg-navy-700 text-white"
               : "bg-navy-600 text-white"
         }`}
       >
@@ -57,7 +57,7 @@ function InsightItem({ insight, formatDuration }: { insight: RealtimeInsight; fo
             {insight.criterion}
           </span>
           {insight.ztp && (
-            <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-bold">
+            <span className="text-xs px-1.5 py-0.5 bg-navy-200 text-navy-800 rounded font-bold">
               ZTP
             </span>
           )}
@@ -96,11 +96,11 @@ export default function LiveInsightsPanel({
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M13 10V3L4 14h7v7l9-11h-7z"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
             />
           </svg>
           <h3 className="text-lg font-bold text-navy-900">
-            Live Insights
+            QA Checklist
           </h3>
           {insights.length > 0 && (
             <span className="px-2 py-0.5 bg-navy-900 text-white text-xs rounded-full">
