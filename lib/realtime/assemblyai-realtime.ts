@@ -17,7 +17,7 @@ export class AssemblyAIRealtime {
   private mediaStream: MediaStream | null = null;
   private audioContext: AudioContext | null = null;
   private microphone: MediaStreamAudioSourceNode | null = null;
-  private processor: ScriptProcessorNode | null = null;
+  private processor: AudioWorkletNode | null = null;
   private sampleRate = 16000;
   private onTranscript: (t: RealtimeTranscript) => void;
   private onInsight: (i: RealtimeInsight) => void;
@@ -79,20 +79,20 @@ export class AssemblyAIRealtime {
       this.audioContext = new AudioContext({ sampleRate: 48000 });
       this.microphone = this.audioContext.createMediaStreamSource(this.mediaStream);
 
-      const bufferSize = 4096;
-      this.processor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
+      await this.audioContext.audioWorklet.addModule('/audio-worklet-processor.js');
+      this.processor = new AudioWorkletNode(this.audioContext, 'audio-processing-worklet', {
+        numberOfInputs: 1,
+        numberOfOutputs: 0,
+      });
 
-      this.processor.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
-        const downsampled = this.downsample(inputData, 48000, this.sampleRate);
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          const int16Array = this.toInt16Array(downsampled);
+      this.processor.port.onmessage = (event) => {
+        if (event.data.type === 'audio' && this.ws?.readyState === WebSocket.OPEN) {
+          const int16Array = new Int16Array(event.data.buffer);
           this.ws.send(int16Array);
         }
       };
 
       this.microphone.connect(this.processor);
-      this.processor.connect(this.audioContext.destination);
 
       const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=${this.sampleRate}&speech_model=universal&token=${this.apiKey}`;
       this.ws = new WebSocket(wsUrl);
