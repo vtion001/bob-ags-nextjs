@@ -97,6 +97,9 @@ export function useLiveAnalysis(options: UseLiveAnalysisOptions = {}): UseLiveAn
         },
         onStateChange: (s: Partial<LiveCallState>) => {
           setLiveState((prev) => ({ ...prev, ...s }));
+          if (s.isRecording !== undefined) {
+            setIsRecording(s.isRecording);
+          }
         },
         onError: (e: Error) => {
           console.error('[LiveAnalysis] onError:', e.message);

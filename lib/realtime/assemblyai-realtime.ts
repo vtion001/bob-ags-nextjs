@@ -86,7 +86,7 @@ export class AssemblyAIRealtime {
         token: token,
         sampleRate: this.sampleRate,
         speechModel: 'u3-rt-pro',
-        formatTurns: true,
+        speakerLabels: true,
       });
 
       let isReady = false;
