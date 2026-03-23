@@ -11,7 +11,7 @@ export function extractGroup(agentName: string | undefined, source?: string): st
     return "Unassigned";
   }
   for (const group of KNOWN_GROUPS) {
-    if (agentName.endsWith(group)) {
+    if (agentName.includes(group)) {
       return group;
     }
   }

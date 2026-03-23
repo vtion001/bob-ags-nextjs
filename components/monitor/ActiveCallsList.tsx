@@ -24,7 +24,7 @@ function extractGroup(agentName: string | undefined, source?: string): string {
   }
   const KNOWN_GROUPS = ["Phillies", "Referrals", "Virtual", "Opener", "Alumni", "Finance", "General", "MA", "Hulk Onsite", "Hulk Offsite", "Legit MH", "Legit Beacon", "Travel Liason", "Daylight Misc", "Ember 12 Step", "Marty Direct", "Trost Virtual Admissions", "Retention Team", "Direct"];
   for (const group of KNOWN_GROUPS) {
-    if (agentName.endsWith(group)) {
+    if (agentName.includes(group)) {
       return group;
     }
   }
