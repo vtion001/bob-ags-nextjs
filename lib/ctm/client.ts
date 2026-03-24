@@ -40,7 +40,7 @@ export class CTMClient {
     }
   }
 
-  async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  public async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     this.validateConfig()
 
     const url = `${this.baseUrl}${endpoint}`
@@ -61,7 +61,7 @@ export class CTMClient {
     return response.json()
   }
 
-  getAccountId(): string {
+  public getAccountId(): string {
     return this.accountId
   }
 }

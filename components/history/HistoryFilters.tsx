@@ -34,8 +34,10 @@ interface HistoryFiltersProps {
   onAnalyzedOnlyChange: (v: boolean) => void
   onRefresh: () => void
   onSearch: () => void
+  onBulkSync: () => void
   isRefreshing: boolean
   isSearching: boolean
+  isBulkSyncing: boolean
   isSyncing?: boolean
 }
 
@@ -246,8 +248,10 @@ export default function HistoryFilters({
   onAnalyzedOnlyChange,
   onRefresh,
   onSearch,
+  onBulkSync,
   isRefreshing,
   isSearching,
+  isBulkSyncing,
   isSyncing,
 }: HistoryFiltersProps) {
   return (
@@ -299,6 +303,18 @@ export default function HistoryFilters({
             Search
           </Button>
         </div>
+
+        <div className="flex items-end">
+          <Button
+            variant="secondary"
+            size="md"
+            className="w-full"
+            onClick={onBulkSync}
+            isLoading={isBulkSyncing}
+          >
+            Bulk Sync
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
@@ -329,7 +345,13 @@ export default function HistoryFilters({
         </div>
       </div>
 
-      {isSyncing && (
+      {isBulkSyncing && (
+        <div className="flex items-center gap-2 text-sm text-navy-500">
+          <div className="w-4 h-4 border-2 border-navy-200 border-t-navy-600 rounded-full animate-spin" />
+          Syncing all historical calls from CTM to Supabase (this may take a while)...
+        </div>
+      )}
+      {isSyncing && !isBulkSyncing && (
         <div className="flex items-center gap-2 text-sm text-navy-500">
           <div className="w-4 h-4 border-2 border-navy-200 border-t-navy-600 rounded-full animate-spin" />
           Syncing latest calls...

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { fetchCallsFromCTM } from '@/lib/calls/fetcher'
 import { getCachedCalls, storeCallsToCache, getLastCallTimestamp } from '@/lib/calls/cache'
+import { invalidateCache } from '@/lib/api/cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -135,6 +136,9 @@ export async function POST(request: NextRequest) {
         .upsert(callsWithUser, { onConflict: 'ctm_call_id' })
 
       if (error) console.warn('[calls] Analysis upsert failed:', error)
+      
+      invalidateCache(`ctm:dashboardStats:${user.id}`)
+      
       return NextResponse.json({ success: true, count: callsWithUser.length })
     }
 
@@ -151,6 +155,8 @@ export async function POST(request: NextRequest) {
     if (filtered.length > 0) {
       try { await storeCallsToCache(supabase, user.id, filtered) } catch {}
     }
+
+    invalidateCache(`ctm:dashboardStats:${user.id}`)
 
     return NextResponse.json({ calls: filtered, source: 'ctm', count: filtered.length, isDelta: true })
   } catch (error) {

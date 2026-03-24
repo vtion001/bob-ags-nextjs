@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { CTMClient } from '@/lib/ctm'
 import { analyzeTranscript } from '@/lib/ai'
+import { invalidateCache } from '@/lib/api/cache'
 
 async function transcribeWithAssemblyAI(audioUrl: string): Promise<string> {
   const apiKey = process.env.ASSEMBLYAI_API_KEY
@@ -149,6 +150,8 @@ export async function POST(request: NextRequest) {
           .eq('ctm_call_id', callUpdate.ctm_call_id)
           .eq('user_id', user.id)
       }
+      
+      invalidateCache(`ctm:dashboardStats:${user.id}`)
     }
 
     return NextResponse.json({

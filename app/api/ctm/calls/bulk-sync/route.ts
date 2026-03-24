@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { CTMClient } from '@/lib/ctm'
+import { invalidateCache } from '@/lib/api/cache'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,39 +15,7 @@ export async function POST(request: NextRequest) {
     console.log('[Bulk Sync] Starting bulk sync for user:', user.id)
 
     const ctmClient = new CTMClient()
-    const callsPerPage = 100
-    const maxPages = 100
-    let allCalls: any[] = []
-    let page = 1
-
-    // Fetch all available calls from CTM
-    console.log('[Bulk Sync] Fetching calls from CTM...')
-    
-    while (page <= maxPages) {
-      const endpoint = `/accounts/${ctmClient.getAccountId()}/calls.json?limit=${callsPerPage}&hours=8760&page=${page}`
-      
-      try {
-        const data = await ctmClient.makeRequest<{ calls?: any[] }>(endpoint)
-        
-        if (!data.calls || data.calls.length === 0) {
-          console.log(`[Bulk Sync] Page ${page}: No more calls, stopping`)
-          break
-        }
-
-        console.log(`[Bulk Sync] Page ${page}: fetched ${data.calls.length} calls`)
-        allCalls.push(...data.calls)
-        
-        if (data.calls.length < callsPerPage) {
-          console.log(`[Bulk Sync] Page ${page}: Less than ${callsPerPage} calls, stopping`)
-          break
-        }
-        
-        page++
-      } catch (err) {
-        console.error(`[Bulk Sync] Error on page ${page}:`, err)
-        break
-      }
-    }
+    const allCalls = await ctmClient.calls.getCalls({ limit: 5000, hours: 8760 })
 
     console.log(`[Bulk Sync] Total calls fetched from CTM: ${allCalls.length}`)
 
@@ -59,26 +28,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Transform and store to Supabase
-    const callsToStore = allCalls.map((c: any) => ({
-      ctm_call_id: String(c.id),
+    const callsToStore = allCalls.map((c) => ({
+      ctm_call_id: c.id,
       user_id: user.id,
-      phone: c.phone_number || c.caller_number || null,
+      phone: c.phone || '',
       direction: c.direction || 'inbound',
       duration: c.duration || 0,
       status: c.status || 'completed',
-      timestamp: c.started_at || new Date().toISOString(),
-      caller_number: c.caller_number || null,
-      tracking_number: c.tracking_number || null,
-      tracking_label: c.tracking_label || null,
+      timestamp: c.timestamp ? new Date(c.timestamp).toISOString() : new Date().toISOString(),
+      caller_number: c.callerNumber || null,
+      tracking_number: c.trackingNumber || null,
+      tracking_label: c.trackingLabel || null,
       source: c.source || null,
-      source_id: c.source_id ? String(c.source_id) : null,
+      source_id: c.sourceId ? String(c.sourceId) : null,
       agent_id: c.agent?.id || null,
       agent_name: c.agent?.name || null,
-      recording_url: c.audio || c.recording_url || null,
+      recording_url: c.recordingUrl || null,
       transcript: c.transcript || null,
       city: c.city || null,
       state: c.state || null,
-      postal_code: c.postal_code || null,
+      postal_code: c.postalCode || null,
       synced_at: new Date().toISOString(),
     }))
 
@@ -107,6 +76,8 @@ export async function POST(request: NextRequest) {
       calls_synced: stored,
       status: 'completed',
     })
+
+    invalidateCache(`ctm:dashboardStats:${user.id}`)
 
     console.log(`[Bulk Sync] Complete. Total stored: ${stored}`)
 

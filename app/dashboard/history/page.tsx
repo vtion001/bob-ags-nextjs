@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import CallTable from '@/components/CallTable'
@@ -33,6 +33,26 @@ export default function HistoryPage() {
     handleSearch,
     handleExport,
   } = useCallHistory()
+
+  const [isBulkSyncing, setIsBulkSyncing] = useState(false)
+
+  const handleBulkSync = async () => {
+    setIsBulkSyncing(true)
+    try {
+      const res = await fetch('/api/ctm/calls/bulk-sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        alert(`Successfully synced ${data.callsSynced} calls to Supabase!`)
+        handleRefresh()
+      } else {
+        alert('Bulk sync failed: ' + (data.error || 'Unknown error'))
+      }
+    } catch (err) {
+      alert('Bulk sync failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
+    } finally {
+      setIsBulkSyncing(false)
+    }
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -72,8 +92,10 @@ export default function HistoryPage() {
           onAnalyzedOnlyChange={setAnalyzedOnly}
           onRefresh={handleRefresh}
           onSearch={handleSearch}
+          onBulkSync={handleBulkSync}
           isRefreshing={isRefreshing}
           isSearching={isSearching}
+          isBulkSyncing={isBulkSyncing}
           isSyncing={isSyncing}
         />
       </Card>
