@@ -18,6 +18,7 @@ import {
   ScoreProgress,
   TranscriptPanel,
 } from "@/components/monitor"
+import LiveAnalysisLogHistory from "@/components/monitor/LiveAnalysisLogHistory"
 import {
   extractGroup,
   formatDuration,
@@ -74,7 +75,12 @@ export default function MonitorPage() {
     isAnalyzing: isAIAnalyzing,
     analyzeNow,
     resetInsights,
-  } = useLiveAIInsights()
+  } = useLiveAIInsights({
+    callId: selectedCallId || undefined,
+    callPhone: selectedCallData?.phone || undefined,
+    callDirection: selectedCallData?.direction || undefined,
+    callTimestamp: selectedCallData?.timestamp?.toISOString() || undefined,
+  })
 
   const byCategory = (category: string) => {
     return RUBRIC_CRITERIA.filter((c) => c.category === category)
@@ -381,6 +387,7 @@ export default function MonitorPage() {
           )}
         </div>
       </div>
+      <LiveAnalysisLogHistory />
     </div>
   )
 }

@@ -1,8 +1,14 @@
 import type { CTMCall, Call } from '@/lib/types'
 
+function hasValidAgent(agent: CTMCall['agent']): agent is { id: string; name: string; email: string } {
+  return !!agent && !!agent.id && !!agent.name
+}
+
 export function transformCall(ctmCall: CTMCall): Call {
   const sale = (ctmCall as unknown as Record<string, unknown>).sale as { score?: number; name?: string } | undefined
   const activityAnalysis = (ctmCall as unknown as Record<string, unknown>).activity_analysis as Record<string, string> | undefined
+  
+  const agent = hasValidAgent(ctmCall.agent) ? ctmCall.agent : null
 
   return {
     id: String(ctmCall.id),
@@ -18,7 +24,7 @@ export function transformCall(ctmCall: CTMCall): Call {
     source: ctmCall.source,
     sourceId: ctmCall.source_id ? String(ctmCall.source_id) : undefined,
     accountId: ctmCall.account_id ? String(ctmCall.account_id) : undefined,
-    agent: ctmCall.agent ?? (ctmCall.source ? { id: '', name: ctmCall.source, email: '' } : undefined),
+    agent: agent ?? (ctmCall.source ? { id: '', name: ctmCall.source, email: '' } : undefined),
     recordingUrl: ctmCall.audio || ctmCall.recording_url,
     transcript: ctmCall.transcript,
     city: ctmCall.city,

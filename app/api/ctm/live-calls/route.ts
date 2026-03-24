@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { CTMClient } from '@/lib/ctm'
 import type { Call } from '@/lib/types'
+import { filterCallsByPhillies } from '@/lib/monitor/helpers'
 
 const DEV_EMAIL = 'agsdev@allianceglobalsolutions.com'
 
@@ -29,6 +30,21 @@ export async function GET(request: NextRequest) {
         hours: Math.min(hours, 2160),
         status: status,
       })
+      
+      if (allCalls.length > 0) {
+        console.log('[live-calls] Sample call agent data:', {
+          firstCall: {
+            id: allCalls[0].id,
+            agent: allCalls[0].agent,
+            source: allCalls[0].source,
+          },
+          secondCall: allCalls.length > 1 ? {
+            id: allCalls[1].id,
+            agent: allCalls[1].agent,
+            source: allCalls[1].source,
+          } : null,
+        })
+      }
     } catch (ctmError) {
       console.error('CTM API error:', ctmError)
       return NextResponse.json({

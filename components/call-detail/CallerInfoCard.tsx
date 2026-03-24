@@ -1,6 +1,7 @@
 import React from 'react'
 import Card from '@/components/ui/Card'
 import { Call } from '@/lib/ctm'
+import { extractGroup } from '@/lib/monitor/helpers'
 
 interface CallerInfoCardProps {
   call: Call
@@ -15,6 +16,11 @@ export default function CallerInfoCard({ call, formatDuration }: CallerInfoCardP
   }
 
   const format = formatDuration || defaultFormatDuration
+
+  const hasRealAgent = call.agent && !!call.agent.id && !!call.agent.name
+  const agentName = hasRealAgent ? call.agent!.name : null
+  const agentGroup = agentName ? extractGroup(agentName, call.source) : null
+  const displayName = agentName ? agentName.split(' - ')[0] : null
 
   return (
     <Card className="p-6">
@@ -54,6 +60,17 @@ export default function CallerInfoCard({ call, formatDuration }: CallerInfoCardP
           <div>
             <p className="text-xs text-navy-400 uppercase">Source</p>
             <p className="text-navy-900 mt-1">{call.trackingLabel}</p>
+          </div>
+        )}
+        {hasRealAgent && (
+          <div>
+            <p className="text-xs text-navy-400 uppercase">Agent / Group</p>
+            <p className="text-navy-900 mt-1">
+              {displayName}
+              {agentGroup && (
+                <span className="text-navy-500"> - {agentGroup}</span>
+              )}
+            </p>
           </div>
         )}
       </div>

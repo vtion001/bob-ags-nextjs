@@ -4,6 +4,7 @@ import { CTMClient } from '@/lib/ctm'
 import { getCachedCalls } from '@/lib/calls/cache'
 import { getAuthenticatedUser, getCTMClient } from '@/lib/api/deps'
 import { getCached, setCache } from '@/lib/api/cache'
+import { filterCallsByPhillies } from '@/lib/monitor/helpers'
 
 interface DashboardStats {
   totalCalls: number
@@ -74,14 +75,16 @@ export async function GET(request: NextRequest) {
       })
 
       if (cached && cached.calls.length > 0) {
-        const { stats, recentCalls } = calculateStats(cached.calls)
+        const filteredCached = filterCallsByPhillies(cached.calls)
+        const { stats, recentCalls } = calculateStats(filteredCached)
         setCache(cacheKey, { stats, recentCalls })
         return NextResponse.json({ stats, recentCalls, fromCache: true })
       }
     } catch {}
 
     const ctmClient = getCTMClient()
-    const calls = await ctmClient.calls.getCalls({ limit: 500, hours, agentId: agentId || undefined })
+    let calls = await ctmClient.calls.getCalls({ limit: 500, hours, agentId: agentId || undefined })
+    calls = filterCallsByPhillies(calls)
     const { stats, recentCalls } = calculateStats(calls)
     setCache(cacheKey, { stats, recentCalls })
 

@@ -4,6 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import { Call } from '@/lib/ctm'
 import Card from './ui/Card'
+import { extractGroup } from '@/lib/monitor/helpers'
 
 export interface CallTableProps {
   calls: Call[]
@@ -90,6 +91,7 @@ export default function CallTable({ calls, onCallClick }: CallTableProps) {
           <tr>
             <th className="text-left px-5 py-3.5 text-xs font-semibold text-navy-500 uppercase tracking-wider">Time</th>
             <th className="text-left px-5 py-3.5 text-xs font-semibold text-navy-500 uppercase tracking-wider">Phone</th>
+            <th className="text-left px-5 py-3.5 text-xs font-semibold text-navy-500 uppercase tracking-wider">Group / Agent</th>
             <th className="text-left px-5 py-3.5 text-xs font-semibold text-navy-500 uppercase tracking-wider">Direction</th>
             <th className="text-left px-5 py-3.5 text-xs font-semibold text-navy-500 uppercase tracking-wider">Duration</th>
             <th className="text-left px-5 py-3.5 text-xs font-semibold text-navy-500 uppercase tracking-wider">Score</th>
@@ -100,6 +102,11 @@ export default function CallTable({ calls, onCallClick }: CallTableProps) {
           {calls.map((call, index) => {
             const score = call.analysis?.score ?? call.score
             const badge = getScoreBadge(score)
+            const agent = call.agent
+            const hasRealAgent = agent && agent.id && agent.name && agent.id !== ''
+            const agentName = hasRealAgent ? agent.name : null
+            const group = agentName ? extractGroup(agentName, call.source) : null
+            const displayName = agentName ? agentName.split(' - ')[0] : null
             return (
               <tr
                 key={`${call.id}-${index}`}
@@ -117,6 +124,21 @@ export default function CallTable({ calls, onCallClick }: CallTableProps) {
                   <Link href={`/dashboard/calls/${call.id}`} className="text-sm font-semibold text-navy-900 hover:text-navy-700">
                     {call.phone}
                   </Link>
+                </td>
+                <td className="px-5 py-4">
+                  <div className="flex flex-col">
+                    {group && (
+                      <span className="text-xs text-navy-400">{group}</span>
+                    )}
+                    {displayName && (
+                      <span className="text-sm text-navy-700 font-medium">{displayName}</span>
+                    )}
+                    {!displayName && (
+                      <span className="text-sm text-navy-500 italic">
+                        {call.source || 'No agent'}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-5 py-4">
                   <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${

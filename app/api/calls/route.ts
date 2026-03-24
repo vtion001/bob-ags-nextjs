@@ -3,6 +3,8 @@ import { createServerSupabase } from '@/lib/supabase/server'
 import { fetchCallsFromCTM } from '@/lib/calls/fetcher'
 import { getCachedCalls, storeCallsToCache, getLastCallTimestamp } from '@/lib/calls/cache'
 import { invalidateCache } from '@/lib/api/cache'
+import { filterCallsByPhillies } from '@/lib/monitor/helpers'
+import type { CallAPIResponse } from '@/lib/calls/transformer'
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,9 +47,10 @@ export async function GET(request: NextRequest) {
       const sinceMs = await getLastCallTimestamp(supabase, user.id)
       const sinceHours = sinceMs ? Math.max(1, (Date.now() - sinceMs) / 3600000) : 1
       const calls = await fetchCallsFromCTM({ hours: Math.min(sinceHours, 24), agentId: agentId || undefined, limit: 500 })
-      const filtered = sinceMs
-        ? calls.filter(c => new Date(c.timestamp).getTime() > sinceMs)
-        : calls
+      let filtered = filterCallsByPhillies(calls) as CallAPIResponse[]
+      filtered = sinceMs
+        ? filtered.filter(c => new Date(c.timestamp).getTime() > sinceMs)
+        : filtered
       if (filtered.length > 0) {
         try { await storeCallsToCache(supabase, user.id, filtered) } catch {}
       }
@@ -73,12 +76,13 @@ export async function GET(request: NextRequest) {
     }
 
     const calls = await fetchCallsFromCTM({ hours, agentId: agentId || undefined, limit })
+    const philliesCalls = filterCallsByPhillies(calls) as CallAPIResponse[]
     try {
-      await storeCallsToCache(supabase, user.id, calls)
+      await storeCallsToCache(supabase, user.id, philliesCalls)
     } catch (storeErr) {
       console.warn('[calls] Supabase write failed:', storeErr)
     }
-    return NextResponse.json({ calls, source: 'ctm', count: calls.length, fromCache: false })
+    return NextResponse.json({ calls: philliesCalls, source: 'ctm', count: philliesCalls.length, fromCache: false })
   } catch (error) {
     console.error('Calls fetch error:', error)
     return NextResponse.json({ error: 'Failed to fetch calls' }, { status: 500 })
@@ -148,9 +152,10 @@ export async function POST(request: NextRequest) {
     const sinceMs = await getLastCallTimestamp(supabase, user.id)
     const sinceHours = sinceMs ? Math.max(1, (Date.now() - sinceMs) / 3600000) : 1
     const calls = await fetchCallsFromCTM({ hours: Math.min(sinceHours, 24), agentId: agentId || undefined, limit: 500 })
-    const filtered = sinceMs
-      ? calls.filter(c => new Date(c.timestamp).getTime() > sinceMs)
-      : calls
+    let filtered = filterCallsByPhillies(calls) as CallAPIResponse[]
+    filtered = sinceMs
+      ? filtered.filter(c => new Date(c.timestamp).getTime() > sinceMs)
+      : filtered
 
     if (filtered.length > 0) {
       try { await storeCallsToCache(supabase, user.id, filtered) } catch {}

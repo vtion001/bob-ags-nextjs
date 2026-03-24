@@ -10,8 +10,24 @@ export interface LiveAIInsight {
   timestamp: number
 }
 
+export interface LiveAnalysisLogEntry {
+  id: string
+  callId?: string
+  callPhone?: string
+  callDirection?: string
+  callTimestamp?: string
+  suggestedDisposition?: string
+  insights: LiveAIInsight[]
+  transcriptPreview?: string
+  createdAt: string
+}
+
 interface UseLiveAIInsightsOptions {
   onError?: (error: string) => void
+  callId?: string
+  callPhone?: string
+  callDirection?: string
+  callTimestamp?: string
 }
 
 interface UseLiveAIInsightsReturn {
@@ -118,7 +134,7 @@ function checkCrisis(transcript: string): LiveAIInsight | null {
 }
 
 export function useLiveAIInsights(options: UseLiveAIInsightsOptions = {}): UseLiveAIInsightsReturn {
-  const { onError } = options
+  const { onError, callId, callPhone, callDirection, callTimestamp } = options
   const [aiInsights, setAiInsights] = useState<LiveAIInsight[]>([])
   const [suggestedDisposition, setSuggestedDisposition] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -178,6 +194,25 @@ export function useLiveAIInsights(options: UseLiveAIInsightsOptions = {}): UseLi
       }
 
       setLastAnalyzedAt(Date.now())
+
+      // Save to Supabase log
+      try {
+        await fetch('/api/live-analysis-logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callId,
+            callPhone,
+            callDirection,
+            callTimestamp,
+            suggestedDisposition: disposition,
+            insights: [...newInsights, ...(crisisInsight ? [crisisInsight] : [])],
+            transcriptPreview: transcript.slice(-500),
+          }),
+        })
+      } catch (logError) {
+        console.warn('[LiveAIInsights] Failed to save log:', logError)
+      }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
       const message = err instanceof Error ? err.message : 'AI analysis failed'
@@ -186,7 +221,7 @@ export function useLiveAIInsights(options: UseLiveAIInsightsOptions = {}): UseLi
     } finally {
       setIsAnalyzing(false)
     }
-  }, [onError])
+  }, [onError, callId, callPhone, callDirection, callTimestamp])
 
   const resetInsights = useCallback(() => {
     setAiInsights([])

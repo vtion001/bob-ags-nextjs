@@ -5,6 +5,8 @@ export const KNOWN_GROUPS = [
   "Marty Direct", "Trost Virtual Admissions", "Retention Team", "Direct"
 ]
 
+export const PHILLIES_GROUP_NAME = "Phillies"
+
 export function extractGroup(agentName: string | undefined, source?: string): string {
   if (!agentName || agentName === "Unknown Agent") {
     if (source) return source;
@@ -40,4 +42,16 @@ export function getScoreColor(score: number): string {
   if (score >= 70) return "text-green-600";
   if (score >= 40) return "text-navy-700";
   return "text-red-600";
+}
+
+export function isPhilliesAgent(agentName: string | undefined | null): boolean {
+  if (!agentName || agentName === "Unknown Agent") return false;
+  return agentName.includes(PHILLIES_GROUP_NAME);
+}
+
+export function filterCallsByPhillies<T extends { agent?: { name?: string } | null; agentName?: string | null }>(calls: T[]): T[] {
+  return calls.filter(call => {
+    const agentName = call.agent?.name ?? call.agentName;
+    return isPhilliesAgent(agentName);
+  });
 }
