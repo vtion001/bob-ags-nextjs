@@ -2,48 +2,58 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { CTMClient } from '@/lib/ctm'
 import { getCachedCalls } from '@/lib/calls/cache'
-import { transformDBRowToAPIResponse } from '@/lib/calls/transformer'
+import { getAuthenticatedUser, getCTMClient } from '@/lib/api/deps'
+import { getCached, setCache } from '@/lib/api/cache'
+
+interface DashboardStats {
+  totalCalls: number
+  analyzed: number
+  hotLeads: number
+  avgScore: string
+}
+
+function calculateStats(calls: any[]): { stats: DashboardStats; recentCalls: any[] } {
+  const inboundCalls = calls.filter((c: any) => c.direction === 'inbound')
+  const totalCalls = inboundCalls.length
+  const analyzed = inboundCalls.filter((c: any) => c.score !== undefined || c.analysis).length
+  const hotLeads = inboundCalls.filter((c: any) => (c.score ?? 0) >= 80).length
+  const scoredCalls = inboundCalls.filter((c: any) => c.score && c.score > 0)
+  const avgScore = scoredCalls.length > 0
+    ? Math.round(scoredCalls.reduce((sum: number, c: any) => sum + (c.score ?? 0), 0) / scoredCalls.length)
+    : 0
+
+  return {
+    stats: { totalCalls, analyzed, hotLeads, avgScore: avgScore.toString() },
+    recentCalls: inboundCalls.slice(0, 10),
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerSupabase(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, error } = await getAuthenticatedUser(request)
+    if (error || !user) return error!
 
     const searchParams = request.nextUrl.searchParams
     const cacheOnly = searchParams.get('cacheOnly') === 'true'
+    const swr = searchParams.get('swr') === 'true'
     const hours = parseInt(searchParams.get('hours') || '168')
     const agentId = searchParams.get('agentId')
 
-    try {
-      const cached = await getCachedCalls(supabase, {
-        userId: user.id,
-        hours,
-        agentId: agentId || undefined,
-        limit: 500,
-        ctmCallId: undefined,
-      })
+    const cacheKey = `ctm:dashboardStats:${user.id}:${hours}:${agentId || 'all'}`
+    const cachedData = swr ? getCached<{ stats: DashboardStats; recentCalls: any[] }>(cacheKey, 300000) : null
 
-      if (cached && cached.calls.length > 0) {
-        const inboundCalls = cached.calls.filter((c: any) => c.direction === 'inbound')
-        const totalCalls = inboundCalls.length
-        const analyzed = inboundCalls.filter((c: any) => c.score !== undefined || c.analysis).length
-        const hotLeads = inboundCalls.filter((c: any) => (c.score ?? 0) >= 80).length
-        const scoredCalls = inboundCalls.filter((c: any) => c.score && c.score > 0)
-        const avgScore = scoredCalls.length > 0
-          ? Math.round(scoredCalls.reduce((sum: number, c: any) => sum + (c.score ?? 0), 0) / scoredCalls.length)
-          : 0
-
-        return NextResponse.json({
-          stats: { totalCalls, analyzed, hotLeads, avgScore: avgScore.toString() },
-          recentCalls: inboundCalls.slice(0, 10),
-          fromCache: true,
-        })
+    if (cachedData) {
+      if (swr) {
+        fetch(`${request.nextUrl.origin}/api/ctm/dashboard/stats?hours=${hours}${agentId ? `&agentId=${agentId}` : ''}&refresh=true`, {
+          headers: { 'Authorization': request.headers.get('Authorization') || '' },
+        }).catch(() => {})
       }
-    } catch {
-      // Cache unavailable, fall through to CTM
+
+      return NextResponse.json({
+        ...cachedData,
+        fromCache: true,
+        stale: swr,
+      })
     }
 
     if (cacheOnly) {
@@ -54,22 +64,28 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const ctmClient = new CTMClient()
-    const calls = await ctmClient.calls.getCalls({ limit: 500, hours, agentId: agentId || undefined })
-    
-    const inboundCalls = calls.filter(c => c.direction === 'inbound')
-    const totalCalls = inboundCalls.length
-    const analyzed = inboundCalls.filter(c => c.score !== undefined || c.analysis).length
-    const hotLeads = inboundCalls.filter(c => (c.score ?? 0) >= 80).length
-    const avgScore = totalCalls > 0
-      ? Math.round(inboundCalls.reduce((sum, c) => sum + (c.score ?? 0), 0) / totalCalls)
-      : 0
+    try {
+      const cached = await getCachedCalls(await createServerSupabase(request), {
+        userId: user.id,
+        hours,
+        agentId: agentId || undefined,
+        limit: 500,
+        ctmCallId: undefined,
+      })
 
-    return NextResponse.json({
-      stats: { totalCalls, analyzed, hotLeads, avgScore: avgScore.toString() },
-      recentCalls: inboundCalls.slice(0, 10),
-      fromCache: false,
-    })
+      if (cached && cached.calls.length > 0) {
+        const { stats, recentCalls } = calculateStats(cached.calls)
+        setCache(cacheKey, { stats, recentCalls })
+        return NextResponse.json({ stats, recentCalls, fromCache: true })
+      }
+    } catch {}
+
+    const ctmClient = getCTMClient()
+    const calls = await ctmClient.calls.getCalls({ limit: 500, hours, agentId: agentId || undefined })
+    const { stats, recentCalls } = calculateStats(calls)
+    setCache(cacheKey, { stats, recentCalls })
+
+    return NextResponse.json({ stats, recentCalls, fromCache: false })
   } catch (error) {
     console.error('CTM dashboard stats error:', error)
     return NextResponse.json(

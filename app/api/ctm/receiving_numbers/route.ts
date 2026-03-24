@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { CTMClient } from '@/lib/ctm'
+import { fetchWithCache, invalidateCache } from '@/lib/api/cache'
+
+const RECEIVING_NUMBERS_CACHE_TTL = 30000
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,8 +13,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const ctmClient = new CTMClient()
-    const data = await ctmClient.receivingNumbers.getReceivingNumbers()
+    const data = await fetchWithCache(
+      'ctm:receiving_numbers',
+      async () => {
+        const ctmClient = new CTMClient()
+        return ctmClient.receivingNumbers.getReceivingNumbers()
+      },
+      RECEIVING_NUMBERS_CACHE_TTL
+    )
 
     return NextResponse.json(data)
   } catch (error) {
@@ -43,6 +52,8 @@ export async function POST(request: NextRequest) {
 
     const ctmClient = new CTMClient()
     const data = await ctmClient.receivingNumbers.createReceivingNumber(number, name || '')
+
+    invalidateCache('ctm:receiving_numbers')
 
     return NextResponse.json(data)
   } catch (error) {

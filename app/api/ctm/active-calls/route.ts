@@ -1,42 +1,27 @@
 import { NextResponse } from 'next/server'
 import { NextRequest } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { CTMClient } from '@/lib/ctm'
+import { getAuthenticatedUser, getUserSettings, getCTMClient } from '@/lib/api/deps'
+import { fetchWithCache, invalidateCache } from '@/lib/api/cache'
 
-const DEV_EMAIL = 'agsdev@allianceglobalsolutions.com'
+const ACTIVE_CALLS_TTL = 5000
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerSupabase(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, error } = await getAuthenticatedUser(request)
+    if (error || !user) return error!
 
-    const ctmClient = new CTMClient()
-    const calls = await ctmClient.calls.getActiveCalls()
+    const ctmClient = getCTMClient()
+    const calls = await fetchWithCache(
+      'ctm:activeCalls',
+      () => ctmClient.calls.getActiveCalls(),
+      ACTIVE_CALLS_TTL
+    )
 
-    const isDevAdmin = user.email === DEV_EMAIL
-
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    const isAdmin = isDevAdmin || userRole?.role === 'admin'
-
-    if (isAdmin) {
+    if (user.isAdmin) {
       return NextResponse.json({ calls })
     }
 
-    const { data: userSettings } = await supabase
-      .from('user_settings')
-      .select('settings')
-      .eq('user_id', user.id)
-      .single()
-
-    const settings = userSettings?.settings || {}
+    const settings = await getUserSettings(request, user.id)
     const assignedAgentId = settings.ctm_agent_id
 
     if (!assignedAgentId) {
@@ -58,4 +43,9 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+export async function POST(request: NextRequest) {
+  invalidateCache('ctm:activeCalls')
+  return NextResponse.json({ success: true })
 }

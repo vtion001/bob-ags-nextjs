@@ -1,24 +1,31 @@
 import { NextResponse } from 'next/server'
 import { NextRequest } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { CTMClient } from '@/lib/ctm'
+import { getAuthenticatedUser, getCTMClient } from '@/lib/api/deps'
+import { fetchWithCache } from '@/lib/api/cache'
+
+const CACHE_TTL = 60000
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerSupabase(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, error } = await getAuthenticatedUser(request)
+    if (error || !user) return error!
 
-    const ctmClient = new CTMClient()
-    const agents = await ctmClient.agents.getAgents()
-    const userGroups = await ctmClient.agents.getUserGroups()
+    const ctmClient = getCTMClient()
 
-    return NextResponse.json({ 
-      agents,
-      userGroups 
-    })
+    const [agents, userGroups] = await Promise.all([
+      fetchWithCache(
+        `ctm:agents:${user.id}`,
+        () => ctmClient.agents.getAgents(),
+        CACHE_TTL
+      ),
+      fetchWithCache(
+        `ctm:userGroups:${user.id}`,
+        () => ctmClient.agents.getUserGroups(),
+        CACHE_TTL
+      ),
+    ])
+
+    return NextResponse.json({ agents, userGroups })
   } catch (error) {
     console.error('CTM agents error:', error)
     return NextResponse.json({ error: 'Failed to fetch agents' }, { status: 500 })

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { CTMClient } from '@/lib/ctm'
+import { fetchWithCache, invalidateCache } from '@/lib/api/cache'
+
+const SOURCES_CACHE_TTL = 30000
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,8 +13,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const ctmClient = new CTMClient()
-    const data = await ctmClient.sources.getSources()
+    const data = await fetchWithCache(
+      'ctm:sources',
+      async () => {
+        const ctmClient = new CTMClient()
+        return ctmClient.sources.getSources()
+      },
+      SOURCES_CACHE_TTL
+    )
 
     return NextResponse.json(data)
   } catch (error) {
@@ -42,6 +51,8 @@ export async function POST(request: NextRequest) {
       landing_url: landing_url || '',
       position: position?.toString() || '1',
     })
+
+    invalidateCache('ctm:sources')
 
     return NextResponse.json(data)
   } catch (error) {
