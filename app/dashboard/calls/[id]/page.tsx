@@ -9,16 +9,19 @@ import {
   CallerInfoCard,
   AIAnalysisCard,
   QAAnalysisCard,
+  QAManualOverrideCard,
   TranscriptCard,
   AudioPlayerCard,
   ActionButtonsCard,
 } from '@/components/call-detail'
 import { useCallDetail } from '@/hooks/calls/useCallDetail'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function CallDetailPage() {
   const params = useParams()
   const router = useRouter()
   const callId = params.id as string
+  const { role } = useAuth()
 
   const {
     call,
@@ -106,6 +109,15 @@ export default function CallDetailPage() {
             isAnalyzing={isAnalyzing}
             hasTranscript={hasTranscript}
             onRunAnalysis={async () => { await handleAnalyze() }}
+          />
+
+          <QAManualOverrideCard
+            callId={callId}
+            rubricResults={analysis?.rubric_results}
+            rubricBreakdown={analysis?.rubric_breakdown}
+            onOverrideSaved={(overrides) => {
+              console.log('Overrides saved:', overrides)
+            }}
           />
 
           <AudioPlayerCard
