@@ -198,6 +198,8 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
 
       if (cancelled) return
 
+      const hasCachedAnalysis = cachedCall && cachedCall.analysis && cachedCall.analysis.rubric_results
+
       if (cachedCall) {
         setCall(cachedCall)
         if (cachedCall.analysis) {
@@ -230,9 +232,12 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
         if (ctmCall.transcript) {
           setTranscript(ctmCall.transcript)
         }
-        setCall(ctmCall)
+        
+        if (!hasCachedAnalysis) {
+          setCall(ctmCall)
+        }
 
-        if (ctmCall.analysis && !cachedCall?.analysis) {
+        if (!hasCachedAnalysis && ctmCall.analysis) {
           setAnalysis({
             score: ctmCall.score || 0,
             sentiment: ctmCall.sentiment || 'neutral',
@@ -244,11 +249,13 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
           })
         }
 
-        await fetch('/api/calls', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ calls: [ctmCall] }),
-        })
+        if (!hasCachedAnalysis) {
+          await fetch('/api/calls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ calls: [ctmCall] }),
+          })
+        }
       }
 
       if (cancelled) return
