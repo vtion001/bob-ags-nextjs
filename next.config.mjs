@@ -21,6 +21,15 @@ const nextConfig = {
   turbopack: {
     root: '/Users/archerterminez/Desktop/REPOSITORY/bob-ags',
   },
+  async redirects() {
+    return [
+      {
+        source: '/favicon.ico',
+        destination: '/icon.svg',
+        permanent: false,
+      },
+    ]
+  },
   async headers() {
     return [
       {

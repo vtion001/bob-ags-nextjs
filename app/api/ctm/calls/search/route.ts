@@ -62,9 +62,12 @@ function phoneMatches(phone1: string, phone2: string): boolean {
   // If either is empty after normalization, no match
   if (!norm1 || !norm2) return false
   
+  const lengthsMatch = norm1.length === norm2.length
+  const directMatch = norm1 === norm2
+  
   // If lengths are equal, direct comparison
-  if (norm1.length === norm2.length) {
-    return norm1 === norm2
+  if (lengthsMatch) {
+    return directMatch
   }
   
   // If lengths differ, compare last digits of the longer number
@@ -73,7 +76,11 @@ function phoneMatches(phone1: string, phone2: string): boolean {
   const longer = norm1.length < norm2.length ? norm2 : norm1
   
   // Compare last N digits of longer with shorter (N = length of shorter)
-  return longer.slice(-shorter.length) === shorter
+  const suffixMatch = longer.slice(-shorter.length) === shorter
+  
+  console.log(`[phoneMatches] phone1="${phone1}" norm1="${norm1}" phone2="${phone2}" norm2="${norm2}" lengthsMatch=${lengthsMatch} directMatch=${directMatch} suffixMatch=${suffixMatch}`)
+  
+  return suffixMatch
 }
 
 function filterCallsByPhone(calls: any[], normalizedPhone: string) {
@@ -113,6 +120,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 })
     }
 
+    console.log('[Phone Search API] Search request:', {
+      phone,
+      phoneLength: phone.length,
+      phoneDigitsOnly: phone.replace(/\D/g, ''),
+      hours: searchParams.get('hours'),
+    })
+
     // Keep original phone for display, filterCallsByPhone handles normalization
     console.log('[Phone Search API] Searching for:', { phone })
 
@@ -139,8 +153,24 @@ export async function GET(request: NextRequest) {
       
       try {
         const ctmClient = new CTMClient()
+        
+        // First, let's get all calls from CTM to see what's available
+        console.log('[Phone Search API] Fetching all calls from CTM...')
+        const allCTMCalls = await ctmClient.calls.getCalls({ limit: 500, hours: 8760 })
+        console.log('[Phone Search API] Total CTM calls:', allCTMCalls.length)
+        
+        // Log sample of phone numbers to see what formats CTM returns
+        if (allCTMCalls.length > 0) {
+          console.log('[Phone Search API] Sample CTM phone numbers:', allCTMCalls.slice(0, 5).map(c => ({
+            id: c.id,
+            phone: c.phone,
+            callerNumber: c.callerNumber,
+            trackingNumber: c.trackingNumber,
+          })))
+        }
+        
         const ctmCalls = await ctmClient.calls.searchCallsByPhone(phone, 8760)
-        console.log('[Phone Search API] CTM calls fetched:', ctmCalls.length)
+        console.log('[Phone Search API] CTM calls after phone filter:', ctmCalls.length)
         
         if (ctmCalls.length > 0) {
           const ctmTransformed = ctmCalls.map(transformCTMCallToAPIResponse)
