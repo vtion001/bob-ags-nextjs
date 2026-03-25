@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
@@ -34,7 +34,17 @@ export default function CallDetailPage() {
     error,
     handleTranscribe,
     handleAnalyze,
+    setAnalysis,
   } = useCallDetail(callId)
+
+  const handleOverrideSaved = useCallback((overrides: any[], manualScore: number) => {
+    if (analysis) {
+      setAnalysis({
+        ...analysis,
+        score: manualScore,
+      })
+    }
+  }, [analysis, setAnalysis])
 
   if (isLoading) {
     return (

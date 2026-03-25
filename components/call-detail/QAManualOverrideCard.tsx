@@ -31,7 +31,7 @@ interface QAManualOverrideCardProps {
     compliance_score: number
     compliance_max: number
   }
-  onOverrideSaved?: (overrides: QAOverrideResult[]) => void
+  onOverrideSaved?: (overrides: QAOverrideResult[], manualScore: number) => void
 }
 
 function getCategoryScore(breakdown: QAManualOverrideCardProps['rubricBreakdown'], category: string): { score: number; max: number } {
@@ -161,7 +161,8 @@ export default function QAManualOverrideCard({
       setHasChanges(false)
       
       if (res.ok) {
-        onOverrideSaved?.(Object.values(overrides))
+        const score = calculateManualScore(Object.values(overrides), rubricBreakdown)
+        onOverrideSaved?.(Object.values(overrides), score)
       }
     } catch (err) {
       console.error('Failed to save overrides:', err)

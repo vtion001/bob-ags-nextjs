@@ -48,6 +48,7 @@ interface UseCallDetailReturn {
   error: string | null
   handleTranscribe: () => Promise<string | null>
   handleAnalyze: () => Promise<boolean>
+  setAnalysis: React.Dispatch<React.SetStateAction<AnalysisResult | null>>
 }
 
 export function useCallDetail(callId: string): UseCallDetailReturn {
@@ -290,5 +291,6 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
     error,
     handleTranscribe,
     handleAnalyze,
+    setAnalysis,
   }
 }
