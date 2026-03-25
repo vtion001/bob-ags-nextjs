@@ -101,9 +101,53 @@ export async function GET(request: NextRequest) {
             },
             updated_at: new Date().toISOString(),
           })
+
+        // Auto-create agent profile for this CTM agent
+        const { data: existingProfile } = await supabase
+          .from('agent_profiles')
+          .select('id')
+          .eq('agent_id', match.id)
+          .single()
+
+        if (!existingProfile) {
+          await supabase.from('agent_profiles').insert({
+            name: match.name || 'Unknown Agent',
+            agent_id: match.id,
+            email: match.email || null,
+            phone: null,
+            notes: `Auto-created for user ${user.email}`,
+          })
+        }
       }
     } catch (agentError) {
       console.error('CTM agent lookup error:', agentError)
+    }
+  } else {
+    // If user already has ctm_agent_id, ensure agent profile exists
+    try {
+      const { data: existingProfile } = await supabase
+        .from('agent_profiles')
+        .select('id')
+        .eq('agent_id', currentSettings.ctm_agent_id)
+        .single()
+
+      if (!existingProfile) {
+        const ctmClient = new CTMClient()
+        const agents = await ctmClient.agents.getAgents()
+        const match = agents.find((agent) => agent.id === currentSettings.ctm_agent_id)
+
+        if (match) {
+          await supabase.from('agent_profiles').insert({
+            name: match.name || 'Unknown Agent',
+            agent_id: match.id,
+            email: match.email || null,
+            phone: null,
+            notes: `Auto-created for user ${user.email}`,
+          })
+        }
+      }
+    } catch (profileError) {
+      console.error('Agent profile creation error:', profileError)
     }
   }
 

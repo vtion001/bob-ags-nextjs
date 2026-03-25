@@ -30,8 +30,10 @@ export interface AuthContextValue {
   role: string
   permissions: Permissions
   isAdmin: boolean
+  isViewer: boolean
   agents: Agent[]
   userGroups: UserGroup[]
+  ctmAgentId: string | null
   isLoading: boolean
   isReady: boolean
   refetch: () => Promise<void>
@@ -55,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [permissions, setPermissions] = useState<Permissions>(DEFAULT_PERMISSIONS)
   const [agents, setAgents] = useState<Agent[]>([])
   const [userGroups, setUserGroups] = useState<UserGroup[]>([])
+  const [ctmAgentId, setCtmAgentId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isReady, setIsReady] = useState(false)
   const fetchCountRef = useRef(0)
@@ -63,11 +66,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const currentFetch = ++fetchCountRef.current
 
     try {
-      const [sessionRes, permsRes, agentsRes, groupsRes] = await Promise.all([
+      const [sessionRes, permsRes, agentsRes, groupsRes, settingsRes] = await Promise.all([
         fetch('/api/auth/session'),
         fetch('/api/users/permissions'),
         fetch('/api/ctm/agents'),
         fetch('/api/ctm/agents/groups'),
+        fetch('/api/users/settings'),
       ])
 
       if (currentFetch !== fetchCountRef.current) return
@@ -90,6 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const agentsData = await agentsRes.json()
         setAgents(agentsData.agents || [])
         setUserGroups(agentsData.userGroups || [])
+      }
+
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json()
+        setCtmAgentId(settingsData.settings?.ctm_agent_id || null)
       }
     } catch (error) {
       console.error('Auth fetch failed:', error)
@@ -115,8 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role,
         permissions,
         isAdmin: role === 'admin',
+        isViewer: role === 'viewer',
         agents,
         userGroups,
+        ctmAgentId,
         isLoading,
         isReady,
         refetch: fetchAll,
