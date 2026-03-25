@@ -144,23 +144,23 @@ export class AssemblyAIRealtime {
       await this.transcriber.connect();
       console.log('[AAI] connect() returned, waiting for open event...');
 
-      // Wait for the 'open' event before starting audio, with 60s timeout
+      // Wait for the 'open' event before starting audio, with 30s timeout
       await Promise.race([
         new Promise<void>((resolve) => {
           const checkReady = () => {
             if (isReady) {
-              console.log('[AAI] Session ready, waiting 5 seconds for socket to be fully ready...');
+              console.log('[AAI] Session ready, waiting 1 second for socket to stabilize...');
               setTimeout(() => {
                 console.log('[AAI] Starting audio processor now');
                 resolve();
-              }, 5000);
+              }, 1000);
             } else {
               setTimeout(checkReady, 50);
             }
           };
           checkReady();
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('AssemblyAI connection timeout after 60s')), 60000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('AssemblyAI connection timeout after 30s')), 30000))
       ]);
 
       this.microphone = this.audioContext.createMediaStreamSource(this.mediaStream);
@@ -261,8 +261,8 @@ export class AssemblyAIRealtime {
         this.audioBuffer.length = 0;
       };
 
-      // Set up interval to flush buffer every 50ms
-      this.bufferFlushInterval = setInterval(this.flushAudioBuffer, 50);
+      // Set up interval to flush buffer every 20ms for lower latency
+      this.bufferFlushInterval = setInterval(this.flushAudioBuffer, 20);
 
       let useWorklet = true;
       try {

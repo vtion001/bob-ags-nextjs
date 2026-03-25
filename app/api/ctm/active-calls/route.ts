@@ -3,7 +3,8 @@ import { NextRequest } from 'next/server'
 import { getAuthenticatedUser, getUserSettings, getCTMClient } from '@/lib/api/deps'
 import { fetchWithCache, invalidateCache } from '@/lib/api/cache'
 
-const ACTIVE_CALLS_TTL = 5000
+const ADMIN_ACTIVE_CALLS_TTL = 2000
+const VIEWER_ACTIVE_CALLS_TTL = 1000
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,18 +12,25 @@ export async function GET(request: NextRequest) {
     if (error || !user) return error!
 
     const ctmClient = getCTMClient()
+    
+    const settings = await getUserSettings(request, user.id)
+    const assignedAgentId = settings.ctm_agent_id
+    const isViewer = !user.isAdmin && !!assignedAgentId
+    
+    const cacheKey = isViewer 
+      ? `ctm:activeCalls:viewer:${assignedAgentId}`
+      : 'ctm:activeCalls:admin'
+    const cacheTtl = isViewer ? VIEWER_ACTIVE_CALLS_TTL : ADMIN_ACTIVE_CALLS_TTL
+
     const calls = await fetchWithCache(
-      'ctm:activeCalls',
+      cacheKey,
       () => ctmClient.calls.getActiveCalls(),
-      ACTIVE_CALLS_TTL
+      cacheTtl
     )
 
     if (user.isAdmin) {
       return NextResponse.json({ calls })
     }
-
-    const settings = await getUserSettings(request, user.id)
-    const assignedAgentId = settings.ctm_agent_id
 
     if (!assignedAgentId) {
       return NextResponse.json({ calls: [] })

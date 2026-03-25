@@ -47,7 +47,7 @@ export function useMonitorPage(options?: UseMonitorPageOptions): UseMonitorPageR
   const [selectedCallData, setSelectedCallData] = useState<Call | null>(null)
   const [callsError, setCallsError] = useState<string | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string>("All")
-  const [pollingInterval] = useState(5)
+  const [pollingInterval] = useState(2)
   const [gracePeriodRemaining, setGracePeriodRemaining] = useState(0)
   const [isInGracePeriod, setIsInGracePeriod] = useState(false)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
