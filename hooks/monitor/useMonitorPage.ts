@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Call } from "@/lib/ctm"
 import { useLiveAnalysis } from "@/hooks/monitor"
 import { extractGroup, KNOWN_GROUPS } from "@/lib/monitor/helpers"
+import { RUBRIC_CRITERIA } from "@/lib/ai/rubric"
 
 const GRACE_PERIOD_SECONDS = 30
 
@@ -243,7 +244,6 @@ export function useMonitorPage(options?: UseMonitorPageOptions): UseMonitorPageR
   }, [isMonitoring, startMonitoring, stopMonitoring])
 
   const byCategory = useCallback((category: string) => {
-    const { RUBRIC_CRITERIA } = require("@/lib/ai")
     return RUBRIC_CRITERIA.filter((c: any) => c.category === category)
   }, [])
 
