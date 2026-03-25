@@ -64,8 +64,7 @@ export function generateDetails(lower: string, criterion: RubricCriterion): stri
 
 export function evaluateRubric(
   lower: string,
-  aiResults: Record<string, { pass: boolean; details: string }>,
-  callType?: string
+  aiResults: Record<string, { pass: boolean; details: string }>
 ): CriterionResult[] {
   return RUBRIC_CRITERIA.map(criterion => {
     if (ALWAYS_NA_CRITERIA.includes(criterion.id)) {

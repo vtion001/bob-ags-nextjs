@@ -117,8 +117,7 @@ export async function analyzeTranscript(
     }
   }
 
-  const callType = detectCallType(transcript)
-  const results = evaluateRubric(lower, aiResults, callType)
+  const results = evaluateRubric(lower, aiResults)
   
   if (ctmStarRating !== undefined) {
     const starRatingMap: Record<number, string> = {
@@ -141,6 +140,7 @@ export async function analyzeTranscript(
   const mentionedLocations = extractLocations(transcript)
   const detectedState = mentionedLocations[0] || ''
   const detectedInsurance = detectInsurance(transcript)
+  const callType = detectCallType(transcript)
   const tags = generateTags(results, score, detectedInsurance, detectedState)
   const sentiment = score >= 70 ? 'positive' : score >= 40 ? 'neutral' : 'negative'
   const disposition = getDisposition(results, score, autoFailed)
