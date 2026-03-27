@@ -54,8 +54,9 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session if expired
-  await supabase.auth.getUser()
+  // Refresh session - MUST use getSession() (not getUser()) to refresh the session cookie
+  // getUser() only validates the JWT without refreshing, causing getSession() to return null on API routes
+  await supabase.auth.getSession()
 
   return response
 }
