@@ -76,8 +76,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (currentFetch !== fetchCountRef.current) return
 
-      if (!sessionRes.ok) {
+      // Only redirect to login on 401 Unauthorized, not on backend errors
+      if (sessionRes.status === 401) {
         window.location.href = '/'
+        return
+      }
+
+      // For other errors (502, 503, 500, etc), don't redirect - backend may be temporarily unavailable
+      if (!sessionRes.ok) {
+        console.error('Session API error:', sessionRes.status, '- backend may be unavailable')
+        // Set a reasonable loading state and let the UI handle the error gracefully
+        if (currentFetch === fetchCountRef.current) {
+          setIsLoading(false)
+          setIsReady(true)
+        }
         return
       }
 
@@ -102,8 +114,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Auth fetch failed:', error)
+      // Network errors (CORS, DNS, etc) don't mean we're logged out
+      // Backend is unreachable but user may still be authenticated via Supabase
       if (currentFetch === fetchCountRef.current) {
-        window.location.href = '/'
+        setIsLoading(false)
+        setIsReady(true)
       }
     } finally {
       if (currentFetch === fetchCountRef.current) {

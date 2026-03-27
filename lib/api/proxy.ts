@@ -76,7 +76,35 @@ export async function proxyToLaravel<T = any>(
     const response = await fetch(url, fetchOptions)
     clearTimeout(timeoutId)
 
-    const data = await response.json()
+    // Get raw text first to check content type
+    const rawText = await response.text()
+
+    // Try to parse as JSON, fallback to error message
+    let data: any
+    try {
+      data = JSON.parse(rawText)
+    } catch {
+      // If Laravel returned HTML error page, extract error message
+      const contentType = response.headers.get('content-type') || ''
+      if (contentType.includes('text/html')) {
+        console.error(`Laravel API returned HTML (${response.status}) for ${endpoint}:`, rawText.substring(0, 200))
+        return NextResponse.json(
+          { error: `Laravel API error: ${response.status} - Backend service error` },
+          { status: 502 }
+        )
+      }
+      // For other content types, try to extract any JSON-like content
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        try {
+          data = JSON.parse(jsonMatch[0])
+        } catch {
+          data = { error: rawText.substring(0, 200) }
+        }
+      } else {
+        data = { error: rawText.substring(0, 200) }
+      }
+    }
 
     if (!response.ok) {
       return NextResponse.json(
