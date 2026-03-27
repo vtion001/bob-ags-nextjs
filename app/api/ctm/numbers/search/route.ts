@@ -1,37 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { CTMClient } from '@/lib/ctm'
+import { proxyToLaravel } from '@/lib/api/proxy'
 
 export async function GET(request: NextRequest) {
-  try {
-    const supabase = await createServerSupabase(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const searchParams = request.nextUrl.searchParams
-    const country = searchParams.get('country') || 'US'
-    const searchby = searchParams.get('searchby') as 'area' | 'address' | 'zip' | null
-    const areacode = searchParams.get('areacode')
-    const address = searchParams.get('address')
-    const pattern = searchParams.get('pattern')
-
-    const ctmClient = new CTMClient()
-    const data = await ctmClient.numbers.searchNumbers({
-      country,
-      searchby: searchby || undefined,
-      areacode: areacode || undefined,
-      address: address || undefined,
-      pattern: pattern || undefined,
-    })
-
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('CTM search numbers error:', error)
-    return NextResponse.json(
-      { error: 'Failed to search numbers in CTM' },
-      { status: 500 }
-    )
-  }
+  const searchParams = request.nextUrl.searchParams
+  const queryString = searchParams.toString()
+  const endpoint = queryString ? `/ctm/numbers/search?${queryString}` : '/ctm/numbers/search'
+  return proxyToLaravel(endpoint, request)
 }

@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
+import { proxyToLaravel } from '@/lib/api/proxy'
 
 export async function POST(request: NextRequest) {
-  try {
-    const supabase = await createServerSupabase(request)
-    await supabase.auth.signOut()
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Logout successful',
-    })
-  } catch (error) {
-    console.error('Logout error:', error)
-    return NextResponse.json(
-      { error: 'An error occurred during logout' },
-      { status: 500 }
-    )
-  }
+  return proxyToLaravel('/auth/logout', request, { method: 'POST' })
 }
