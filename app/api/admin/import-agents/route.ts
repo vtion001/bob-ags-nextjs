@@ -3,25 +3,6 @@ import { createServerSupabase } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { AgentsService } from '@/lib/ctm/services/agents'
 
-const AGENTS_TO_IMPORT = [
-  'May Ligad Phillies',
-  'JM Dequilla Phillies',
-  'Kiel Asiniero Phillies',
-  'Jhon Denver Manongdo Phillies',
-  'Anjo Aquino Phillies',
-  'Francine Del Mundo Phillies',
-  'Pauline Aquino Phillies',
-  'Mary Arellano Phillies',
-  'Zac Castro Phillies',
-  'Benjie Magbanua Phillies',
-  'Jerieme Padoc Phillies',
-  'Patricia Aranes Phillies',
-  'Ann Jamorol Phillies',
-  'Jasmin Amistoso Phillies',
-  'Luke Flores Phillies',
-  'Karen Perez Phillies',
-]
-
 export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const secret = searchParams.get('secret')
@@ -31,21 +12,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Fetch CTM agents
     const agentsService = new AgentsService()
     const ctmAgents = await agentsService.getAgents()
 
-    console.log('[Import Agents] Total CTM agents:', ctmAgents.length)
-
-    // Match agents by name
-    const matchedAgents = ctmAgents.filter(agent =>
-      AGENTS_TO_IMPORT.some(name =>
-        agent.name?.toLowerCase().includes(name.toLowerCase()) ||
-        name.toLowerCase().includes(agent.name?.toLowerCase() || '')
-      )
+    // Filter only AGS agents
+    const agsAgents = ctmAgents.filter(a =>
+      a.email?.includes('allianceglobalsolutions.com')
     )
 
-    console.log('[Import Agents] Matched agents:', matchedAgents)
+    console.log('[Import AGS Agents] Found:', agsAgents.length)
 
     // Use service role to bypass RLS
     const supabaseAdmin = createClient(
@@ -55,7 +30,7 @@ export async function POST(request: NextRequest) {
     )
 
     const results = []
-    for (const agent of matchedAgents) {
+    for (const agent of agsAgents) {
       // Check if already exists
       const { data: existing } = await supabaseAdmin
         .from('agent_profiles')
@@ -64,7 +39,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (existing) {
-        results.push({ name: agent.name, status: 'already_exists', id: agent.id })
+        results.push({ name: agent.name, email: agent.email, status: 'already_exists' })
         continue
       }
 
@@ -80,26 +55,20 @@ export async function POST(request: NextRequest) {
         })
 
       if (insertError) {
-        console.error('[Import Agents] Insert error for', agent.name, insertError)
-        results.push({ name: agent.name, status: 'error', error: insertError.message })
+        console.error('[Import Agents] Insert error:', agent.name, insertError)
+        results.push({ name: agent.name, email: agent.email, status: 'error', error: insertError.message })
       } else {
-        results.push({ name: agent.name, status: 'imported', id: agent.id })
+        results.push({ name: agent.name, email: agent.email, status: 'imported' })
       }
     }
 
-    // Also check for unmatched names
-    const matchedNames = matchedAgents.map(a => a.name)
-    const unmatched = AGENTS_TO_IMPORT.filter(
-      name => !matchedNames.some(m => m.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(m?.toLowerCase()))
-    )
-
     return NextResponse.json({
       success: true,
+      total: agsAgents.length,
       imported: results.filter(r => r.status === 'imported').length,
       alreadyExists: results.filter(r => r.status === 'already_exists').length,
       errors: results.filter(r => r.status === 'error').length,
       results,
-      unmatched,
     })
   } catch (error) {
     console.error('[Import Agents] Error:', error)
