@@ -13,14 +13,50 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get user permissions from Supabase
-    const { data: userRole, error } = await supabase
+    // Get user permissions from Supabase - check by user_id first, then fallback to email
+    let { data: userRole, error } = await supabase
       .from('user_roles')
       .select('role, permissions')
       .eq('user_id', user.id)
       .single()
 
+    // If no match by user_id, try by email (for users created via OAuth or when user_id didn't match)
     if (error || !userRole) {
+      const userEmail = user.email?.toLowerCase()
+      const devEmail = 'agsdev@allianceglobalsolutions.com'
+
+      // Special case: dev user always gets admin permissions
+      if (userEmail === devEmail) {
+        return NextResponse.json({
+          success: true,
+          role: 'admin',
+          permissions: {
+            can_view_calls: true,
+            can_view_monitor: true,
+            can_view_history: true,
+            can_view_agents: true,
+            can_manage_settings: true,
+            can_manage_users: true,
+            can_run_analysis: true,
+          }
+        })
+      }
+
+      // Try finding by email
+      const { data: userRoleByEmail } = await supabase
+        .from('user_roles')
+        .select('role, permissions')
+        .eq('email', userEmail)
+        .single()
+
+      if (userRoleByEmail) {
+        return NextResponse.json({
+          success: true,
+          role: userRoleByEmail.role,
+          permissions: userRoleByEmail.permissions || {}
+        })
+      }
+
       return NextResponse.json({
         success: true,
         role: 'viewer',
