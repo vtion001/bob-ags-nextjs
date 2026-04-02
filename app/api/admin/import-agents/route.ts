@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const allAgents = await agentsService.getAgents()
     console.log('[Import] Total CTM agents fetched:', allAgents.length)
 
-    const agentByUid = new Map(allAgents.map(a => [a.uid, a])))
+    const agentByUid = new Map(allAgents.map(a => [a.uid, a]))
     const results = []
 
     for (const { uid, name } of PHILLIES_AGENTS) {
