@@ -2,11 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { CTMClient } from '@/lib/ctm/client'
 
-const PHILLIES_GROUP_UIDS = [
-  535923, 552210, 552216, 599232, 599238,
-  779372, 779375, 779378, 779381, 779387,
-  835207, 838132, 857749, 873789, 873795,
-  912540, 937020, 937023, 937026, 937032
+// All working Phillies group agent UIDs
+const PHILLIES_AGENTS = [
+  { uid: 535923, name: 'May Ligad Phillies' },
+  { uid: 552216, name: 'Ann Jamorol Phillies' },
+  { uid: 599232, name: 'Pauline Aquino Phillies' },
+  { uid: 599238, name: 'Zac Castro Phillies' },
+  { uid: 779372, name: 'Jerieme Padoc Phillies' },
+  { uid: 779375, name: 'Francine Del Mundo Phillies' },
+  { uid: 779378, name: 'Benjie Magbanua Phillies' },
+  { uid: 779381, name: 'Patricia Aranes Phillies' },
+  { uid: 779387, name: 'Luke Flores Phillies' },
+  { uid: 835207, name: 'Anjo Aquino Phillies' },
+  { uid: 873789, name: 'Kiel Asiniero Phillies' },
+  { uid: 873795, name: 'JM Dequilla Phillies' },
+  { uid: 912540, name: 'Mary Arellano Phillies' },
+  { uid: 937020, name: 'Jasmin Amistoso Phillies' },
+  { uid: 937023, name: 'Jhon Denver Manongdo Phillies' },
+  { uid: 937026, name: 'Alfred Mariano Phillies' },
+  { uid: 937032, name: 'Karen Perez Phillies' },
 ]
 
 export async function POST(request: NextRequest) {
@@ -27,8 +41,7 @@ export async function POST(request: NextRequest) {
 
     const results = []
 
-    // Fetch each agent by UID from CTM
-    for (const uid of PHILLIES_GROUP_UIDS) {
+    for (const { uid, name } of PHILLIES_AGENTS) {
       try {
         const agentData = await ctmClient.makeRequest<{ agent?: { id: string; uid: number; name: string; email: string } }>(
           `/accounts/${ctmClient.accountId}/agents/${uid}.json`
@@ -36,7 +49,7 @@ export async function POST(request: NextRequest) {
 
         const agent = agentData.agent
         if (!agent) {
-          results.push({ uid, status: 'not_found' })
+          results.push({ uid, name, status: 'not_found' })
           continue
         }
 
@@ -71,16 +84,15 @@ export async function POST(request: NextRequest) {
         }
       } catch (err) {
         console.error('[Import] Error fetching UID:', uid, err)
-        results.push({ uid, status: 'error' })
+        results.push({ uid, name, status: 'error' })
       }
     }
 
     return NextResponse.json({
       success: true,
-      total: PHILLIES_GROUP_UIDS.length,
+      total: PHILLIES_AGENTS.length,
       imported: results.filter(r => r.status === 'imported').length,
       alreadyExists: results.filter(r => r.status === 'already_exists').length,
-      notFound: results.filter(r => r.status === 'not_found').length,
       errors: results.filter(r => r.status === 'error').length,
       results,
     })

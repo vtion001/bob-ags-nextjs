@@ -66,8 +66,16 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const { role, permissions } = body
 
+    // Use service role to bypass RLS recursion
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    )
+
     // Update user permissions in Supabase
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('user_roles')
       .upsert({
         user_id: user.id,
