@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { CTMClient } from '@/lib/ctm/client'
+import { AgentsService } from '@/lib/ctm/services/agents'
 
-// All working Phillies group agent UIDs
 const PHILLIES_AGENTS = [
   { uid: 535923, name: 'May Ligad Phillies' },
   { uid: 552216, name: 'Ann Jamorol Phillies' },
@@ -32,59 +31,57 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const ctmClient = new CTMClient()
+    const agentsService = new AgentsService()
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { persistSession: false } }
     )
 
+    // First, get all agents to build a uid->agent map
+    const allAgents = await agentsService.getAgents()
+    console.log('[Import] Total CTM agents fetched:', allAgents.length)
+
+    const agentByUid = new Map(allAgents.map(a => [a.uid, a])))
     const results = []
 
     for (const { uid, name } of PHILLIES_AGENTS) {
-      try {
-        const agentData = await ctmClient.makeRequest<{ agent?: { id: string; uid: number; name: string; email: string } }>(
-          `/accounts/${ctmClient.accountId}/agents/${uid}.json`
-        )
+      const agent = agentByUid.get(uid)
 
-        const agent = agentData.agent
-        if (!agent) {
-          results.push({ uid, name, status: 'not_found' })
-          continue
-        }
+      if (!agent) {
+        console.log(`[Import] UID ${uid} (${name}) not found in agents list`)
+        results.push({ uid, name, status: 'not_found_in_ctm' })
+        continue
+      }
 
-        // Check if already exists
-        const { data: existing } = await supabaseAdmin
-          .from('agent_profiles')
-          .select('id')
-          .eq('agent_id', agent.id)
-          .single()
+      // Check if already exists
+      const { data: existing } = await supabaseAdmin
+        .from('agent_profiles')
+        .select('id')
+        .eq('agent_id', agent.id)
+        .single()
 
-        if (existing) {
-          results.push({ name: agent.name, email: agent.email, status: 'already_exists' })
-          continue
-        }
+      if (existing) {
+        results.push({ name: agent.name, email: agent.email, status: 'already_exists' })
+        continue
+      }
 
-        // Insert new agent profile
-        const { error: insertError } = await supabaseAdmin
-          .from('agent_profiles')
-          .insert({
-            name: agent.name,
-            agent_id: agent.id,
-            email: agent.email || null,
-            phone: null,
-            notes: `Auto-imported from CTM Phillies group on ${new Date().toISOString()}`,
-          })
+      // Insert new agent profile
+      const { error: insertError } = await supabaseAdmin
+        .from('agent_profiles')
+        .insert({
+          name: agent.name,
+          agent_id: agent.id,
+          email: agent.email || null,
+          phone: null,
+          notes: `Auto-imported from CTM Phillies group on ${new Date().toISOString()}`,
+        })
 
-        if (insertError) {
-          console.error('[Import] Insert error:', agent.name, insertError)
-          results.push({ name: agent.name, email: agent.email, status: 'error', error: insertError.message })
-        } else {
-          results.push({ name: agent.name, email: agent.email, status: 'imported' })
-        }
-      } catch (err) {
-        console.error('[Import] Error fetching UID:', uid, err)
-        results.push({ uid, name, status: 'error' })
+      if (insertError) {
+        console.error('[Import] Insert error:', agent.name, insertError)
+        results.push({ name: agent.name, email: agent.email, status: 'error', error: insertError.message })
+      } else {
+        results.push({ name: agent.name, email: agent.email, status: 'imported' })
       }
     }
 
@@ -93,6 +90,7 @@ export async function POST(request: NextRequest) {
       total: PHILLIES_AGENTS.length,
       imported: results.filter(r => r.status === 'imported').length,
       alreadyExists: results.filter(r => r.status === 'already_exists').length,
+      notFound: results.filter(r => r.status === 'not_found_in_ctm').length,
       errors: results.filter(r => r.status === 'error').length,
       results,
     })
