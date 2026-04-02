@@ -1,21 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const secret = searchParams.get('secret')
 
-  // Simple secret check - in production this should be an env var
   if (secret !== 'ags-admin-fix-2026') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = await createServerSupabase(request)
-
   const devEmail = 'agsdev@allianceglobalsolutions.com'
 
+  // Use service role client to bypass RLS
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  )
+
   // Update user_roles to admin
-  const { error: roleError } = await supabase
+  const { error: roleError } = await supabaseAdmin
     .from('user_roles')
     .update({ role: 'admin', approved: true })
     .eq('email', devEmail)
@@ -26,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Update users to superadmin
-  const { error: userError } = await supabase
+  const { error: userError } = await supabaseAdmin
     .from('users')
     .update({ is_superadmin: true })
     .eq('email', devEmail)
