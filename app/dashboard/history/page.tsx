@@ -57,11 +57,15 @@ export default function HistoryPage() {
     setShowSyncDialog(true)
     try {
       const res = await fetch('/api/ctm/calls/bulk-sync', { method: 'GET' })
+      if (!res.ok) {
+        setSyncPreview(null)
+        return
+      }
       const data = await res.json()
       setSyncPreview(data)
     } catch (err) {
       console.error('Failed to get sync preview:', err)
-      setSyncPreview({ callsAvailable: 0, callsInSupabase: 0 })
+      setSyncPreview(null)
     } finally {
       setIsLoadingPreview(false)
     }
@@ -172,16 +176,16 @@ export default function HistoryPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Calls available in CTM:</span>
-                      <span className="font-semibold">{syncPreview.callsAvailable.toLocaleString()}</span>
+                      <span className="font-semibold">{(syncPreview.callsAvailable ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Calls currently in Supabase:</span>
-                      <span className="font-semibold">{syncPreview.callsInSupabase.toLocaleString()}</span>
+                      <span className="font-semibold">{(syncPreview.callsInSupabase ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between border-t pt-2">
                       <span>New calls to add:</span>
                       <span className="font-semibold text-green-600">
-                        {Math.max(0, syncPreview.callsAvailable - syncPreview.callsInSupabase).toLocaleString()}
+                        {Math.max(0, (syncPreview.callsAvailable ?? 0) - (syncPreview.callsInSupabase ?? 0)).toLocaleString()}
                       </span>
                     </div>
                   </div>
