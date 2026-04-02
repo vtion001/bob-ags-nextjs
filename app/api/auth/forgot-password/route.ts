@@ -20,10 +20,18 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message || 'Failed to send reset email' },
-        { status: 400 }
-      )
+      // Log the actual error for debugging
+      console.error('Supabase reset password error:', {
+        message: error.message,
+        status: error.status,
+        code: error.code
+      })
+
+      // Return generic message for security (don't reveal if email exists)
+      return NextResponse.json({
+        success: true,
+        message: 'If an account exists with this email, a password reset link has been sent.',
+      })
     }
 
     return NextResponse.json({
