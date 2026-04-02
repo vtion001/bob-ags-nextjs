@@ -19,7 +19,7 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   turbopack: {
-    root: '/Users/archerterminez/Desktop/REPOSITORY/bob-ags',
+    root: '/Users/archerterminez/Desktop/REPOSITORY/bob-ags-nextjs-backup',
   },
   async redirects() {
     return [

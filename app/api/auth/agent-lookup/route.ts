@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { AgentsService } from '@/lib/ctm/services/agents'
+import { CallsService } from '@/lib/ctm/services/calls'
 
 export async function POST(request: NextRequest) {
   try {
