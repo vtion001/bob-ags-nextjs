@@ -8,27 +8,35 @@ export async function GET(request: NextRequest) {
     // Dev bypass check
     const devSessionCookie = request.cookies.get('sb-dev-session')
     let isDevUser = false
+    let userId = null
+
     if (devSessionCookie) {
       try {
         const devSession = JSON.parse(devSessionCookie.value)
         if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
           isDevUser = true
+          userId = DEV_BYPASS_UID
         }
       } catch {}
     }
 
+    let supabase = null
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
+      supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      userId = user.id
+    } else {
+      // For dev user, create supabase client without auth
+      supabase = await createServerSupabase(request)
     }
 
     const { data: userSettings, error } = await supabase
       .from('user_settings')
       .select('settings')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (error || !userSettings) {
@@ -66,21 +74,28 @@ export async function POST(request: NextRequest) {
     // Dev bypass check
     const devSessionCookie = request.cookies.get('sb-dev-session')
     let isDevUser = false
+    let userId = null
+
     if (devSessionCookie) {
       try {
         const devSession = JSON.parse(devSessionCookie.value)
         if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
           isDevUser = true
+          userId = DEV_BYPASS_UID
         }
       } catch {}
     }
 
+    let supabase = null
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
+      supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      userId = user.id
+    } else {
+      supabase = await createServerSupabase(request)
     }
 
     const body = await request.json()
@@ -88,7 +103,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('user_settings')
       .upsert({
-        user_id: user.id,
+        user_id: userId,
         settings: body
       })
       .select()
@@ -120,27 +135,34 @@ export async function DELETE(request: NextRequest) {
     // Dev bypass check
     const devSessionCookie = request.cookies.get('sb-dev-session')
     let isDevUser = false
+    let userId = null
+
     if (devSessionCookie) {
       try {
         const devSession = JSON.parse(devSessionCookie.value)
         if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
           isDevUser = true
+          userId = DEV_BYPASS_UID
         }
       } catch {}
     }
 
+    let supabase = null
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
+      supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      userId = user.id
+    } else {
+      supabase = await createServerSupabase(request)
     }
 
     const { error } = await supabase
       .from('user_settings')
       .delete()
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (error) {
       console.error('Error deleting settings:', error)
