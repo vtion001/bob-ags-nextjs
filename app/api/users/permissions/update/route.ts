@@ -52,6 +52,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  let targetUserIdValue: string
+
   try {
     const supabase = await createServerSupabase(request)
     const { data: { user } } = await supabase.auth.getUser()
@@ -64,7 +66,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { role, permissions } = body
+    const { role, permissions, targetUserId } = body
 
     // Use service role to bypass RLS recursion
     const { createClient } = await import('@supabase/supabase-js')
@@ -74,13 +76,73 @@ export async function PUT(request: NextRequest) {
       { auth: { persistSession: false } }
     )
 
-    // Update user permissions in Supabase
+    // Determine which user to update
+    // If targetUserId is an email, look up the user by email
+    // If targetUserId is a user_id (UUID), use it directly
+    // Otherwise, use the current authenticated user's id
+    targetUserIdValue = targetUserId
+
+    if (targetUserId && !targetUserId.includes('@') && targetUserId.length > 30) {
+      // This is a UUID (Supabase user id) - use it directly
+      targetUserIdValue = targetUserId
+    } else if (targetUserId && targetUserId.includes('@')) {
+      // This is an email - look up the user by email (case-insensitive)
+      // First check user_roles
+      const { data: existingUser } = await supabaseAdmin
+        .from('user_roles')
+        .select('user_id, email')
+        .ilike('email', targetUserId)
+        .single()
+
+      if (existingUser) {
+        targetUserIdValue = existingUser.user_id
+      } else {
+        // User not in user_roles yet - check if they exist in auth.users
+        // Use a case-insensitive search
+        const { data: authUser } = await supabaseAdmin
+          .from('auth.users')
+          .select('id, email')
+          .ilike('email', targetUserId)
+          .single()
+
+        if (authUser) {
+          targetUserIdValue = authUser.id
+        } else {
+          // User hasn't signed up yet
+          return NextResponse.json(
+            { error: 'User not found. They must sign up first before you can assign a role.' },
+            { status: 404 }
+          )
+        }
+      }
+    } else {
+      // Fall back to current user's id
+      targetUserIdValue = user.id
+    }
+
+    // Upsert user permissions in Supabase
+    // Get the email to use - prefer the targetUserId email or lookup from auth.users
+    let emailToUse: string | null = null
+    if (targetUserId && targetUserId.includes('@')) {
+      emailToUse = targetUserId.toLowerCase()
+    } else if (targetUserIdValue && !targetUserIdValue.includes('@')) {
+      // It's a UUID - look up the email from auth.users
+      const { data: authUserForEmail } = await supabaseAdmin
+        .from('auth.users')
+        .select('email')
+        .eq('id', targetUserIdValue)
+        .single()
+      emailToUse = authUserForEmail?.email?.toLowerCase() || null
+    }
+
     const { data, error } = await supabaseAdmin
       .from('user_roles')
       .upsert({
-        user_id: user.id,
+        user_id: targetUserIdValue,
+        email: emailToUse,
         role: role || 'viewer',
-        permissions: permissions || {}
+        permissions: permissions || {},
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single()
@@ -88,7 +150,7 @@ export async function PUT(request: NextRequest) {
     if (error) {
       console.error('Error updating permissions:', error)
       return NextResponse.json(
-        { error: 'Failed to update permissions' },
+        { error: 'Failed to update permissions', details: error.message },
         { status: 500 }
       )
     }
@@ -100,8 +162,9 @@ export async function PUT(request: NextRequest) {
     })
   } catch (error) {
     console.error('Permissions update error:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Failed to update permissions' },
+      { error: 'Failed to update permissions', details: message, userId: targetUserIdValue },
       { status: 500 }
     )
   }

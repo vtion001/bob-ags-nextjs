@@ -16,6 +16,9 @@ pnpm build    # Production build
 pnpm start    # Start production server
 pnpm lint     # Run ESLint
 ```
+**Package manager:** pnpm (not npm). Node 22.x required.
+
+**Testing:** No test suite configured yet.
 
 ## Architecture
 
@@ -71,11 +74,15 @@ Two auth systems coexist:
 1. **Supabase SSR** (`@supabase/ssr`) - Primary auth, configured in `middleware.ts` and `lib/supabase/server.ts`
 2. **Legacy HMAC sessions** (`lib/auth.ts`) - Custom session tokens for developer login
 
-The middleware at `middleware.ts` creates a Supabase server client and refreshes sessions on every request. **Must use `getSession()` (not `getUser()`)** to refresh cookies.
+The middleware at `middleware.ts` creates a Supabase server client and refreshes sessions on every request. **Must use `getSession()` (not `getUser()`)** to refresh cookies. Using `getUser()` alone will cause `getSession()` to return null on API routes.
 
 ### CTM Integration
 
 `lib/ctm/client.ts` is the base class; `lib/ctm/services/*.ts` contain feature-specific clients (CallsService, AgentsService, etc.). API routes in `app/api/ctm/` proxy requests to CTM to hide credentials.
+
+**CTM uses Basic Auth** with `Authorization: Basic base64(ACCESS_KEY:SECRET_KEY)`. API base: `https://api.calltrackingmetrics.com/api/v1`. Rate limit: 1000 req/min.
+
+**Key services:** `calls.ts` (list/detail/transcript), `agents.ts` (agent profiles), `numbers.ts` (tracking numbers), `receivingNumbers.ts`, `schedules.ts`, `sources.ts`, `accounts.ts`, `voiceMenus.ts`.
 
 ### AI Analysis System
 
@@ -89,6 +96,23 @@ ZTP (Zero Tolerance Policy) criteria (3.4, 5.1, 5.2) auto-fail calls if violated
 ### Realtime Analysis
 
 `lib/realtime/` handles live call transcription via AssemblyAI streaming. Uses a rubric-based analyzer (`analyzer.ts`) that detects keywords in real-time and calculates live QA scores.
+
+**Flow:** Browser → AssemblyAI WebSocket (streaming audio) → Realtime analyzer → Live QA score updates via polling (`useMonitorPage` hook).
+
+### AI Scoring System (docs/AI_SCORING_SYSTEM.md)
+
+25-criterion rubric evaluates call quality across 5 sections (Opening, Probing, Qualification, Closing, Compliance).
+
+**Zero Tolerance Policy (ZTP) auto-fail criteria:**
+- 3.4: Unqualified transfers (state insurance, self-pay)
+- 5.1: HIPAA confidentiality violations
+- 5.2: Providing medical advice
+
+ZTP violations set score to 0 regardless of other criteria. Three criteria (4.2, 4.3, 4.4) are always N/A (require Salesforce verification).
+
+**Scoring:** Max 107 points (25 criteria, 22 evaluated + 3 N/A). Score = (earned/max) × 100. Dispositions: Qualified Lead (80-100), Warm Lead (60-79), Refer (40-59), Do Not Refer (0-39).
+
+**Tags generated:** `excellent`, `good`, `needs-improvement`, `poor`, `unqualified-transfer`, `hipaa-risk`, `medical-advice-risk`, `ztp-violation`, `insurance:{type}`, `state:{state}`
 
 ### Database (Supabase)
 
@@ -131,6 +155,8 @@ const calls = await callsService.getCalls({ hours: 24, limit: 100 })
 ```
 
 **Live Monitoring**: Uses polling with `useMonitorPage` hook, not WebSockets. AssemblyAI streaming via `lib/realtime/assemblyai-realtime.ts`.
+
+**Middleware matcher** excludes `_next/static`, `_next/image`, favicon, and static file extensions (svg, png, jpg, etc.) from session refresh.
 
 ## Color System
 
