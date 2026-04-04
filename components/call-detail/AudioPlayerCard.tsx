@@ -27,7 +27,8 @@ export default function AudioPlayerCard({ audioUrl, callId, callStatus }: AudioP
     )
   }
 
-  const audioSrc = audioUrl.startsWith('/') ? `/api/ctm/calls/${callId}/audio` : audioUrl
+  // Always use our proxy to avoid CORS issues with CTM's signed S3 URLs
+  const audioSrc = `/api/ctm/calls/${callId}/audio`
 
   return (
     <Card className="p-6">

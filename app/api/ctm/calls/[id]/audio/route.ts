@@ -10,21 +10,32 @@ export async function GET(
     const ctmClient = new CTMClient()
     const accountId = ctmClient.getAccountId()
 
-    // Fetch the recording audio URL from CTM
-    const data = await ctmClient.makeRequest<{ recording_url?: string }>(
-      `/accounts/${accountId}/calls/${id}/recording`
-    )
+    // Fetch the raw binary audio directly from CTM
+    // The /recording endpoint returns raw audio, NOT JSON
+    const url = `https://api.calltrackingmetrics.com/api/v1/accounts/${accountId}/calls/${id}/recording`
+    const authHeader = `Basic ${Buffer.from(`${ctmClient.accessKey}:${ctmClient.secretKey}`).toString('base64')}`
 
-    if (!data.recording_url) {
-      return NextResponse.json(
-        { error: 'Recording not found' },
-        { status: 404 }
-      )
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`CTM API error: ${response.status} ${response.statusText} - ${errorText}`)
     }
 
-    return NextResponse.json({
-      success: true,
-      recording_url: data.recording_url
+    // Stream the binary audio back to the client
+    const contentType = response.headers.get('Content-Type') || 'audio/mpeg'
+    const audioBuffer = await response.arrayBuffer()
+
+    return new NextResponse(audioBuffer, {
+      headers: {
+        'Content-Type': contentType,
+        'Content-Length': String(audioBuffer.byteLength),
+      },
     })
   } catch (error) {
     console.error('Error fetching call audio:', error)
