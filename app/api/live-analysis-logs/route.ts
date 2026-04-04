@@ -18,8 +18,10 @@ export async function GET(request: NextRequest) {
 
   try {
     let userId: string | null = null
+    let supabase
+
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
+      supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
@@ -31,6 +33,13 @@ export async function GET(request: NextRequest) {
       userId = user.id
     } else {
       userId = DEV_BYPASS_UID
+      // Use service role key to bypass RLS for dev users
+      const { createClient } = await import('@supabase/supabase-js')
+      supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { persistSession: false } }
+      )
     }
 
     const searchParams = request.nextUrl.searchParams
@@ -80,8 +89,10 @@ export async function POST(request: NextRequest) {
 
   try {
     let userId: string | null = null
+    let supabase
+
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
+      supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
@@ -93,6 +104,13 @@ export async function POST(request: NextRequest) {
       userId = user.id
     } else {
       userId = DEV_BYPASS_UID
+      // Use service role key to bypass RLS for dev users
+      const { createClient } = await import('@supabase/supabase-js')
+      supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { persistSession: false } }
+      )
     }
 
     const body = await request.json()
@@ -149,8 +167,10 @@ export async function DELETE(request: NextRequest) {
 
   try {
     let userId: string | null = null
+    let supabase
+
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
+      supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
@@ -162,6 +182,13 @@ export async function DELETE(request: NextRequest) {
       userId = user.id
     } else {
       userId = DEV_BYPASS_UID
+      // Use service role key to bypass RLS for dev users
+      const { createClient } = await import('@supabase/supabase-js')
+      supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { persistSession: false } }
+      )
     }
 
     // Delete all logs for this user
