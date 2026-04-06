@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
       const supabase = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
+      // MUST use getSession() to refresh cookies
+      const { data: { user } } = await supabase.auth.getSession()
       if (!user) {
         return NextResponse.json(
           { error: 'Unauthorized' },

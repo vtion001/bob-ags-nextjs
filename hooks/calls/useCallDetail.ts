@@ -120,16 +120,49 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
     setTranscriptError(null)
     setIsTranscribing(true)
     try {
+      // First, try to get transcript from CTM (pre-transcribed calls)
       const res = await fetch(`/api/ctm/calls/${callId}/transcript`)
       const data = await res.json()
 
-      if (data.transcript) {
+      if (data.transcript && data.transcript.trim()) {
         setTranscript(data.transcript)
         return data.transcript as string
-      } else if (data.error) {
-        setTranscriptError(data.error + (data.details ? `: ${data.details}` : ''))
+      }
+
+      // If CTM has no transcript, use AssemblyAI to transcribe the recording
+      const callRes = await fetch(`/api/ctm/calls/${callId}`)
+      if (!callRes.ok) {
+        setTranscriptError('Failed to get call details')
         return null
       }
+      const callData = await callRes.json()
+      const recordingUrl = callData.call?.recordingUrl || callData.call?.audio
+
+      if (!recordingUrl) {
+        setTranscriptError('No recording available for this call')
+        return null
+      }
+
+      // Call AssemblyAI transcription service - it will fetch audio via CTM proxy
+      const assemblyRes = await fetch('/api/assemblyai/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId }),
+      })
+
+      if (!assemblyRes.ok) {
+        const errorData = await assemblyRes.json()
+        setTranscriptError(errorData.error || 'Transcription failed')
+        return null
+      }
+
+      const assemblyData = await assemblyRes.json()
+      if (assemblyData.transcript) {
+        setTranscript(assemblyData.transcript)
+        return assemblyData.transcript as string
+      }
+
+      setTranscriptError('No transcript generated')
       return null
     } catch {
       setTranscriptError('Failed to transcribe audio')
