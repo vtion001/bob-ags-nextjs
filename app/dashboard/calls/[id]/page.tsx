@@ -13,6 +13,7 @@ import {
   TranscriptCard,
   AudioPlayerCard,
   ActionButtonsCard,
+  CoachingInsightsCard,
   NotesDialog,
   NotesLogDialog,
 } from '@/components/call-detail'
@@ -139,6 +140,12 @@ export default function CallDetailPage() {
               isAnalyzing={isAnalyzing}
               call={call}
               onAnalyze={handleAnalyze}
+            />
+
+            <CoachingInsightsCard
+              rubricResults={analysis?.rubric_results}
+              score={analysis?.score || call.score || 0}
+              disposition={analysis?.disposition}
             />
 
             <QAAnalysisCard
