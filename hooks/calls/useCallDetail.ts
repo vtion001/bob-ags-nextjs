@@ -93,7 +93,21 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
 
   const fetchCallDetails = useCallback(async () => {
     try {
-      // Fetch directly from CTM API to get the correct call by ID
+      // First, check Supabase for cached analysis data
+      const cachedRes = await fetch(`/api/calls?ctm_call_id=${callId}`)
+      if (cachedRes.ok) {
+        const cachedData = await cachedRes.json()
+        if (cachedData.calls && cachedData.calls.length > 0) {
+          const cachedCall = cachedData.calls[0]
+          // If we have analysis data from Supabase, return it
+          if (cachedCall.rubric_results || cachedCall.score) {
+            console.log('[useCallDetail] Found cached analysis in Supabase for call:', callId)
+            return cachedCall
+          }
+        }
+      }
+
+      // Fall back to CTM API if not in Supabase or no analysis
       const res = await fetch(`/api/ctm/calls/${callId}`)
       if (!res.ok) return null
       const data = await res.json()

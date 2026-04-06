@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     const sourceId = searchParams.get('source_id')
     const agentId = searchParams.get('agent_id')
     const agentProfileId = searchParams.get('agentProfileId') // Optional: specific agent profile to filter by
+    const ctmCallId = searchParams.get('ctm_call_id') // Optional: fetch specific call by CTM call ID
+    const cacheOnly = searchParams.get('cacheOnly') === 'true'
 
     // Fetch registered agent profiles with their CTM agent IDs
     const { supabase, response } = await createServerSupabase(request)
@@ -30,6 +32,29 @@ export async function GET(request: NextRequest) {
           ctmAgentIdToProfile.set(normalizedId, profile)
         }
       }
+    }
+
+    // If ctm_call_id is provided, fetch specific call from Supabase
+    if (ctmCallId) {
+      const { data: cachedCall, error: fetchError } = await supabase
+        .from('calls')
+        .select('*')
+        .eq('ctm_call_id', ctmCallId)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error fetching cached call:', fetchError)
+      }
+
+      const jsonResponse = NextResponse.json({
+        success: true,
+        calls: cachedCall ? [cachedCall] : [],
+        cached: !!cachedCall
+      })
+      response.cookies.getAll().forEach((cookie) => {
+        jsonResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return jsonResponse
     }
 
     const callsService = createCallsService()
