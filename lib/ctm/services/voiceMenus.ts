@@ -3,8 +3,9 @@ import type { CTMVoiceMenu, VoiceMenuItem } from '@/lib/types'
 
 export class VoiceMenusService extends CTMClient {
   async getVoiceMenus(): Promise<{ voice_menus?: CTMVoiceMenu[] }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ voice_menus?: CTMVoiceMenu[] }>(
-      `/accounts/${this.accountId}/voice_menus`
+      `/accounts/${accountId}/voice_menus`
     )
   }
 
@@ -16,8 +17,9 @@ export class VoiceMenusService extends CTMClient {
     prompt_retries?: string
     items?: VoiceMenuItem[]
   }): Promise<{ status: string; voice_menu?: CTMVoiceMenu }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ status: string; voice_menu?: CTMVoiceMenu }>(
-      `/accounts/${this.accountId}/voice_menus`,
+      `/accounts/${accountId}/voice_menus`,
       {
         method: 'POST',
         body: JSON.stringify({ voice_menu: voiceMenu }),
@@ -26,8 +28,9 @@ export class VoiceMenusService extends CTMClient {
   }
 
   async updateVoiceMenu(vomId: string, voiceMenu: { name?: string }): Promise<{ status: string }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ status: string }>(
-      `/accounts/${this.accountId}/voice_menus/${vomId}`,
+      `/accounts/${accountId}/voice_menus/${vomId}`,
       {
         method: 'PUT',
         body: JSON.stringify({ voice_menu: voiceMenu }),

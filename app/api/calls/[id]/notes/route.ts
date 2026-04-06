@@ -4,21 +4,22 @@ import { createServerSupabase } from '@/lib/supabase/server'
 const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
 
 export async function GET(request: NextRequest) {
+  // Dev bypass check
+  const devSessionCookie = request.cookies.get('sb-dev-session')
+  let isDevUser = false
+  if (devSessionCookie) {
+    try {
+      const devSession = JSON.parse(devSessionCookie.value)
+      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
+        isDevUser = true
+      }
+    } catch {}
+  }
+
   try {
-    // Dev bypass check
-    const devSessionCookie = request.cookies.get('sb-dev-session')
-    let isDevUser = false
-    if (devSessionCookie) {
-      try {
-        const devSession = JSON.parse(devSessionCookie.value)
-        if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-          isDevUser = true
-        }
-      } catch {}
-    }
+    const supabase = await createServerSupabase(request)
 
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -40,7 +41,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (error) {
-      console.error('Error fetching call notes:', error)
       return NextResponse.json({
         success: true,
         notes: []
@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
       notes: data || []
     })
   } catch (error) {
-    console.error('Error fetching call notes:', error)
     return NextResponse.json({
       success: true,
       notes: []
@@ -61,21 +60,22 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  // Dev bypass check
+  const devSessionCookie = request.cookies.get('sb-dev-session')
+  let isDevUser = false
+  if (devSessionCookie) {
+    try {
+      const devSession = JSON.parse(devSessionCookie.value)
+      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
+        isDevUser = true
+      }
+    } catch {}
+  }
+
   try {
-    // Dev bypass check
-    const devSessionCookie = request.cookies.get('sb-dev-session')
-    let isDevUser = false
-    if (devSessionCookie) {
-      try {
-        const devSession = JSON.parse(devSessionCookie.value)
-        if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-          isDevUser = true
-        }
-      } catch {}
-    }
+    const supabase = await createServerSupabase(request)
 
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -101,7 +101,6 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error updating call notes:', error)
       return NextResponse.json(
         { error: 'Failed to update notes' },
         { status: 500 }
@@ -113,7 +112,6 @@ export async function PATCH(request: NextRequest) {
       notes: data
     })
   } catch (error) {
-    console.error('Error updating call notes:', error)
     return NextResponse.json(
       { error: 'Failed to update notes' },
       { status: 500 }

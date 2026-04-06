@@ -4,8 +4,9 @@ import type { Agent, UserGroup, CTMAgent, CTMUserGroup } from '@/lib/types'
 export class AgentsService extends CTMClient {
   async getAgents(): Promise<Agent[]> {
     try {
+      const accountId = this.getAccountId()
       const firstPage = await this.makeRequest<{ agents?: CTMAgent[]; next_page?: string }>(
-        `/accounts/${this.accountId}/agents.json`
+        `/accounts/${accountId}/agents.json`
       )
       
       if (!firstPage.agents?.length) return []
@@ -41,8 +42,9 @@ export class AgentsService extends CTMClient {
   }
   
   private async fetchAgentsPage(page: number): Promise<Agent[]> {
+    const accountId = this.getAccountId()
     const data = await this.makeRequest<{ agents?: CTMAgent[] }>(
-      `/accounts/${this.accountId}/agents.json?page=${page}`
+      `/accounts/${accountId}/agents.json?page=${page}`
     )
     return (data.agents || []).map(a => ({
       id: a.id || String(a.uid) || '',
@@ -59,16 +61,16 @@ export class AgentsService extends CTMClient {
 
   async getUserGroups(): Promise<UserGroup[]> {
     try {
+      const accountId = this.getAccountId()
       const data = await this.makeRequest<{ user_groups?: CTMUserGroup[] }>(
-        `/accounts/${this.accountId}/user_groups.json`
+        `/accounts/${accountId}/user_groups.json`
       )
       return (data.user_groups || []).map(g => ({
         id: String(g.id),
         name: g.name || 'Unknown',
         userIds: g.user_ids || [],
       }))
-    } catch (err) {
-      console.error('[CTM] getUserGroups error:', err)
+    } catch {
       return []
     }
   }

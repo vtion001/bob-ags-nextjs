@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { VoiceMenusService } from '@/lib/ctm/services/voiceMenus'
+import { authenticate } from '@/lib/api-helpers'
 
 export async function GET(request: NextRequest) {
+  const authError = await authenticate(request)
+  if (authError) return authError
+
   try {
     const voiceMenusService = new VoiceMenusService()
     const data = await voiceMenusService.getVoiceMenus()
@@ -11,7 +15,6 @@ export async function GET(request: NextRequest) {
       ...data
     })
   } catch (error) {
-    console.error('Error fetching CTM voice menus:', error)
     return NextResponse.json(
       { error: 'Failed to fetch voice menus from CallTrackingMetrics' },
       { status: 502 }
@@ -20,6 +23,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authError = await authenticate(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
     const voiceMenusService = new VoiceMenusService()
@@ -30,7 +36,6 @@ export async function POST(request: NextRequest) {
       ...data
     })
   } catch (error) {
-    console.error('Error creating CTM voice menu:', error)
     return NextResponse.json(
       { error: 'Failed to create voice menu in CallTrackingMetrics' },
       { status: 502 }

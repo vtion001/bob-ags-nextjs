@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { NumbersService } from '@/lib/ctm/services/numbers'
+import { authenticate } from '@/lib/api-helpers'
 
 export async function GET(request: NextRequest) {
+  const authError = await authenticate(request)
+  if (authError) return authError
+
   try {
     const searchParams = request.nextUrl.searchParams
     const numbersService = new NumbersService()
@@ -36,7 +40,6 @@ export async function GET(request: NextRequest) {
       ...data
     })
   } catch (error) {
-    console.error('Error searching CTM numbers:', error)
     return NextResponse.json(
       { error: 'Failed to search numbers in CallTrackingMetrics' },
       { status: 502 }

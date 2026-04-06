@@ -64,6 +64,10 @@ export class CTMClient {
   public getAccountId(): string {
     return this.accountId
   }
+
+  public getBasicAuthHeader(): string {
+    return Buffer.from(`${this.accessKey}:${this.secretKey}`).toString('base64')
+  }
 }
 
 export function createCTMClient(): CTMClient {

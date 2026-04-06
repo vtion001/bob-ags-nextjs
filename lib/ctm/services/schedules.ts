@@ -3,8 +3,9 @@ import type { CTMSchedule, ScheduleTime } from '@/lib/types'
 
 export class SchedulesService extends CTMClient {
   async getSchedules(): Promise<{ schedules?: CTMSchedule[] }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ schedules?: CTMSchedule[] }>(
-      `/accounts/${this.accountId}/schedules`
+      `/accounts/${accountId}/schedules`
     )
   }
 
@@ -13,8 +14,9 @@ export class SchedulesService extends CTMClient {
     times?: ScheduleTime[]
     timezone?: string
   }): Promise<{ status: string; schedule?: CTMSchedule }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ status: string; schedule?: CTMSchedule }>(
-      `/accounts/${this.accountId}/schedules`,
+      `/accounts/${accountId}/schedules`,
       {
         method: 'POST',
         body: JSON.stringify({ schedule }),
@@ -23,8 +25,9 @@ export class SchedulesService extends CTMClient {
   }
 
   async updateSchedule(schId: string, schedule: { name?: string }): Promise<{ status: string }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ status: string }>(
-      `/accounts/${this.accountId}/schedules/${schId}`,
+      `/accounts/${accountId}/schedules/${schId}`,
       {
         method: 'PUT',
         body: JSON.stringify({ schedule }),

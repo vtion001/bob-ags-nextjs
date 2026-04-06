@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  let targetUserIdValue: string
+  let targetUserIdValue: string = ''
 
   try {
     let currentUserId: string | null = null
@@ -230,7 +230,6 @@ export async function PUT(request: NextRequest) {
       permissions: data.permissions
     })
   } catch (error) {
-    console.error('Permissions update error:', error)
     const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
       { error: 'Failed to update permissions', details: message, userId: targetUserIdValue },

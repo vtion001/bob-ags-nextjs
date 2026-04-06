@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1)
 
     if (error) {
-      console.error('Error fetching calls for QA logs:', error)
       return NextResponse.json({
         success: false,
         error: error.message,
@@ -59,7 +58,6 @@ export async function GET(request: NextRequest) {
       total: count || 0
     })
   } catch (error) {
-    console.error('QA logs error:', error)
     return NextResponse.json({
       success: false,
       error: 'Internal server error',
@@ -84,8 +82,9 @@ export async function POST(request: NextRequest) {
 
   try {
     let userId: string | null = null
+    const supabase = await createServerSupabase(request)
+
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
@@ -109,7 +108,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error creating QA override:', error)
       return NextResponse.json(
         { error: 'Failed to create QA override' },
         { status: 500 }
@@ -121,7 +119,6 @@ export async function POST(request: NextRequest) {
       qa_override: data
     })
   } catch (error) {
-    console.error('QA override error:', error)
     return NextResponse.json(
       { error: 'Failed to create QA override' },
       { status: 500 }

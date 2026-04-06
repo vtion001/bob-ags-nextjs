@@ -16,13 +16,66 @@ function isDevUser(request: NextRequest): boolean {
   return false
 }
 
-async function getTranscriptFromAssemblyAI(audioUrl: string): Promise<string> {
+async function getTranscriptFromAssemblyAI(callSid: string): Promise<string> {
   const apiKey = process.env.ASSEMBLYAI_API_KEY || process.env.NEXT_PUBLIC_ASSEMBLYAI_API_KEY
   if (!apiKey) {
     throw new Error('AssemblyAI API key not configured')
   }
 
-  // Submit the audio for transcription
+  // Get CTM credentials
+  const accountId = process.env.CTM_ACCOUNT_ID
+  const accessKey = process.env.CTM_ACCESS_KEY
+  const secretKey = process.env.CTM_SECRET_KEY
+
+  if (!accountId || !accessKey || !secretKey) {
+    throw new Error('CTM credentials not configured')
+  }
+
+  // Fetch audio directly from CTM (which returns 303 redirect to S3)
+  const authHeader = Buffer.from(`${accessKey}:${secretKey}`).toString('base64')
+  const recordingUrl = `https://api.calltrackingmetrics.com/api/v1/accounts/${accountId}/calls/${callSid}/recording`
+
+  const ctmResponse = await fetch(recordingUrl, {
+    headers: { 'Authorization': `Basic ${authHeader}` },
+  })
+
+  if (!ctmResponse.ok) {
+    throw new Error(`CTM recording error: ${ctmResponse.status}`)
+  }
+
+  // Follow the redirect to S3
+  const redirectUrl = ctmResponse.headers.get('Location')
+  if (!redirectUrl) {
+    throw new Error('No redirect URL from CTM')
+  }
+
+  const audioResponse = await fetch(redirectUrl)
+  if (!audioResponse.ok) {
+    throw new Error(`S3 error: ${audioResponse.status}`)
+  }
+
+  const audioBuffer = await audioResponse.arrayBuffer()
+  const contentType = audioResponse.headers.get('Content-Type') || 'audio/wav'
+
+  // Upload to AssemblyAI
+  const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
+    method: 'POST',
+    headers: {
+      'Authorization': apiKey,
+      'Content-Type': contentType,
+    },
+    body: audioBuffer,
+  })
+
+  if (!uploadResponse.ok) {
+    const errorText = await uploadResponse.text()
+    throw new Error(`AssemblyAI upload error: ${errorText}`)
+  }
+
+  const uploadData = await uploadResponse.json()
+  const audioUrl = uploadData.upload_url
+
+  // Submit for transcription
   const submitResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
     headers: {
@@ -351,7 +404,6 @@ export async function GET(request: NextRequest) {
       calls: []
     })
   } catch (error) {
-    console.error('Error in call analyze:', error)
     return NextResponse.json(
       { error: 'Failed to analyze calls' },
       { status: 500 }
@@ -396,10 +448,11 @@ export async function POST(request: NextRequest) {
         } else if (call.recordingUrl) {
           // Use AssemblyAI to transcribe the recording
           try {
-            transcript = await getTranscriptFromAssemblyAI(call.recordingUrl)
+            transcript = await getTranscriptFromAssemblyAI(callId)
           } catch (transcribeErr) {
-            console.error('AssemblyAI transcription error:', transcribeErr)
-            // Continue without transcript - keyword fallback will be used
+            const errMsg = transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)
+            results.push({ callId, success: false, error: `Transcription failed: ${errMsg}` })
+            continue
           }
         }
 
@@ -409,7 +462,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Get AI evaluation from OpenRouter
-        const aiContent = await analyzeWithOpenRouter(transcript, call.phone || '', call.ctmStarRating)
+        const aiContent = await analyzeWithOpenRouter(transcript, call.phone || '', call.starRating)
         const aiResults = parseRubricResults(aiContent)
         const evaluatedResults = evaluateRubric(transcript.toLowerCase(), RUBRIC_CRITERIA, aiResults)
         const { breakdown, ztpFailures, autoFailed } = calculateBreakdown(evaluatedResults)
@@ -459,7 +512,6 @@ export async function POST(request: NextRequest) {
           transcript
         })
       } catch (err) {
-        console.error(`Error analyzing call ${callId}:`, err)
         results.push({ callId, success: false, error: err instanceof Error ? err.message : 'Analysis failed' })
       }
     }
@@ -469,7 +521,6 @@ export async function POST(request: NextRequest) {
       results
     })
   } catch (error) {
-    console.error('Error in call analyze:', error)
     return NextResponse.json(
       { error: 'Failed to analyze call' },
       { status: 500 }

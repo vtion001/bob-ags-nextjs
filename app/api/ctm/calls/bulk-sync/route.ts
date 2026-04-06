@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
       message: 'Bulk sync completed (no-op in standalone mode)'
     })
   } catch (error) {
-    console.error('Error in bulk sync:', error)
     return NextResponse.json(
       { error: 'Failed to perform bulk sync' },
       { status: 500 }
@@ -73,7 +72,6 @@ export async function POST(request: NextRequest) {
       message: 'Bulk sync completed (no-op in standalone mode)'
     })
   } catch (error) {
-    console.error('Error in bulk sync:', error)
     return NextResponse.json(
       { error: 'Failed to perform bulk sync' },
       { status: 500 }

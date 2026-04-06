@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { CallsService } from '@/lib/ctm/services/calls'
+import { authenticate } from '@/lib/api-helpers'
 
 export async function GET(request: NextRequest) {
+  const authError = await authenticate(request)
+  if (authError) return authError
+
   try {
     const searchParams = request.nextUrl.searchParams
     const hours = parseInt(searchParams.get('hours') || '24', 10)
@@ -38,7 +42,6 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error)
     return NextResponse.json(
       { error: 'Failed to fetch dashboard stats from CallTrackingMetrics' },
       { status: 502 }

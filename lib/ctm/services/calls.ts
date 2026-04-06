@@ -29,15 +29,16 @@ function phoneMatches(phone1: string, phone2: string): boolean {
 export class CallsService extends CTMClient {
   async getCalls(params: GetCallsParams = {}): Promise<Call[]> {
     const { limit = 100, hours = 24, status, sourceId, agentId } = params
-    
+
     const callsPerRequest = 200
     const pagesNeeded = Math.ceil(limit / callsPerRequest)
     const maxPages = Math.min(pagesNeeded, 500)
-    
+
     let allCalls: Call[] = []
-    
+    const accountId = this.getAccountId()
+
     for (let page = 1; page <= maxPages && allCalls.length < limit; page++) {
-      let endpoint = `/accounts/${this.accountId}/calls.json?limit=${callsPerRequest}&hours=${hours}&page=${page}`
+      let endpoint = `/accounts/${accountId}/calls.json?limit=${callsPerRequest}&hours=${hours}&page=${page}`
       if (status) endpoint += `&status=${status}`
       if (sourceId) endpoint += `&source_id=${sourceId}`
       if (agentId) endpoint += `&agent_id=${agentId}`
@@ -63,13 +64,14 @@ export class CallsService extends CTMClient {
 
     const callsPerRequest = 200
     const maxPages = limit ? Math.ceil(limit / callsPerRequest) : 500
+    const accountId = this.getAccountId()
 
     let allCalls: Call[] = []
     let page = 1
     let hasMore = true
 
     while (page <= maxPages && hasMore) {
-      let endpoint = `/accounts/${this.accountId}/calls.json?limit=${callsPerRequest}&hours=${hours}&page=${page}`
+      let endpoint = `/accounts/${accountId}/calls.json?limit=${callsPerRequest}&hours=${hours}&page=${page}`
       if (status) endpoint += `&status=${status}`
       if (sourceId) endpoint += `&source_id=${sourceId}`
       if (agentId) endpoint += `&agent_id=${agentId}`
@@ -90,8 +92,6 @@ export class CallsService extends CTMClient {
         allCalls.push(...transformedCalls)
       }
 
-      console.log(`[getAllCalls] Fetched page ${page}, total calls: ${allCalls.length}`)
-
       if (limit && allCalls.length >= limit) {
         allCalls = allCalls.slice(0, limit)
         hasMore = false
@@ -105,14 +105,23 @@ export class CallsService extends CTMClient {
       }
     }
 
-    console.log(`[getAllCalls] Complete. Total calls fetched: ${allCalls.length}`)
     return allCalls
   }
 
   async getCall(callId: string): Promise<Call | null> {
     try {
+      // If callId looks like an SID (starts with 'CA'), we need to resolve the numeric ID
+      if (callId.startsWith('CA')) {
+        const numericId = await this.resolveNumericId(callId)
+        if (!numericId) {
+          return null
+        }
+        callId = numericId
+      }
+
+      const accountId = this.getAccountId()
       const data = await this.makeRequest<CTMCall>(
-        `/accounts/${this.accountId}/calls/${callId}.json`
+        `/accounts/${accountId}/calls/${callId}.json`
       )
       return data ? transformCall(data) : null
     } catch {
@@ -120,10 +129,45 @@ export class CallsService extends CTMClient {
     }
   }
 
+  /**
+   * Resolve a CTM call SID to its numeric ID.
+   * CTM's /calls/{id}.json endpoint only accepts numeric IDs, not SIDs.
+   * We fetch recent calls and find the matching SID (paginating as needed).
+   */
+  private async resolveNumericId(sid: string): Promise<string | null> {
+    try {
+      const maxPages = 100 // search up to 100 pages (20k calls) to find the SID
+      let after: string | undefined = undefined
+      const accountId = this.getAccountId()
+
+      for (let page = 0; page < maxPages; page++) {
+        let endpoint = `/accounts/${accountId}/calls.json?limit=200&hours=24`
+        if (after) endpoint += `&after=${after}`
+
+        const data = await this.makeRequest<{ calls?: CTMCall[]; after?: string }>(endpoint)
+
+        if (data.calls) {
+          const match = data.calls.find(c => c.sid === sid)
+          if (match) {
+            return String(match.id)
+          }
+        }
+
+        after = data.after
+        if (!after) break
+      }
+
+      return null
+    } catch {
+      return null
+    }
+  }
+
   async getCallTranscript(callId: string): Promise<string> {
     try {
+      const accountId = this.getAccountId()
       const data = await this.makeRequest<{ transcript?: string }>(
-        `/accounts/${this.accountId}/calls/${callId}/transcript`
+        `/accounts/${accountId}/calls/${callId}/transcript`
       )
       return data.transcript || ''
     } catch {
@@ -143,8 +187,6 @@ export class CallsService extends CTMClient {
   async searchCallsByPhone(phoneNumber: string, hours: number = 8760, limit?: number, direction?: 'inbound' | 'outbound'): Promise<Call[]> {
     // Phone search should fetch all available calls (no limit by default)
     const allCalls = await this.getAllCalls({ hours, direction, limit })
-
-    console.log('[searchCallsByPhone] Fetched calls:', allCalls.length)
 
     return allCalls.filter(call => {
       const phoneFields = [

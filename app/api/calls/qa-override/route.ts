@@ -28,13 +28,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Return empty qa-overrides - stored in Supabase
+    const supabase = await createServerSupabase(request)
     const { data, error } = await supabase
       .from('qa_overrides')
       .select('*')
       .limit(100)
 
     if (error) {
-      console.error('Error fetching QA overrides:', error)
       return NextResponse.json({
         success: true,
         qa_overrides: []
@@ -46,7 +46,6 @@ export async function GET(request: NextRequest) {
       qa_overrides: data || []
     })
   } catch (error) {
-    console.error('QA overrides error:', error)
     return NextResponse.json({
       success: true,
       qa_overrides: []
@@ -81,6 +80,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Store QA override in Supabase
+    const supabase = await createServerSupabase(request)
     const { data, error } = await supabase
       .from('qa_overrides')
       .insert(body)
@@ -88,7 +88,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error creating QA override:', error)
       return NextResponse.json(
         { error: 'Failed to create QA override' },
         { status: 500 }
@@ -100,7 +99,6 @@ export async function POST(request: NextRequest) {
       qa_override: data
     })
   } catch (error) {
-    console.error('QA override error:', error)
     return NextResponse.json(
       { error: 'Failed to create QA override' },
       { status: 500 }

@@ -3,8 +3,9 @@ import type { CTMSource } from '@/lib/types'
 
 export class SourcesService extends CTMClient {
   async getSources(): Promise<{ sources?: CTMSource[] }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ sources?: CTMSource[] }>(
-      `/accounts/${this.accountId}/sources`
+      `/accounts/${accountId}/sources`
     )
   }
 
@@ -15,8 +16,9 @@ export class SourcesService extends CTMClient {
     landing_url?: string
     position?: string
   }): Promise<{ status: string; source?: CTMSource }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ status: string; source?: CTMSource }>(
-      `/accounts/${this.accountId}/sources`,
+      `/accounts/${accountId}/sources`,
       {
         method: 'POST',
         body: JSON.stringify(data),
@@ -25,8 +27,9 @@ export class SourcesService extends CTMClient {
   }
 
   async assignNumberToSource(tsoId: string, tpnId: string): Promise<{ status: string }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ status: string }>(
-      `/accounts/${this.accountId}/sources/${tsoId}/numbers/${tpnId}/add`,
+      `/accounts/${accountId}/sources/${tsoId}/numbers/${tpnId}/add`,
       { method: 'POST' }
     )
   }

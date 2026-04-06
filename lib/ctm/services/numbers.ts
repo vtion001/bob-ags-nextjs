@@ -3,8 +3,9 @@ import type { CTMNumber, SearchNumbersParams } from '@/lib/types'
 
 export class NumbersService extends CTMClient {
   async getNumbers(): Promise<{ numbers?: CTMNumber[] }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ numbers?: CTMNumber[] }>(
-      `/accounts/${this.accountId}/numbers.json`
+      `/accounts/${accountId}/numbers.json`
     )
   }
 
@@ -16,14 +17,16 @@ export class NumbersService extends CTMClient {
     if (params.address) queryParams.set('address', params.address)
     if (params.pattern) queryParams.set('pattern', params.pattern)
 
+    const accountId = this.getAccountId()
     return this.makeRequest<{ numbers?: CTMNumber[] }>(
-      `/accounts/${this.accountId}/numbers/search.json?${queryParams.toString()}`
+      `/accounts/${accountId}/numbers/search.json?${queryParams.toString()}`
     )
   }
 
   async purchaseNumber(phoneNumber: string, test: boolean = true): Promise<{ status: string; number?: CTMNumber }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ status: string; number?: CTMNumber }>(
-      `/accounts/${this.accountId}/numbers`,
+      `/accounts/${accountId}/numbers`,
       {
         method: 'POST',
         body: JSON.stringify({ phone_number: phoneNumber, test }),
@@ -32,8 +35,9 @@ export class NumbersService extends CTMClient {
   }
 
   async getNumberDetails(tpnId: string): Promise<{ number?: CTMNumber }> {
+    const accountId = this.getAccountId()
     return this.makeRequest<{ number?: CTMNumber }>(
-      `/accounts/${this.accountId}/numbers/${tpnId}`
+      `/accounts/${accountId}/numbers/${tpnId}`
     )
   }
 
@@ -42,8 +46,9 @@ export class NumbersService extends CTMClient {
     if (numbers) data.numbers = numbers
     if (countryCodes) data.country_codes = countryCodes
 
+    const accountId = this.getAccountId()
     return this.makeRequest<{ status: string }>(
-      `/accounts/${this.accountId}/numbers/${tpnId}/update_number`,
+      `/accounts/${accountId}/numbers/${tpnId}/update_number`,
       {
         method: 'POST',
         body: JSON.stringify(data),
@@ -59,8 +64,9 @@ export class NumbersService extends CTMClient {
       (data.virtual_phone_number as Record<string, unknown>).voice_menu_id = voiceMenuId
     }
 
+    const accountId = this.getAccountId()
     return this.makeRequest<{ status: string }>(
-      `/accounts/${this.accountId}/numbers/${tpnId}/dial_routes`,
+      `/accounts/${accountId}/numbers/${tpnId}/dial_routes`,
       {
         method: 'PUT',
         body: JSON.stringify(data),

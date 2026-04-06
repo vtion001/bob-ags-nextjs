@@ -82,10 +82,74 @@ export async function GET(request: NextRequest) {
 
     return jsonResponse
   } catch (error) {
-    console.error('Error fetching calls:', error)
     return NextResponse.json(
       { error: 'Failed to fetch calls from CallTrackingMetrics' },
       { status: 502 }
     )
+  }
+}
+
+// POST handler for storing call/analysis data to Supabase
+export async function POST(request: NextRequest) {
+  const { supabase, response } = await createServerSupabase(request)
+
+  try {
+    const body = await request.json()
+    const { calls } = body
+
+    if (!Array.isArray(calls) || calls.length === 0) {
+      return NextResponse.json({ error: 'No calls data provided' }, { status: 400 })
+    }
+
+    // Transform calls to match the Supabase schema
+    // The calls table has: ctm_call_id, user_id, and other fields
+    const callsWithCtmId = calls.map((call: Record<string, unknown>) => ({
+      ctm_call_id: String(call.id), // CTM call ID goes to ctm_call_id
+      phone: call.phone,
+      direction: call.direction,
+      duration: call.duration,
+      status: call.status,
+      timestamp: call.timestamp,
+      caller_number: call.callerNumber,
+      tracking_number: call.trackingNumber,
+      tracking_label: call.trackingLabel,
+      source: call.source,
+      source_id: call.sourceId,
+      agent_id: call.agent?.id,
+      agent_name: call.agent?.name,
+      recording_url: call.recordingUrl,
+      transcript: call.transcript,
+      city: call.city,
+      state: call.state,
+      postal_code: call.postalCode,
+      notes: call.notes,
+      talk_time: call.talkTime,
+      wait_time: call.waitTime,
+      ring_time: call.ringTime,
+      score: call.score,
+      sentiment: call.sentiment,
+      summary: call.summary,
+      tags: call.tags || [],
+      disposition: call.disposition,
+      rubric_results: call.rubric_results,
+      rubric_breakdown: call.rubric_breakdown,
+    }))
+
+    // Upsert with ctm_call_id as conflict target
+    const { error: upsertError } = await supabase
+      .from('calls')
+      .upsert(callsWithCtmId, { onConflict: 'ctm_call_id' })
+
+    if (upsertError) {
+      return NextResponse.json({ error: 'Failed to store calls', details: upsertError.message }, { status: 500 })
+    }
+
+    const jsonResponse = NextResponse.json({ success: true })
+    response.cookies.getAll().forEach((cookie) => {
+      jsonResponse.cookies.set(cookie.name, cookie.value)
+    })
+    return jsonResponse
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

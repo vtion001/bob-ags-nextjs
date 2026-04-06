@@ -5,6 +5,7 @@ export interface Agent {
   name: string
   email: string
   uid?: number
+  phone?: string
 }
 
 export interface UserGroup {
@@ -18,7 +19,7 @@ export interface Call {
   phone: string
   direction: 'inbound' | 'outbound'
   duration: number
-  status: 'completed' | 'missed' | 'active'
+  status: 'completed' | 'missed' | 'active' | 'voicemail'
   timestamp: Date
   name?: string
   callerNumber?: string
@@ -39,6 +40,7 @@ export interface Call {
   ringTime?: number
   score?: number
   starRating?: number
+  tags?: string[]
   analysis?: CallAnalysis
   destinationNumber?: string
   poolNumber?: string

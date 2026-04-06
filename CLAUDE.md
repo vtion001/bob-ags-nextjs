@@ -16,9 +16,18 @@ pnpm build    # Production build
 pnpm start    # Start production server
 pnpm lint     # Run ESLint
 ```
+
 **Package manager:** pnpm (not npm). Node 22.x required.
 
 **Testing:** No test suite configured yet.
+
+## Code Style
+
+- **TypeScript**: Strict mode enabled. Prefer explicit types over `any`. Use `interface` for object shapes, `type` for unions.
+- **Naming**: PascalCase for components/files, camelCase for functions/variables.
+- **Components**: Use `'use client'` directive for client-side components. Custom UI components in `components/ui/`.
+- **Styling**: Tailwind CSS 4 with custom design tokens. CSS variables defined in `app/globals.css`. Navy color scale in `tailwind.config.ts`.
+- **API Routes**: JWT session validation on protected routes. HTTP-only cookies for session tokens.
 
 ## Architecture
 
@@ -71,10 +80,10 @@ supabase/
 ### Authentication
 
 Two auth systems coexist:
-1. **Supabase SSR** (`@supabase/ssr`) - Primary auth, configured in `middleware.ts` and `lib/supabase/server.ts`
+1. **Supabase SSR** (`@supabase/ssr`) - Primary auth, configured in `lib/supabase/middleware.ts` and `lib/supabase/server.ts`
 2. **Legacy HMAC sessions** (`lib/auth.ts`) - Custom session tokens for developer login
 
-The middleware at `middleware.ts` creates a Supabase server client and refreshes sessions on every request. **Must use `getSession()` (not `getUser()`)** to refresh cookies. Using `getUser()` alone will cause `getSession()` to return null on API routes.
+The middleware at `lib/supabase/middleware.ts` creates a Supabase server client and refreshes sessions on every request via `updateSession()`. **Must use `getSession()` (not `getUser()`)** to refresh cookies. Using `getUser()` alone will cause `getSession()` to return null on API routes.
 
 ### CTM Integration
 
@@ -156,7 +165,7 @@ const calls = await callsService.getCalls({ hours: 24, limit: 100 })
 
 **Live Monitoring**: Uses polling with `useMonitorPage` hook, not WebSockets. AssemblyAI streaming via `lib/realtime/assemblyai-realtime.ts`.
 
-**Middleware matcher** excludes `_next/static`, `_next/image`, favicon, and static file extensions (svg, png, jpg, etc.) from session refresh.
+**Middleware matcher** excludes `_next/static`, `_next/image`, favicon, and static file extensions (svg, png, jpg, etc.) from session refresh. The `updateSession()` function in `lib/supabase/middleware.ts` must be called from your own middleware to refresh sessions.
 
 ## Color System
 
