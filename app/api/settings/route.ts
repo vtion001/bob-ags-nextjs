@@ -100,6 +100,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
+    // Dev users don't have real auth entries - skip actual DB write but return success
+    if (isDevUser) {
+      return NextResponse.json({
+        success: true,
+        settings: body,
+        note: 'Dev mode - settings not persisted'
+      })
+    }
+
     const { data, error } = await supabase
       .from('user_settings')
       .upsert({

@@ -205,11 +205,14 @@ export function useDashboard(): UseDashboardReturn {
   }, [timeRange, customStartDate, customEndDate, selectedAgentUid])
 
   useEffect(() => {
+    // Don't redirect prematurely on empty allAgents — it may still be loading
+    // Only redirect on explicit auth failure (401) from the session endpoint
     if (!isReady || authLoading) return
 
     const init = async () => {
       try {
-        if (allAgents.length === 0) {
+        const sessionRes = await fetch('/api/auth/session')
+        if (sessionRes.status === 401) {
           window.location.href = '/'
           return
         }
@@ -242,8 +245,10 @@ export function useDashboard(): UseDashboardReturn {
           assignedAgentId,
           userEmail,
         })
-      } catch {
-        window.location.href = '/'
+      } catch (err) {
+        // Only redirect on network errors, not on partial failures
+        // Settings fetch failure is non-fatal - user can still use dashboard
+        console.error('Dashboard init error:', err)
       } finally {
         setIsLoading(false)
       }
@@ -438,9 +443,14 @@ export function useDashboard(): UseDashboardReturn {
       })
       if (analyzeRes.ok) {
         const result = await analyzeRes.json()
-        setAnalyzeProgress(`Analyzed ${result.analyzed} calls!`)
+        const analyzedCount = result.results?.length || 0
+        setAnalyzeProgress(`Analyzed ${analyzedCount} calls!`)
         await fetchCTMCalls()
         setTimeout(() => setAnalyzeProgress(''), 3000)
+      } else {
+        const errorData = await analyzeRes.json().catch(() => ({}))
+        setError(errorData.error || `Analysis failed (${analyzeRes.status})`)
+        setTimeout(() => setError(null), 5000)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed')

@@ -59,6 +59,7 @@ components/
 
 lib/
 ├── supabase/           # Supabase client helpers (server.ts, client.ts, middleware.ts)
+├── types/              # Centralized TypeScript types
 ├── ctm/               # CTM API client and services
 │   └── services/      # calls, agents, numbers, schedules, etc.
 ├── ai/                # AI analysis (OpenRouter + keyword fallback)
@@ -80,10 +81,10 @@ supabase/
 ### Authentication
 
 Two auth systems coexist:
-1. **Supabase SSR** (`@supabase/ssr`) - Primary auth, configured in `lib/supabase/middleware.ts` and `lib/supabase/server.ts`
+1. **Supabase SSR** (`@supabase/ssr`) - Primary auth, configured in `proxy.ts` (root) and `lib/supabase/server.ts`
 2. **Legacy HMAC sessions** (`lib/auth.ts`) - Custom session tokens for developer login
 
-The middleware at `lib/supabase/middleware.ts` creates a Supabase server client and refreshes sessions on every request via `updateSession()`. **Must use `getSession()` (not `getUser()`)** to refresh cookies. Using `getUser()` alone will cause `getSession()` to return null on API routes.
+`proxy.ts` creates a Supabase server client and refreshes sessions on every request. **Must use `getSession()` (not `getUser()`)** to refresh cookies. Using `getUser()` alone will cause `getSession()` to return null on API routes.
 
 ### CTM Integration
 
@@ -112,14 +113,13 @@ ZTP (Zero Tolerance Policy) criteria (3.4, 5.1, 5.2) auto-fail calls if violated
 
 25-criterion rubric evaluates call quality across 5 sections (Opening, Probing, Qualification, Closing, Compliance).
 
-**Zero Tolerance Policy (ZTP) auto-fail criteria:**
-- 3.4: Unqualified transfers (state insurance, self-pay)
-- 5.1: HIPAA confidentiality violations
-- 5.2: Providing medical advice
+**Max score: 107 points** (22 evaluated criteria; 3 are always N/A requiring Salesforce verification: criteria 4.2, 4.3, 4.4)
 
-ZTP violations set score to 0 regardless of other criteria. Three criteria (4.2, 4.3, 4.4) are always N/A (require Salesforce verification).
+**Score formula**: (earned/max) × 100
 
-**Scoring:** Max 107 points (25 criteria, 22 evaluated + 3 N/A). Score = (earned/max) × 100. Dispositions: Qualified Lead (80-100), Warm Lead (60-79), Refer (40-59), Do Not Refer (0-39).
+**Auto-fail (ZTP)**: Criteria 3.4 (unqualified transfers), 5.1 (HIPAA violations), 5.2 (medical advice) set score to 0 if violated, regardless of other criteria.
+
+**Dispositions**: Qualified Lead (80-100), Warm Lead (60-79), Refer (40-59), Do Not Refer (0-39).
 
 **Tags generated:** `excellent`, `good`, `needs-improvement`, `poor`, `unqualified-transfer`, `hipaa-risk`, `medical-advice-risk`, `ztp-violation`, `insurance:{type}`, `state:{state}`
 
@@ -165,7 +165,9 @@ const calls = await callsService.getCalls({ hours: 24, limit: 100 })
 
 **Live Monitoring**: Uses polling with `useMonitorPage` hook, not WebSockets. AssemblyAI streaming via `lib/realtime/assemblyai-realtime.ts`.
 
-**Middleware matcher** excludes `_next/static`, `_next/image`, favicon, and static file extensions (svg, png, jpg, etc.) from session refresh. The `updateSession()` function in `lib/supabase/middleware.ts` must be called from your own middleware to refresh sessions.
+**Session refresh middleware** is in `proxy.ts` at the project root. It uses Supabase SSR and also handles a **dev bypass session** (`sb-dev-session` cookie) that allows local development without real Supabase auth — the dev session is detected and converted to a fake `sb-session` placeholder so downstream Supabase client code works.
+
+**Middleware matcher** excludes `_next/static`, `_next/image`, favicon, and static file extensions (svg, png, jpg, etc.) from session refresh.
 
 ## Color System
 

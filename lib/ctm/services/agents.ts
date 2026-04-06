@@ -29,12 +29,14 @@ export class AgentsService extends CTMClient {
           this.fetchAgentsPage(page).catch(() => [])
         )
       }
-      
+
+      // Fetch all pages in parallel but track indices to preserve order
       const pageResults = await Promise.all(pagePromises)
+      // pageResults[i] corresponds to page i+2 (since page 1 was already fetched)
       for (const pageAgents of pageResults) {
         allAgents.push(...pageAgents)
       }
-      
+
       return allAgents
     } catch {
       return []
