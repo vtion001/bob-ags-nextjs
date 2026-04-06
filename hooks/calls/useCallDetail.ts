@@ -298,7 +298,8 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
 
       if (cancelled) return
 
-      const fetchedCall = ctmCall || cachedCall
+      // Use cachedCall if it has analysis, otherwise use ctmCall
+      const fetchedCall = hasCachedAnalysis ? cachedCall : (ctmCall || cachedCall)
       if (!fetchedCall) {
         setError('Call not found')
         return
