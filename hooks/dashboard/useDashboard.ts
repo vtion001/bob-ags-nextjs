@@ -186,12 +186,20 @@ export function useDashboard(): UseDashboardReturn {
 
       const [cacheData, ctmData] = await Promise.all([cacheRes.json(), ctmRes.json()])
 
-      if (cacheData?.stats) setStats(cacheData.stats)
+      if (cacheData?.stats) {
+        setStats(prev => ({
+          ...prev,
+          ...cacheData.stats,
+          // Preserve existing kpi since CTM stats endpoint doesn't include it
+          kpi: prev.kpi,
+        }))
+      }
       if (cacheData?.recentCalls) setRecentCalls(cacheData.recentCalls)
       if (ctmData?.stats && !ctmData.fromCache) {
         setStats(prev => ({
           ...prev,
           ...ctmData.stats,
+          // Preserve existing kpi since CTM stats endpoint doesn't include it
           kpi: prev.kpi,
         }))
         setRecentCalls(ctmData.recentCalls || [])
@@ -399,13 +407,8 @@ export function useDashboard(): UseDashboardReturn {
     }
   }, [timeRange, customStartDate, customEndDate, selectedAgentUid, selectedGroup, isLoading, userEmail, fetchCTMCalls])
 
-  useEffect(() => {
-    if (!autoRefresh || isLoading) return
-    const interval = setInterval(() => {
-      fetchStats()
-    }, 30000)
-    return () => clearInterval(interval)
-  }, [autoRefresh, isLoading, fetchStats])
+  // fetchCTMCalls handles its own refresh via useEffect above
+  // No separate auto-refresh needed for fetchStats since CTM stats endpoint doesn't return kpi anyway
 
   const handleGroupChange = useCallback((groupId: string) => {
     setSelectedGroup(groupId)
