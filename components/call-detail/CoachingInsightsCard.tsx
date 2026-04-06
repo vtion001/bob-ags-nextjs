@@ -27,7 +27,7 @@ const COACHING_TIPS: Record<string, { tip: string; category: string }> = {
     category: 'Opening'
   },
   '2.1': {
-    tip: 'Ask about clean/sobriety timeline using neutral language: "When was the last time you or your loved one used alcohol or drugs?" Never say "How long have you been sober?" as this implies they've already stopped.',
+    tip: "Ask about clean/sobriety timeline using neutral language: 'When was the last time you or your loved one used alcohol or drugs?' Never say 'How long have you been sober?' as this implies they've already stopped.",
     category: 'Probing'
   },
   '2.2': {
