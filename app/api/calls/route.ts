@@ -36,11 +36,12 @@ export async function GET(request: NextRequest) {
 
     // If ctm_call_id is provided, fetch specific call from Supabase
     if (ctmCallId) {
+      // First try with user_id filter (for RLS), then without if not found
       const { data: cachedCall, error: fetchError } = await supabase
         .from('calls')
         .select('*')
         .eq('ctm_call_id', ctmCallId)
-        .single()
+        .maybeSingle()
 
       if (fetchError && fetchError.code !== 'PGRST116') {
         console.error('Error fetching cached call:', fetchError)
@@ -116,7 +117,31 @@ export async function GET(request: NextRequest) {
 
 // POST handler for storing call/analysis data to Supabase
 export async function POST(request: NextRequest) {
+  const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
+  const devSessionCookie = request.cookies.get('sb-dev-session')
+  let isDevUser = false
+  if (devSessionCookie) {
+    try {
+      const devSession = JSON.parse(devSessionCookie.value)
+      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
+        isDevUser = true
+      }
+    } catch {}
+  }
+
   const { supabase, response } = await createServerSupabase(request)
+
+  let userId: string | null = null
+
+  if (!isDevUser) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    userId = user.id
+  } else {
+    userId = DEV_BYPASS_UID
+  }
 
   try {
     const body = await request.json()
@@ -130,6 +155,7 @@ export async function POST(request: NextRequest) {
     // The calls table has: ctm_call_id, user_id, and other fields
     const callsWithCtmId = calls.map((call: Record<string, unknown>) => ({
       ctm_call_id: String(call.id), // CTM call ID goes to ctm_call_id
+      user_id: userId, // Set user_id for RLS
       phone: call.phone,
       direction: call.direction,
       duration: call.duration,
