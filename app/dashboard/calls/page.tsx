@@ -29,7 +29,7 @@ const PAGE_SIZE = 100 // CTM API returns 200 per page, request 100 for safety
 
 export default function CallsPage() {
   const router = useRouter()
-  const { isAdmin, ctmAgentId } = useAuth()
+  const { isAdmin, ctmAgentId, isLoading: authLoading } = useAuth()
   const [calls, setCalls] = useState<Call[]>([])
   const [stats, setStats] = useState<CallsStats>({
     totalCalls: 0,
@@ -66,6 +66,9 @@ export default function CallsPage() {
       const data = await res.json()
       const fetchedCalls: Call[] = data.calls || []
 
+      // Store in ref to prevent stale closure issues
+      fetchedCallsRef.current = fetchedCalls
+
       // Calculate stats from fetched calls
       const totalCalls = fetchedCalls.length
       const answered = fetchedCalls.filter(c => c.status === 'completed' || c.status === 'active').length
@@ -101,9 +104,12 @@ export default function CallsPage() {
     }
   }, [ctmAgentId])
 
+  // Initial fetch only when auth is ready and ctmAgentId is available
   useEffect(() => {
-    fetchCalls({ page: 1 })
-  }, [fetchCalls])
+    if (!authLoading) {
+      fetchCalls({ page: 1 })
+    }
+  }, [authLoading, fetchCalls])
 
   const handleSearch = () => {
     if (!searchQuery.trim()) {
