@@ -16,7 +16,7 @@ function isDevUser(request: NextRequest): boolean {
   return false
 }
 
-async function getTranscriptFromAssemblyAI(callSid: string): Promise<string> {
+async function getTranscriptFromAssemblyAI(callId: string): Promise<string> {
   const apiKey = process.env.ASSEMBLYAI_API_KEY || process.env.NEXT_PUBLIC_ASSEMBLYAI_API_KEY
   if (!apiKey) {
     throw new Error('AssemblyAI API key not configured')
@@ -31,31 +31,41 @@ async function getTranscriptFromAssemblyAI(callSid: string): Promise<string> {
     throw new Error('CTM credentials not configured')
   }
 
-  // Fetch audio directly from CTM (which returns 303 redirect to S3)
   const authHeader = Buffer.from(`${accessKey}:${secretKey}`).toString('base64')
-  const recordingUrl = `https://api.calltrackingmetrics.com/api/v1/accounts/${accountId}/calls/${callSid}/recording`
 
-  const ctmResponse = await fetch(recordingUrl, {
+  // First, get the call details to find the SID and recording URL
+  const callUrl = `https://api.calltrackingmetrics.com/api/v1/accounts/${accountId}/calls/${callId}.json`
+  const callResponse = await fetch(callUrl, {
     headers: { 'Authorization': `Basic ${authHeader}` },
+  })
+
+  if (!callResponse.ok) {
+    throw new Error(`CTM call lookup error: ${callResponse.status}`)
+  }
+
+  const callData = await callResponse.json()
+  const sid = callData.sid
+  const recordingUrl = callData.audio || callData.recording_url
+
+  if (!recordingUrl && !sid) {
+    throw new Error('No recording available for this call')
+  }
+
+  // If we have the full recording URL already, use it; otherwise construct from SID
+  const audioSourceUrl = recordingUrl || `https://app.calltrackingmetrics.com/api/v1/accounts/${accountId}/calls/${sid}/recording`
+
+  // Fetch audio directly from CTM (with auth) - this handles the 303 redirect to S3
+  const ctmResponse = await fetch(audioSourceUrl, {
+    headers: { 'Authorization': `Basic ${authHeader}` },
+    redirect: 'follow',
   })
 
   if (!ctmResponse.ok) {
     throw new Error(`CTM recording error: ${ctmResponse.status}`)
   }
 
-  // Follow the redirect to S3
-  const redirectUrl = ctmResponse.headers.get('Location')
-  if (!redirectUrl) {
-    throw new Error('No redirect URL from CTM')
-  }
-
-  const audioResponse = await fetch(redirectUrl)
-  if (!audioResponse.ok) {
-    throw new Error(`S3 error: ${audioResponse.status}`)
-  }
-
-  const audioBuffer = await audioResponse.arrayBuffer()
-  const contentType = audioResponse.headers.get('Content-Type') || 'audio/wav'
+  const audioBuffer = await ctmResponse.arrayBuffer()
+  const contentType = ctmResponse.headers.get('Content-Type') || 'audio/wav'
 
   // Upload to AssemblyAI
   const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
@@ -392,7 +402,8 @@ export async function GET(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
       const supabase = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
+      // MUST use getSession() to refresh cookies
+      const { data: { user } } = await supabase.auth.getSession()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
@@ -415,7 +426,8 @@ export async function POST(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
       const supabase = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
+      // MUST use getSession() to refresh cookies
+      const { data: { user } } = await supabase.auth.getSession()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
