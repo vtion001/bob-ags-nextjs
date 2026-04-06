@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const sourceId = searchParams.get('source_id')
     const agentId = searchParams.get('agent_id')
+    const page = parseInt(searchParams.get('page') || '1', 10)
 
     const callsService = new CallsService()
     const calls = await callsService.getCalls({
@@ -20,7 +21,8 @@ export async function GET(request: NextRequest) {
       hours,
       status: status || undefined,
       sourceId: sourceId || undefined,
-      agentId: agentId || undefined
+      agentId: agentId || undefined,
+      page
     })
 
     return NextResponse.json({

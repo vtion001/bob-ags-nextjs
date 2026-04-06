@@ -96,6 +96,7 @@ export interface GetCallsParams {
   status?: string | null
   sourceId?: string | null
   agentId?: string | null
+  page?: number
 }
 
 export interface SearchNumbersParams {

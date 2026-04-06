@@ -28,7 +28,7 @@ function phoneMatches(phone1: string, phone2: string): boolean {
 
 export class CallsService extends CTMClient {
   async getCalls(params: GetCallsParams = {}): Promise<Call[]> {
-    const { limit = 100, hours = 24, status, sourceId, agentId } = params
+    const { limit = 100, hours = 24, status, sourceId, agentId, page: startPage = 1 } = params
 
     const callsPerRequest = 200
     const pagesNeeded = Math.ceil(limit / callsPerRequest)
@@ -37,7 +37,7 @@ export class CallsService extends CTMClient {
     let allCalls: Call[] = []
     const accountId = this.getAccountId()
 
-    for (let page = 1; page <= maxPages && allCalls.length < limit; page++) {
+    for (let page = startPage; page <= maxPages + startPage - 1 && allCalls.length < limit; page++) {
       let endpoint = `/accounts/${accountId}/calls.json?limit=${callsPerRequest}&hours=${hours}&page=${page}`
       if (status) endpoint += `&status=${status}`
       if (sourceId) endpoint += `&source_id=${sourceId}`
