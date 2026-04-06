@@ -236,19 +236,24 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
 
       if (cancelled) return
 
-      const hasCachedAnalysis = cachedCall && cachedCall.analysis && cachedCall.analysis.rubric_results
+      // Check for cached analysis - rubric_results can be on either analysis object (CTM) or directly on call (Supabase)
+      const hasCachedAnalysis = cachedCall && (
+        (cachedCall.analysis && cachedCall.analysis.rubric_results) ||
+        cachedCall.rubric_results
+      )
 
       if (cachedCall) {
         setCall(cachedCall)
-        if (cachedCall.analysis) {
+        // Check both nested analysis object (CTM) and direct fields (Supabase)
+        if (cachedCall.analysis?.rubric_results || cachedCall.rubric_results) {
           setAnalysis({
             score: cachedCall.score || 0,
-            sentiment: cachedCall.sentiment || 'neutral',
-            summary: cachedCall.summary || '',
-            tags: cachedCall.tags || [],
-            disposition: cachedCall.disposition || '',
-            rubric_results: (cachedCall.analysis as AnalysisResult).rubric_results,
-            rubric_breakdown: (cachedCall.analysis as AnalysisResult).rubric_breakdown,
+            sentiment: cachedCall.sentiment || cachedCall.analysis?.sentiment || 'neutral',
+            summary: cachedCall.summary || cachedCall.analysis?.summary || '',
+            tags: cachedCall.tags || cachedCall.analysis?.tags || [],
+            disposition: cachedCall.disposition || cachedCall.analysis?.disposition || '',
+            rubric_results: (cachedCall.analysis as AnalysisResult)?.rubric_results || cachedCall.rubric_results,
+            rubric_breakdown: (cachedCall.analysis as AnalysisResult)?.rubric_breakdown || cachedCall.rubric_breakdown,
           })
         }
         if (cachedCall.transcript) {
@@ -306,7 +311,10 @@ export function useCallDetail(callId: string): UseCallDetailReturn {
       }
 
       if (fetchedCall.transcript) {
-        if (!fetchedCall.analysis?.score && !fetchedCall.analysis?.sentiment) {
+        // Check both nested analysis (CTM) and direct fields (Supabase)
+        const hasScore = fetchedCall.score || fetchedCall.analysis?.score
+        const hasSentiment = fetchedCall.sentiment || fetchedCall.analysis?.sentiment
+        if (!hasScore && !hasSentiment) {
           await handleAnalyze()
         }
       } else if (fetchedCall.recordingUrl) {

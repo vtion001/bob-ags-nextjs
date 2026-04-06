@@ -66,9 +66,6 @@ export default function CallsPage() {
       const data = await res.json()
       const fetchedCalls: Call[] = data.calls || []
 
-      // Store in ref to prevent stale closure issues
-      fetchedCallsRef.current = fetchedCalls
-
       // Calculate stats from fetched calls
       const totalCalls = fetchedCalls.length
       const answered = fetchedCalls.filter(c => c.status === 'completed' || c.status === 'active').length
