@@ -157,6 +157,7 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 required
                 disabled={isLoading}
+                autoComplete="username"
               />
               <div className="relative">
                 <Input

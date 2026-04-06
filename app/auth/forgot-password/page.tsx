@@ -100,6 +100,7 @@ export default function ForgotPasswordPage() {
                 placeholder="you@company.com"
                 required
                 disabled={isLoading}
+                autoComplete="username"
               />
               <Button
                 type="submit"

@@ -192,6 +192,7 @@ export default function SignUpPage() {
                 placeholder="you@company.com"
                 required
                 disabled={isLoading}
+                autoComplete="username"
               />
               <div className="relative">
                 <Input
