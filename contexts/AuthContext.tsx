@@ -1,6 +1,10 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
+
+// Supabase browser client singleton for auth error handling
+const supabase = createClient()
 
 export interface Permissions {
   can_view_calls: boolean
@@ -132,6 +136,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchAll()
   }, [fetchAll])
+
+  // Handle Supabase browser client auto-refresh errors
+  // When refresh token is invalid/expired, Supabase fires AUTH_ERROR
+  // We catch it and redirect to login before the error propagates
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'AUTH_ERROR') {
+        console.warn('[Auth] Auth error detected, redirecting to login')
+        window.location.href = '/'
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   return (
     <AuthContext.Provider
