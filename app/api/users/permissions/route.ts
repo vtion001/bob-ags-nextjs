@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { DEFAULT_PERMISSIONS, RoleType } from '@/lib/settings/types'
 
 // Dev bypass constants
 const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
 const DEV_BYPASS_EMAIL = 'dev@bob.local'
+
+function getPermissionsForRole(role: string): ReturnType<typeof DEFAULT_PERMISSIONS[keyof typeof DEFAULT_PERMISSIONS]> {
+  const validRoles: RoleType[] = ['admin', 'manager', 'viewer', 'qa']
+  if (validRoles.includes(role as RoleType)) {
+    return DEFAULT_PERMISSIONS[role as RoleType]
+  }
+  return DEFAULT_PERMISSIONS['viewer']
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -82,36 +91,35 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           success: true,
           role: userRoleByEmail.role,
-          permissions: userRoleByEmail.permissions || {}
+          // Use stored permissions or fall back to DEFAULT_PERMISSIONS for the role
+          permissions: userRoleByEmail.permissions && Object.keys(userRoleByEmail.permissions).length > 0
+            ? userRoleByEmail.permissions
+            : getPermissionsForRole(userRoleByEmail.role)
         })
       }
 
+      // No role found - return viewer with default permissions
       return NextResponse.json({
         success: true,
         role: 'viewer',
-        permissions: {
-          can_view_calls: true,
-          can_view_monitor: true,
-          can_view_history: false,
-          can_view_agents: false,
-          can_manage_settings: false,
-          can_manage_users: false,
-          can_run_analysis: false,
-        }
+        permissions: DEFAULT_PERMISSIONS['viewer']
       })
     }
 
     return NextResponse.json({
       success: true,
       role: userRole.role,
-      permissions: userRole.permissions || {}
+      // Use stored permissions or fall back to DEFAULT_PERMISSIONS for the role
+      permissions: userRole.permissions && Object.keys(userRole.permissions).length > 0
+        ? userRole.permissions
+        : getPermissionsForRole(userRole.role)
     })
   } catch (error) {
     console.error('Permissions error:', error)
     return NextResponse.json({
       success: true,
       role: 'viewer',
-      permissions: {}
+      permissions: DEFAULT_PERMISSIONS['viewer']
     })
   }
 }

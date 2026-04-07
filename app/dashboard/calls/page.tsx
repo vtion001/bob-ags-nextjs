@@ -45,6 +45,32 @@ export default function CallsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
 
+  // Fetch stats from dedicated stats endpoint (iterates all pages for accurate totals)
+  const fetchStats = useCallback(async () => {
+    try {
+      const hours = 8760 // 1 year
+      const agentParam = ctmAgentId ? `&agent_id=${ctmAgentId}` : ''
+      const url = `/api/ctm/dashboard/stats?hours=${hours}${agentParam}`
+
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('Failed to fetch stats')
+      const data = await res.json()
+
+      if (data.stats) {
+        setStats({
+          totalCalls: data.stats.totalCalls || 0,
+          answered: data.stats.answered || 0,
+          missed: data.stats.missed || 0,
+          avgDuration: data.stats.avgDuration || 0,
+          avgScore: data.stats.avgScore || 0,
+        })
+      }
+    } catch (err) {
+      // Stats fetch failed - continue without stats, don't block call loading
+      console.error('Stats fetch failed:', err)
+    }
+  }, [ctmAgentId])
+
   const fetchCalls = useCallback(async (options: { phone?: string; page?: number } = {}) => {
     setIsLoading(true)
     setError(null)
@@ -66,26 +92,6 @@ export default function CallsPage() {
       const data = await res.json()
       const fetchedCalls: Call[] = data.calls || []
 
-      // Calculate stats from fetched calls
-      const totalCalls = fetchedCalls.length
-      const answered = fetchedCalls.filter(c => c.status === 'completed' || c.status === 'active').length
-      const missed = fetchedCalls.filter(c => c.status === 'missed').length
-      const avgDuration = totalCalls > 0
-        ? fetchedCalls.reduce((sum, c) => sum + (c.duration || 0), 0) / totalCalls
-        : 0
-      const scoredCalls = fetchedCalls.filter(c => c.score !== undefined && c.score !== null)
-      const avgScore = scoredCalls.length > 0
-        ? scoredCalls.reduce((sum, c) => sum + (c.score || 0), 0) / scoredCalls.length
-        : 0
-
-      setStats({
-        totalCalls,
-        answered,
-        missed,
-        avgDuration: Math.round(avgDuration),
-        avgScore: Math.round(avgScore),
-      })
-
       if (options.phone) {
         setCalls(fetchedCalls)
         setHasMore(false)
@@ -101,12 +107,13 @@ export default function CallsPage() {
     }
   }, [ctmAgentId])
 
-  // Initial fetch only when auth is ready and ctmAgentId is available
+  // Initial fetch: stats (all pages) and first page of calls
   useEffect(() => {
     if (!authLoading) {
+      fetchStats()
       fetchCalls({ page: 1 })
     }
-  }, [authLoading, fetchCalls])
+  }, [authLoading, fetchStats, fetchCalls])
 
   const handleSearch = () => {
     if (!searchQuery.trim()) {
@@ -127,6 +134,7 @@ export default function CallsPage() {
 
   const handleRefresh = () => {
     setCurrentPage(1)
+    fetchStats()
     fetchCalls({ page: 1 })
   }
 

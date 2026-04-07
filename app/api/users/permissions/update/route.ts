@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { DEFAULT_PERMISSIONS, RoleType } from '@/lib/settings/types'
 
 const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
 
@@ -204,13 +205,22 @@ export async function PUT(request: NextRequest) {
       emailToUse = authUserForEmail?.email?.toLowerCase() || null
     }
 
+    // Validate role is a valid RoleType, default to 'viewer' if not
+    const validRoles: RoleType[] = ['admin', 'manager', 'viewer', 'qa']
+    const safeRole: RoleType = validRoles.includes(role as RoleType) ? role as RoleType : 'viewer'
+
+    // Use provided permissions or fall back to DEFAULT_PERMISSIONS for the role
+    const permissionsToUse = permissions && Object.keys(permissions).length > 0
+      ? permissions
+      : DEFAULT_PERMISSIONS[safeRole]
+
     const { data, error } = await supabaseAdmin
       .from('user_roles')
       .upsert({
         user_id: targetUserIdValue,
         email: emailToUse,
-        role: role || 'viewer',
-        permissions: permissions || {},
+        role: safeRole,
+        permissions: permissionsToUse,
         updated_at: new Date().toISOString(),
       })
       .select()

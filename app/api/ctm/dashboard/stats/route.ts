@@ -10,35 +10,41 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const hours = parseInt(searchParams.get('hours') || '24', 10)
     const sourceId = searchParams.get('source_id')
+    const agentId = searchParams.get('agent_id')
 
     const callsService = new CallsService()
-    const calls = await callsService.getCalls({
+
+    // Use getAllCalls to iterate through all pages and get accurate totals
+    // getAllCalls pages through up to 500 pages (100k calls) if no limit specified
+    const calls = await callsService.getAllCalls({
       hours,
-      limit: 500,
-      sourceId: sourceId || undefined
+      sourceId: sourceId || undefined,
+      agentId: agentId || undefined,
     })
 
-    // Calculate stats from calls
+    // Calculate stats from ALL calls (not just a page of 100-500)
     const totalCalls = calls.length
-    const analyzed = calls.filter(c => c.analysis).length
-    const hotLeads = calls.filter(c => {
-      if (!c.analysis) return false
-      const score = c.analysis.score || 0
-      return score >= 80
-    }).length
+    const answered = calls.filter(c => c.status === 'completed' || c.status === 'active').length
+    const missed = calls.filter(c => c.status === 'missed').length
 
-    const scores = calls.filter(c => c.score).map(c => c.score!)
+    const durations = calls.filter(c => c.duration).map(c => c.duration!)
+    const avgDuration = durations.length > 0
+      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+      : 0
+
+    const scores = calls.filter(c => c.score !== undefined && c.score !== null).map(c => c.score!)
     const avgScore = scores.length > 0
-      ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
-      : '0.0'
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : 0
 
     return NextResponse.json({
       success: true,
       stats: {
         totalCalls,
-        analyzed,
-        hotLeads,
-        avgScore
+        answered,
+        missed,
+        avgDuration,
+        avgScore,
       }
     })
   } catch (error) {
