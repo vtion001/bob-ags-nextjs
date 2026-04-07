@@ -1,72 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Call } from '@/lib/ctm'
 import { useAuth } from '@/contexts/AuthContext'
+import type {
+  Agent,
+  UserGroup,
+  KPIStats,
+  DashboardStats,
+  LiveCallsMeta,
+  TimeRange,
+} from './types'
+import { getHoursFromRange } from './utils'
 
-export interface Agent {
-  id: string
-  uid: number
-  name: string
-  email: string
-}
-
-export interface UserGroup {
-  id: string
-  name: string
-  userIds: number[]
-}
-
-export interface ScoreDistribution {
-  excellent: number
-  good: number
-  needsImprovement: number
-  poor: number
-}
-
-export interface ZTPViolations {
-  hipaaRisk: number
-  medicalAdviceRisk: number
-  unqualifiedTransfer: number
-}
-
-export interface DispositionBreakdown {
-  qualified: number
-  warmLead: number
-  refer: number
-  doNotRefer: number
-}
-
-export interface KPIStats {
-  totalCalls: number
-  answered: number
-  missed: number
-  voicemail: number
-  avgDuration: number
-  avgTalkTime: number
-  avgWaitTime: number
-  avgRingTime: number
-  avgScore: number
-  scoreDistribution: ScoreDistribution
-  ztpViolations: ZTPViolations
-  disposition: DispositionBreakdown
-}
-
-export interface DashboardStats {
-  totalCalls: number
-  analyzed: number
-  hotLeads: number
-  avgScore: string
-  kpi: KPIStats
-}
-
-export interface LiveCallsMeta {
-  total: number
-  isAdmin: boolean
-  assignedGroupId: string | null
-  assignedAgentId: string | null
-  userEmail: string | null
-}
-
-export type TimeRange = '24h' | '7d' | '30d' | '90d' | 'custom'
+export type { Agent, UserGroup, KPIStats, DashboardStats, LiveCallsMeta, TimeRange }
 
 interface UseDashboardReturn {
   isLoading: boolean
@@ -101,25 +46,7 @@ interface UseDashboardReturn {
   getAvailableAgents: () => Agent[]
 }
 
-export function getHoursFromRange(range: TimeRange): number {
-  switch (range) {
-    case '24h': return 24
-    case '7d': return 168
-    case '30d': return 720
-    case '90d': return 2160
-    default: return 168
-  }
-}
-
-export function formatDateRange(range: TimeRange): string {
-  switch (range) {
-    case '24h': return 'Last 24 Hours'
-    case '7d': return 'Last 7 Days'
-    case '30d': return 'Last 30 Days'
-    case '90d': return 'Last 90 Days'
-    case 'custom': return 'Custom Range'
-  }
-}
+export { getHoursFromRange, formatDateRange } from './utils'
 
 export function useDashboard(): UseDashboardReturn {
   const [isLoading, setIsLoading] = useState(true)
