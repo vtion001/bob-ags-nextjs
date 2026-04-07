@@ -9,6 +9,8 @@ interface ActiveCallsListProps {
   groups: string[];
   onSelectCall: (call: Call) => void;
   onGroupChange: (group: string) => void;
+  role?: string;
+  assignedAgentId?: string | null;
 }
 
 function formatDuration(seconds: number): string {
@@ -84,10 +86,17 @@ export default function ActiveCallsList({
   groups,
   onSelectCall,
   onGroupChange,
+  role,
+  assignedAgentId,
 }: ActiveCallsListProps) {
-  const filteredCalls = selectedGroup === "All" 
-    ? calls 
-    : calls.filter((call) => extractGroup(call.agent?.name, call.source) === selectedGroup);
+  // For agent role, filter to only show calls assigned to this agent
+  const agentFilteredCalls = role === 'agent' && assignedAgentId
+    ? calls.filter((call) => String(call.agent?.uid) === String(assignedAgentId))
+    : calls;
+
+  const filteredCalls = selectedGroup === "All"
+    ? agentFilteredCalls
+    : agentFilteredCalls.filter((call) => extractGroup(call.agent?.name, call.source) === selectedGroup);
 
   return (
     <Card className="p-4">

@@ -32,7 +32,7 @@ export interface UserRole {
   id: string
   user_id: string
   email: string
-  role: 'admin' | 'manager' | 'viewer' | 'qa'
+  role: 'admin' | 'manager' | 'viewer' | 'qa' | 'agent'
   permissions: UserPermissions
   approved?: boolean
   approved_by?: string
@@ -57,7 +57,7 @@ export interface CTMUserGroup {
   userIds: number[]
 }
 
-export type RoleType = 'admin' | 'manager' | 'viewer' | 'qa'
+export type RoleType = 'admin' | 'manager' | 'viewer' | 'qa' | 'agent'
 
 export const DEFAULT_PERMISSIONS: Record<RoleType, UserPermissions> = {
   admin: {
@@ -95,6 +95,15 @@ export const DEFAULT_PERMISSIONS: Record<RoleType, UserPermissions> = {
     can_manage_settings: false,
     can_manage_users: false,
     can_run_analysis: true,
+  },
+  agent: {
+    can_view_calls: false,
+    can_view_monitor: true,
+    can_view_history: false,
+    can_view_agents: false,
+    can_manage_settings: false,
+    can_manage_users: false,
+    can_run_analysis: false,
   },
 }
 

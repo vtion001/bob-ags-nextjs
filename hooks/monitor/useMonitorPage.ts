@@ -7,7 +7,7 @@ import { RUBRIC_CRITERIA } from "@/lib/ai/rubric"
 const GRACE_PERIOD_SECONDS = 30
 
 interface UseMonitorPageOptions {
-  role?: 'admin' | 'manager' | 'viewer' | 'qa'
+  role?: 'admin' | 'manager' | 'viewer' | 'qa' | 'agent'
   assignedAgentId?: string | null
   onNewCallAutoStart?: (call: Call) => void
 }
@@ -55,7 +55,7 @@ export function useMonitorPage(options?: UseMonitorPageOptions): UseMonitorPageR
   const hasAutoStartedRef = useRef(false)
   const monitoredCallIdRef = useRef<string | null>(null)
   const gracePeriodTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const isViewerWithAssignment = role === 'viewer' && !!assignedAgentId
+  const isViewerWithAssignment = (role === 'viewer' || role === 'agent') && !!assignedAgentId
   const hasAgentAssignment = !!assignedAgentId
 
   const playBeep = useCallback(() => {

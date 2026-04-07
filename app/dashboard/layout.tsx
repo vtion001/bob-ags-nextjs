@@ -64,6 +64,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const { email, role, permissions, isLoading } = useAuth()
 
   React.useEffect(() => {
+    if (!isLoading && role === 'agent' && pathname === '/dashboard') {
+      window.location.href = '/dashboard/monitor'
+    }
     if (!isLoading && role === 'viewer' && pathname === '/dashboard') {
       window.location.href = '/dashboard/monitor'
     }

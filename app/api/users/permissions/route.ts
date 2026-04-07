@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { DEFAULT_PERMISSIONS, RoleType } from '@/lib/settings/types'
+import { DEFAULT_PERMISSIONS, RoleType, UserPermissions } from '@/lib/settings/types'
 
 // Dev bypass constants
 const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
 const DEV_BYPASS_EMAIL = 'dev@bob.local'
 
-function getPermissionsForRole(role: string): ReturnType<typeof DEFAULT_PERMISSIONS[keyof typeof DEFAULT_PERMISSIONS]> {
-  const validRoles: RoleType[] = ['admin', 'manager', 'viewer', 'qa']
+function getPermissionsForRole(role: string): UserPermissions {
+  const validRoles: RoleType[] = ['admin', 'manager', 'viewer', 'qa', 'agent']
   if (validRoles.includes(role as RoleType)) {
     return DEFAULT_PERMISSIONS[role as RoleType]
   }

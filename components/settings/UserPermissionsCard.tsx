@@ -9,6 +9,7 @@ const ROLE_COLORS: Record<RoleType, { bg: string; text: string; label: string }>
   manager: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Manager' },
   qa: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'QA' },
   viewer: { bg: 'bg-navy-100', text: 'text-navy-700', label: 'Viewer' },
+  agent: { bg: 'bg-green-100', text: 'text-green-700', label: 'Agent' },
 }
 
 const ROLE_DESCRIPTIONS: Record<RoleType, string> = {
@@ -16,6 +17,7 @@ const ROLE_DESCRIPTIONS: Record<RoleType, string> = {
   manager: 'Access to calls, monitor, history, and analysis',
   qa: 'View all calls, history, and run analysis',
   viewer: 'Monitor tab only',
+  agent: 'Monitor assigned calls only',
 }
 
 interface UserCardProps {
@@ -91,6 +93,7 @@ function UserCard({ user, isDevAdmin, isPending, onApprove, onReject, onRoleChan
             className="flex-1 px-3 py-2 rounded-lg border border-navy-200 bg-white text-navy-900 text-sm focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20"
           >
             <option value="viewer">Viewer - Monitor only</option>
+            <option value="agent">Agent - Monitor assigned calls</option>
             <option value="qa">QA - View calls & analysis</option>
             <option value="manager">Manager - Full access (no settings)</option>
             <option value="admin">Admin - Full access</option>
@@ -133,6 +136,7 @@ function UserCard({ user, isDevAdmin, isPending, onApprove, onReject, onRoleChan
         className="px-3 py-2 rounded-lg border border-navy-200 bg-white text-navy-900 text-sm focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-500/20 hover:border-navy-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <option value="viewer">Viewer</option>
+        <option value="agent">Agent</option>
         <option value="qa">QA</option>
         <option value="manager">Manager</option>
         <option value="admin">Admin</option>

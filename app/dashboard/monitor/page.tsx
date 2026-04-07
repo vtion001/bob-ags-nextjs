@@ -34,7 +34,7 @@ import {
 } from "@/lib/monitor/helpers"
 
 export default function MonitorPage() {
-  const { role } = useAuth()
+  const { role, isAgent } = useAuth()
   const [assignedAgentId, setAssignedAgentId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export default function MonitorPage() {
     hasAgentAssignment,
     gracePeriodRemaining,
     isInGracePeriod,
-  } = useMonitorPage({ role: role as 'admin' | 'manager' | 'viewer', assignedAgentId })
+  } = useMonitorPage({ role: role as 'admin' | 'manager' | 'viewer' | 'qa' | 'agent', assignedAgentId })
 
   const {
     aiInsights,
@@ -272,6 +272,8 @@ export default function MonitorPage() {
                   groups={groups}
                   onSelectCall={handleSelectCall}
                   onGroupChange={setSelectedGroup}
+                  role={role}
+                  assignedAgentId={assignedAgentId}
                 />
                 {activeCalls.length === 0 && callsError && (
                   <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">

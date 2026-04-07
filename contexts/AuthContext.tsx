@@ -31,6 +31,7 @@ export interface AuthContextValue {
   permissions: Permissions
   isAdmin: boolean
   isViewer: boolean
+  isAgent: boolean
   agents: Agent[]
   userGroups: UserGroup[]
   ctmAgentId: string | null
@@ -140,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         permissions,
         isAdmin: role === 'admin',
         isViewer: role === 'viewer',
+        isAgent: role === 'agent',
         agents,
         userGroups,
         ctmAgentId,
