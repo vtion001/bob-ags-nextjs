@@ -62,9 +62,13 @@ export async function GET(request: NextRequest) {
     if (error || !userRole) {
       const userEmail = user.email?.toLowerCase()
       const devEmail = 'agsdev@allianceglobalsolutions.com'
+      const superAdminEmails = [
+        'agsdev@allianceglobalsolutions.com',
+        'v.rodriguez@allianceglobalsolutions.com',
+      ]
 
-      // Special case: dev user always gets admin permissions
-      if (userEmail === devEmail) {
+      // Special case: superadmin emails always get admin permissions
+      if (superAdminEmails.includes(userEmail)) {
         return NextResponse.json({
           success: true,
           role: 'admin',
