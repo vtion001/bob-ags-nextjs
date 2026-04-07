@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await createServerSupabase(request)
-    const { data: { user }, error } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getSession()
 
-    if (error || !user) {
+    if (!user) {
       return NextResponse.json(
         { error: 'No active session' },
         { status: 401 }
