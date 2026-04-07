@@ -1,5 +1,5 @@
 import React from 'react'
-import ScoreCircle from '@/components/ScoreCircle'
+import ScoreCircle from '@/components/call-detail/ScoreCircle'
 import Card from '@/components/ui/Card'
 
 interface CallScoreCardProps {

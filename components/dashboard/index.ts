@@ -1,4 +1,8 @@
 export { default as DashboardHeader } from './DashboardHeader'
 export { default as DashboardKPIs } from './DashboardKPIs'
 export { default as DashboardStats } from './DashboardStats'
+export { default as DashboardRecentCalls } from './DashboardRecentCalls'
 export { default as AgentAssignmentWarning } from './AgentAssignmentWarning'
+export { default as CallTable } from './CallTable'
+export { default as Navbar } from './Navbar'
+export { default as StatsCard } from './StatsCard'

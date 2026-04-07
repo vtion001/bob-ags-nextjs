@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Call } from '@/lib/ctm'
-import Card from './ui/Card'
+import Card from '@/components/ui/Card'
 import { extractGroup } from '@/lib/monitor/helpers'
 import {
   ChevronUpIcon,

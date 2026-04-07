@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { usePathname } from 'next/navigation'
-import Navbar from '@/components/Navbar'
+import Navbar from '@/components/dashboard/Navbar'
 import Link from 'next/link'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 

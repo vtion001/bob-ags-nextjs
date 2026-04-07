@@ -1,6 +1,6 @@
 import React from 'react'
 import Card from '@/components/ui/Card'
-import ScoreCircle from '@/components/ScoreCircle'
+import ScoreCircle from '@/components/call-detail/ScoreCircle'
 
 interface AnalysisResult {
   score: number

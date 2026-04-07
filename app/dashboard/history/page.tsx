@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import CallTable from '@/components/CallTable'
+import CallTable from '@/components/dashboard/CallTable'
 import { useCallHistory } from '@/hooks/dashboard/useCallHistory'
 import { HistoryFilters, HistoryStats } from '@/components/history'
 import { useAuth } from '@/contexts/AuthContext'

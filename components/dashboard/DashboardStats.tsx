@@ -1,5 +1,5 @@
 import React from 'react'
-import StatsCard from '@/components/StatsCard'
+import StatsCard from '@/components/dashboard/StatsCard'
 
 interface DashboardStatsProps {
   totalCalls: number

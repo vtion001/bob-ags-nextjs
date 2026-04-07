@@ -1,5 +1,5 @@
 import React from 'react'
-import CallTable from '@/components/CallTable'
+import CallTable from '@/components/dashboard/CallTable'
 import { Call } from '@/lib/ctm'
 import { TimeRange, formatDateRange } from '@/hooks/dashboard/useDashboard'
 
