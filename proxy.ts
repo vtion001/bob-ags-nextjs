@@ -25,6 +25,19 @@ export default async function proxy(request: NextRequest) {
     }
   }
 
+  // Detect if request is HTTPS (Vercel Edge provides this via headers)
+  const isSecure = request.headers.get('x-forwarded-proto') === 'https'
+    || request.headers.get('x-url-scheme') === 'https'
+    || request.headers.get('referer')?.startsWith('https://')
+    || request.headers.get('host')?.includes('vercel.app')
+
+  const cookieOptions: CookieOptions = {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: 'lax' as const,
+    path: '/',
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -42,27 +55,32 @@ export default async function proxy(request: NextRequest) {
     }
   )
 
-  // Refresh session - MUST use getSession() to refresh the session cookie
-  // This sets the refresh token cookie via setAll() above
-  const { data: { session }, error } = await supabase.auth.getSession()
+  // Try to get existing session first (may return null without error if expired)
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
   let response = NextResponse.next({ request: { headers: request.headers } })
 
-  // If we have a session, apply the session cookies to the response
   if (session) {
-    response.cookies.set('sb-session', session.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-    })
+    // Valid session - refresh cookies on response
+    response.cookies.set('sb-session', session.access_token, cookieOptions)
     if (session.refresh_token) {
-      response.cookies.set('sb-refresh-token', session.refresh_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-      })
+      response.cookies.set('sb-refresh-token', session.refresh_token, cookieOptions)
+    }
+  } else {
+    // No session (expired/invalid) - try explicit refresh
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+
+    if (refreshError || !refreshData.session) {
+      // Refresh failed - clear stale cookies so browser doesn't retry endlessly
+      response.cookies.set('sb-session', '', { ...cookieOptions, maxAge: 0 })
+      response.cookies.set('sb-refresh-token', '', { ...cookieOptions, maxAge: 0 })
+    } else {
+      // Refresh succeeded - set new cookies
+      const newSession = refreshData.session!
+      response.cookies.set('sb-session', newSession.access_token, cookieOptions)
+      if (newSession.refresh_token) {
+        response.cookies.set('sb-refresh-token', newSession.refresh_token, cookieOptions)
+      }
     }
   }
 
