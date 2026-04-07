@@ -1,0 +1,63 @@
+[     169ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "username"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3001/:0
+[     243ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[     307ms] [LOG] [HMR] connected @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[    6030ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[    6037ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/users/settings:0
+[    6038ms] [LOG] [Fast Refresh] done in 108ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[    6178ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[    6182ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/users/settings:0
+[    6183ms] [LOG] [Fast Refresh] done in 107ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[    6253ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/users/settings:0
+[    6302ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/users/settings:0
+[   62319ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   62475ms] [LOG] [Fast Refresh] done in 257ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  144065ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  144441ms] [LOG] [Fast Refresh] done in 479ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  152672ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  152948ms] [LOG] [Fast Refresh] done in 379ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  366694ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  366847ms] [LOG] [Fast Refresh] done in 256ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1196882ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1197260ms] [LOG] [Fast Refresh] done in 476ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1197397ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1197411ms] [LOG] [Fast Refresh] done in 116ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1202881ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1202901ms] [LOG] [Fast Refresh] done in 122ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1203248ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 0, totalCalls: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1203251ms] [LOG] [useCallHistory] Filter results: {inputCount: 0, outputCount: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1203253ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 0, totalCalls: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1203254ms] [LOG] [useCallHistory] Filter results: {inputCount: 0, outputCount: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1203596ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1203949ms] [LOG] [Fast Refresh] done in 454ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1205775ms] [LOG] [useCallHistory] API /api/ctm/agents response: {agentsCount: 20, userGroupsCount: undefined, firstAgent: Object, firstGroup: undefined} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1205775ms] [LOG] [useCallHistory] Mapped agentProfiles: [Object, Object, Object] @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1205775ms] [LOG] [useCallHistory] API /api/ctm/agents response: {agentsCount: 20, userGroupsCount: undefined, firstAgent: Object, firstGroup: undefined} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1205775ms] [LOG] [useCallHistory] Mapped agentProfiles: [Object, Object, Object] @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1208637ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1208640ms] [LOG] [Fast Refresh] done in 105ms @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214113ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 0, totalCalls: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214114ms] [LOG] [useCallHistory] Filter results: {inputCount: 0, outputCount: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214115ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 0, totalCalls: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214116ms] [LOG] [useCallHistory] Filter results: {inputCount: 0, outputCount: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214125ms] [LOG] [useCallHistory] API /api/ctm/agents response: {agentsCount: 20, userGroupsCount: undefined, firstAgent: Object, firstGroup: undefined} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214126ms] [LOG] [useCallHistory] Mapped agentProfiles: [Object, Object, Object] @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214126ms] [LOG] [useCallHistory] API /api/ctm/agents response: {agentsCount: 20, userGroupsCount: undefined, firstAgent: Object, firstGroup: undefined} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214126ms] [LOG] [useCallHistory] Mapped agentProfiles: [Object, Object, Object] @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214130ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 20, totalCalls: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214131ms] [LOG] [useCallHistory] Filter results: {inputCount: 0, outputCount: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1214950ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/live-analysis-logs?limit=50:0
+[ 1214997ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/live-analysis-logs?limit=50:0
+[ 1215861ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 0, totalCalls: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1215862ms] [LOG] [useCallHistory] Filter results: {inputCount: 0, outputCount: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1215864ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 0, totalCalls: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1215865ms] [LOG] [useCallHistory] Filter results: {inputCount: 0, outputCount: 0} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1216857ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 0, totalCalls: 10} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1216857ms] [LOG] [useCallHistory] Filter results: {inputCount: 10, outputCount: 10} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1217011ms] [LOG] [useCallHistory] API /api/ctm/agents response: {agentsCount: 20, userGroupsCount: undefined, firstAgent: Object, firstGroup: undefined} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1217011ms] [LOG] [useCallHistory] Mapped agentProfiles: [Object, Object, Object] @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1217011ms] [LOG] [useCallHistory] API /api/ctm/agents response: {agentsCount: 20, userGroupsCount: undefined, firstAgent: Object, firstGroup: undefined} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1217011ms] [LOG] [useCallHistory] Mapped agentProfiles: [Object, Object, Object] @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1217033ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 20, totalCalls: 10} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1217033ms] [LOG] [useCallHistory] Filter results: {inputCount: 10, outputCount: 10} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1217734ms] [LOG] [useCallHistory] Group filter DEBUG: {groupFilter: , userGroupsCount: 0, userGroups: Array(0), agentProfilesCount: 20, totalCalls: 10} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1217735ms] [LOG] [useCallHistory] Filter results: {inputCount: 10, outputCount: 10} @ http://localhost:3001/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297

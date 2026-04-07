@@ -1,0 +1,98 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e16]:
+      - generic [ref=e17]:
+        - img "BOB" [ref=e19]
+        - generic [ref=e20]:
+          - button [ref=e21] [cursor=pointer]:
+            - img [ref=e22]
+          - button [ref=e25] [cursor=pointer]:
+            - img [ref=e26]
+    - generic [ref=e28]:
+      - complementary [ref=e29]:
+        - navigation [ref=e30]:
+          - link "Calls View all calls" [ref=e31] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e32]:
+              - img [ref=e34]
+              - generic [ref=e36]:
+                - generic [ref=e37]: Calls
+                - generic [ref=e38]: View all calls
+          - link "Monitor Live monitoring" [ref=e39] [cursor=pointer]:
+            - /url: /dashboard/monitor
+            - generic [ref=e40]:
+              - img [ref=e42]
+              - generic [ref=e44]:
+                - generic [ref=e45]: Monitor
+                - generic [ref=e46]: Live monitoring
+          - link "History Search calls" [ref=e47] [cursor=pointer]:
+            - /url: /dashboard/history
+            - generic [ref=e48]:
+              - img [ref=e50]
+              - generic [ref=e52]:
+                - generic [ref=e53]: History
+                - generic [ref=e54]: Search calls
+          - link "QA Logs Override history" [ref=e55] [cursor=pointer]:
+            - /url: /dashboard/qa-logs
+            - generic [ref=e56]:
+              - img [ref=e58]
+              - generic [ref=e60]:
+                - generic [ref=e61]: QA Logs
+                - generic [ref=e62]: Override history
+          - link "Agents Manage profiles" [ref=e63] [cursor=pointer]:
+            - /url: /dashboard/agents
+            - generic [ref=e64]:
+              - img [ref=e66]
+              - generic [ref=e68]:
+                - generic [ref=e69]: Agents
+                - generic [ref=e70]: Manage profiles
+          - link "Settings Preferences" [ref=e71] [cursor=pointer]:
+            - /url: /dashboard/settings
+            - generic [ref=e72]:
+              - img [ref=e74]
+              - generic [ref=e77]:
+                - generic [ref=e78]: Settings
+                - generic [ref=e79]: Preferences
+        - generic [ref=e81]:
+          - img [ref=e83]
+          - generic [ref=e85]:
+            - generic [ref=e86]: BOB Agent
+            - text: Admin
+      - main [ref=e87]:
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - generic [ref=e90]:
+              - heading "Dashboard" [level=1] [ref=e91]
+              - paragraph [ref=e92]: All calls across your account
+            - generic [ref=e93]:
+              - generic [ref=e94]:
+                - button "Last 7 Days" [active] [ref=e95]:
+                  - generic [ref=e96]: Last 7 Days
+                  - img [ref=e97]
+                - generic [ref=e118]:
+                  - button "Last 24 Hours" [ref=e119] [cursor=pointer]:
+                    - generic [ref=e121]: Last 24 Hours
+                  - button "Last 7 Days" [ref=e122] [cursor=pointer]:
+                    - generic [ref=e123]:
+                      - generic [ref=e124]: Last 7 Days
+                      - img [ref=e125]
+                  - button "Last 30 Days" [ref=e127] [cursor=pointer]:
+                    - generic [ref=e129]: Last 30 Days
+                  - button "Last 90 Days" [ref=e130] [cursor=pointer]:
+                    - generic [ref=e132]: Last 90 Days
+              - button "All Agents" [ref=e100]:
+                - generic [ref=e101]: All Agents
+                - img [ref=e102]
+              - button "Sync Now" [ref=e104] [cursor=pointer]:
+                - img [ref=e105]
+                - text: Sync Now
+              - button "Auto" [ref=e107]:
+                - img [ref=e108]
+                - text: Auto
+              - button "Run Analysis" [ref=e110] [cursor=pointer]:
+                - img [ref=e111]
+                - text: Run Analysis
+          - paragraph [ref=e116]: Analyzing calls...
+  - button "Open Next.js Dev Tools" [ref=e11] [cursor=pointer]:
+    - img [ref=e12]
+  - alert [ref=e15]

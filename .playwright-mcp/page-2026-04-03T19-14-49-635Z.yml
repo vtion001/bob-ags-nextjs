@@ -1,0 +1,114 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e4]:
+      - generic [ref=e5]:
+        - img "BOB" [ref=e7]
+        - generic [ref=e8]:
+          - button [ref=e9] [cursor=pointer]:
+            - img [ref=e10]
+          - button [ref=e13] [cursor=pointer]:
+            - img [ref=e14]
+    - generic [ref=e16]:
+      - complementary [ref=e17]:
+        - navigation [ref=e18]:
+          - link "Calls View all calls" [ref=e19] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e20]:
+              - img [ref=e22]
+              - generic [ref=e24]:
+                - generic [ref=e25]: Calls
+                - generic [ref=e26]: View all calls
+          - link "Monitor Live monitoring" [ref=e27] [cursor=pointer]:
+            - /url: /dashboard/monitor
+            - generic [ref=e28]:
+              - img [ref=e30]
+              - generic [ref=e32]:
+                - generic [ref=e33]: Monitor
+                - generic [ref=e34]: Live monitoring
+          - link "History Search calls" [ref=e35] [cursor=pointer]:
+            - /url: /dashboard/history
+            - generic [ref=e36]:
+              - img [ref=e38]
+              - generic [ref=e40]:
+                - generic [ref=e41]: History
+                - generic [ref=e42]: Search calls
+          - link "QA Logs Override history" [ref=e43] [cursor=pointer]:
+            - /url: /dashboard/qa-logs
+            - generic [ref=e44]:
+              - img [ref=e46]
+              - generic [ref=e48]:
+                - generic [ref=e49]: QA Logs
+                - generic [ref=e50]: Override history
+          - link "Agents Manage profiles" [ref=e51] [cursor=pointer]:
+            - /url: /dashboard/agents
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e56]:
+                - generic [ref=e57]: Agents
+                - generic [ref=e58]: Manage profiles
+          - link "Settings Preferences" [ref=e59] [cursor=pointer]:
+            - /url: /dashboard/settings
+            - generic [ref=e60]:
+              - img [ref=e62]
+              - generic [ref=e65]:
+                - generic [ref=e66]: Settings
+                - generic [ref=e67]: Preferences
+        - generic [ref=e69]:
+          - img [ref=e71]
+          - generic [ref=e73]:
+            - generic [ref=e74]: BOB Agent
+            - text: Admin
+      - main [ref=e75]:
+        - generic [ref=e76]:
+          - generic [ref=e77]:
+            - heading "Call History" [level=1] [ref=e78]
+            - paragraph [ref=e79]: Search and filter your call history
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - generic [ref=e83]:
+                - generic [ref=e84]: Phone Number
+                - textbox "(772) 766-9678" [ref=e85]
+              - generic [ref=e86]:
+                - generic [ref=e87]: Group / Agent
+                - button "All Agents" [ref=e88]:
+                  - generic [ref=e89]: All Agents
+                  - img [ref=e90]
+              - generic [ref=e92]:
+                - generic [ref=e93]: Min Score
+                - spinbutton [ref=e94]: "0"
+              - generic [ref=e95]:
+                - generic [ref=e96]: Max Score
+                - spinbutton [ref=e97]: "100"
+              - button "Search" [ref=e99] [cursor=pointer]
+              - button "Bulk Sync" [ref=e101] [cursor=pointer]
+            - generic [ref=e102]:
+              - generic [ref=e103]:
+                - generic [ref=e104]: Start Date
+                - textbox [ref=e105]
+              - generic [ref=e106]:
+                - generic [ref=e107]: End Date
+                - textbox [ref=e108]
+              - generic [ref=e110] [cursor=pointer]:
+                - checkbox "Analyzed Only" [ref=e111]
+                - generic [ref=e112]: Analyzed Only
+          - generic [ref=e113]:
+            - generic [ref=e114]:
+              - paragraph [ref=e115]: Total Results
+              - paragraph [ref=e116]: "0"
+            - generic [ref=e117]:
+              - paragraph [ref=e118]: Hot Leads
+              - paragraph [ref=e119]: "0"
+            - generic [ref=e120]:
+              - paragraph [ref=e121]: Avg Score
+              - paragraph [ref=e122]: 0%
+          - generic [ref=e123]:
+            - generic [ref=e124]:
+              - heading "Results" [level=2] [ref=e125]
+              - button "Export CSV" [disabled] [ref=e126]
+            - generic [ref=e127]:
+              - img [ref=e129]
+              - heading "No calls found" [level=3] [ref=e131]
+              - paragraph [ref=e132]: Calls will appear here once detected
+  - button "Open Next.js Dev Tools" [ref=e138] [cursor=pointer]:
+    - img [ref=e139]
+  - alert [ref=e142]

@@ -1,0 +1,347 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e47] [cursor=pointer]:
+    - img [ref=e48]
+  - alert [ref=e51]
+  - generic [ref=e52]:
+    - navigation [ref=e54]:
+      - generic [ref=e55]:
+        - img "BOB" [ref=e57]
+        - generic [ref=e58]:
+          - button [ref=e59] [cursor=pointer]:
+            - img [ref=e60]
+          - button [ref=e63] [cursor=pointer]:
+            - img [ref=e64]
+    - generic [ref=e66]:
+      - complementary [ref=e67]:
+        - navigation [ref=e68]:
+          - link "Calls View all calls" [ref=e69] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e70]:
+              - img [ref=e72]
+              - generic [ref=e74]:
+                - generic [ref=e75]: Calls
+                - generic [ref=e76]: View all calls
+          - link "Monitor Live monitoring" [ref=e77] [cursor=pointer]:
+            - /url: /dashboard/monitor
+            - generic [ref=e78]:
+              - img [ref=e80]
+              - generic [ref=e82]:
+                - generic [ref=e83]: Monitor
+                - generic [ref=e84]: Live monitoring
+          - link "History Search calls" [active] [ref=e85] [cursor=pointer]:
+            - /url: /dashboard/history
+            - generic [ref=e86]:
+              - img [ref=e88]
+              - generic [ref=e90]:
+                - generic [ref=e91]: History
+                - generic [ref=e92]: Search calls
+          - link "QA Logs Override history" [ref=e93] [cursor=pointer]:
+            - /url: /dashboard/qa-logs
+            - generic [ref=e94]:
+              - img [ref=e96]
+              - generic [ref=e98]:
+                - generic [ref=e99]: QA Logs
+                - generic [ref=e100]: Override history
+          - link "Agents Manage profiles" [ref=e101] [cursor=pointer]:
+            - /url: /dashboard/agents
+            - generic [ref=e102]:
+              - img [ref=e104]
+              - generic [ref=e106]:
+                - generic [ref=e107]: Agents
+                - generic [ref=e108]: Manage profiles
+          - link "Settings Preferences" [ref=e109] [cursor=pointer]:
+            - /url: /dashboard/settings
+            - generic [ref=e110]:
+              - img [ref=e112]
+              - generic [ref=e115]:
+                - generic [ref=e116]: Settings
+                - generic [ref=e117]: Preferences
+        - generic [ref=e119]:
+          - img [ref=e121]
+          - generic [ref=e123]:
+            - generic [ref=e124]: BOB Agent
+            - text: Admin
+      - main [ref=e125]:
+        - generic [ref=e151]:
+          - generic [ref=e152]:
+            - heading "Call History" [level=1] [ref=e153]
+            - paragraph [ref=e154]: Search and filter your call history
+          - generic [ref=e156]:
+            - generic [ref=e157]:
+              - generic [ref=e158]:
+                - generic [ref=e159]: Phone Number
+                - textbox "(772) 766-9678" [ref=e160]
+              - generic [ref=e161]:
+                - generic [ref=e162]: Group / Agent
+                - button "All Agents" [ref=e163]:
+                  - generic [ref=e164]: All Agents
+                  - img [ref=e165]
+              - generic [ref=e167]:
+                - generic [ref=e168]: Min Score
+                - spinbutton [ref=e169]: "0"
+              - generic [ref=e170]:
+                - generic [ref=e171]: Max Score
+                - spinbutton [ref=e172]: "100"
+              - button "Search" [ref=e174] [cursor=pointer]
+              - button "Bulk Sync" [ref=e176] [cursor=pointer]
+            - generic [ref=e177]:
+              - generic [ref=e178]:
+                - generic [ref=e179]: Start Date
+                - textbox [ref=e180]
+              - generic [ref=e181]:
+                - generic [ref=e182]: End Date
+                - textbox [ref=e183]
+              - generic [ref=e185] [cursor=pointer]:
+                - checkbox "Analyzed Only" [ref=e186]
+                - generic [ref=e187]: Analyzed Only
+          - generic [ref=e188]:
+            - generic [ref=e189]:
+              - paragraph [ref=e190]: Total Results
+              - paragraph [ref=e191]: "10"
+            - generic [ref=e192]:
+              - paragraph [ref=e193]: Hot Leads
+              - paragraph [ref=e194]: "0"
+            - generic [ref=e195]:
+              - paragraph [ref=e196]: Avg Score
+              - paragraph [ref=e197]: 0%
+          - generic [ref=e198]:
+            - generic [ref=e199]:
+              - heading "Results" [level=2] [ref=e200]
+              - button "Export CSV" [ref=e201] [cursor=pointer]
+            - table [ref=e205]:
+              - rowgroup [ref=e206]:
+                - row "Time Phone Agent Direction Duration Score Actions" [ref=e207]:
+                  - columnheader "Time" [ref=e208]:
+                    - button "Time" [ref=e209]:
+                      - text: Time
+                      - img [ref=e210]
+                  - columnheader "Phone" [ref=e212]:
+                    - button "Phone" [ref=e213]:
+                      - text: Phone
+                      - img [ref=e214]
+                  - columnheader "Agent" [ref=e217]:
+                    - button "Agent" [ref=e218]:
+                      - img [ref=e219]
+                      - text: Agent
+                      - img [ref=e222]
+                  - columnheader "Direction" [ref=e225]:
+                    - button "Direction" [ref=e226]:
+                      - text: Direction
+                      - img [ref=e227]
+                  - columnheader "Duration" [ref=e230]:
+                    - button "Duration" [ref=e231]:
+                      - img [ref=e232]
+                      - text: Duration
+                      - img [ref=e235]
+                  - columnheader "Score" [ref=e238]:
+                    - button "Score" [ref=e239]:
+                      - img [ref=e240]
+                      - text: Score
+                      - img [ref=e242]
+                  - columnheader "Actions" [ref=e245]
+              - rowgroup [ref=e246]:
+                - row "Just now +12812367079 Virtual Robert Manzo- Virtual Outbound 0m 0s Pending" [ref=e247] [cursor=pointer]:
+                  - cell "Just now" [ref=e248]:
+                    - generic [ref=e250]: Just now
+                  - cell "+12812367079" [ref=e251]:
+                    - link "+12812367079" [ref=e252]:
+                      - /url: /dashboard/calls/4130589689
+                  - cell "Virtual Robert Manzo- Virtual" [ref=e253]:
+                    - generic [ref=e254]:
+                      - generic [ref=e255]: Virtual
+                      - generic [ref=e256]: Robert Manzo- Virtual
+                  - cell "Outbound" [ref=e257]:
+                    - generic [ref=e258]:
+                      - img [ref=e259]
+                      - text: Outbound
+                  - cell "0m 0s" [ref=e261]
+                  - cell "Pending" [ref=e262]:
+                    - generic [ref=e263]: Pending
+                  - cell [ref=e264]:
+                    - link [ref=e265]:
+                      - /url: /dashboard/calls/4130589689
+                      - img [ref=e266]
+                - row "Just now +13085290847 Alumni Karina Miesner- Alumni Outbound 0m 0s Pending" [ref=e269] [cursor=pointer]:
+                  - cell "Just now" [ref=e270]:
+                    - generic [ref=e272]: Just now
+                  - cell "+13085290847" [ref=e273]:
+                    - link "+13085290847" [ref=e274]:
+                      - /url: /dashboard/calls/4130589626
+                  - cell "Alumni Karina Miesner- Alumni" [ref=e275]:
+                    - generic [ref=e276]:
+                      - generic [ref=e277]: Alumni
+                      - generic [ref=e278]: Karina Miesner- Alumni
+                  - cell "Outbound" [ref=e279]:
+                    - generic [ref=e280]:
+                      - img [ref=e281]
+                      - text: Outbound
+                  - cell "0m 0s" [ref=e283]
+                  - cell "Pending" [ref=e284]:
+                    - generic [ref=e285]: Pending
+                  - cell [ref=e286]:
+                    - link [ref=e287]:
+                      - /url: /dashboard/calls/4130589626
+                      - img [ref=e288]
+                - row "Just now +12403702826 Ember 12 Step Inbound 0m 0s Pending" [ref=e291] [cursor=pointer]:
+                  - cell "Just now" [ref=e292]:
+                    - generic [ref=e294]: Just now
+                  - cell "+12403702826" [ref=e295]:
+                    - link "+12403702826" [ref=e296]:
+                      - /url: /dashboard/calls/4130589617
+                  - cell "Ember 12 Step" [ref=e297]:
+                    - generic [ref=e299]: Ember 12 Step
+                  - cell "Inbound" [ref=e300]:
+                    - generic [ref=e301]:
+                      - img [ref=e302]
+                      - text: Inbound
+                  - cell "0m 0s" [ref=e304]
+                  - cell "Pending" [ref=e305]:
+                    - generic [ref=e306]: Pending
+                  - cell [ref=e307]:
+                    - link [ref=e308]:
+                      - /url: /dashboard/calls/4130589617
+                      - img [ref=e309]
+                - row "Just now +17082509795 Opener Paytan Stevens- Opener Outbound 0m 0s Pending" [ref=e312] [cursor=pointer]:
+                  - cell "Just now" [ref=e313]:
+                    - generic [ref=e315]: Just now
+                  - cell "+17082509795" [ref=e316]:
+                    - link "+17082509795" [ref=e317]:
+                      - /url: /dashboard/calls/4130589098
+                  - cell "Opener Paytan Stevens- Opener" [ref=e318]:
+                    - generic [ref=e319]:
+                      - generic [ref=e320]: Opener
+                      - generic [ref=e321]: Paytan Stevens- Opener
+                  - cell "Outbound" [ref=e322]:
+                    - generic [ref=e323]:
+                      - img [ref=e324]
+                      - text: Outbound
+                  - cell "0m 0s" [ref=e326]
+                  - cell "Pending" [ref=e327]:
+                    - generic [ref=e328]: Pending
+                  - cell [ref=e329]:
+                    - link [ref=e330]:
+                      - /url: /dashboard/calls/4130589098
+                      - img [ref=e331]
+                - row "Just now +17048771591 General Cole Drummond Outbound 0m 5s Pending" [ref=e334] [cursor=pointer]:
+                  - cell "Just now" [ref=e335]:
+                    - generic [ref=e337]: Just now
+                  - cell "+17048771591" [ref=e338]:
+                    - link "+17048771591" [ref=e339]:
+                      - /url: /dashboard/calls/4130588921
+                  - cell "General Cole Drummond" [ref=e340]:
+                    - generic [ref=e341]:
+                      - generic [ref=e342]: General
+                      - generic [ref=e343]: Cole Drummond
+                  - cell "Outbound" [ref=e344]:
+                    - generic [ref=e345]:
+                      - img [ref=e346]
+                      - text: Outbound
+                  - cell "0m 5s" [ref=e348]
+                  - cell "Pending" [ref=e349]:
+                    - generic [ref=e350]: Pending
+                  - cell [ref=e351]:
+                    - link [ref=e352]:
+                      - /url: /dashboard/calls/4130588921
+                      - img [ref=e353]
+                - row "Just now +19548174995 Trost Virtual Admissions Outbound 0m 0s Pending" [ref=e356] [cursor=pointer]:
+                  - cell "Just now" [ref=e357]:
+                    - generic [ref=e359]: Just now
+                  - cell "+19548174995" [ref=e360]:
+                    - link "+19548174995" [ref=e361]:
+                      - /url: /dashboard/calls/4130588582
+                  - cell "Trost Virtual Admissions" [ref=e362]:
+                    - generic [ref=e364]: Trost Virtual Admissions
+                  - cell "Outbound" [ref=e365]:
+                    - generic [ref=e366]:
+                      - img [ref=e367]
+                      - text: Outbound
+                  - cell "0m 0s" [ref=e369]
+                  - cell "Pending" [ref=e370]:
+                    - generic [ref=e371]: Pending
+                  - cell [ref=e372]:
+                    - link [ref=e373]:
+                      - /url: /dashboard/calls/4130588582
+                      - img [ref=e374]
+                - row "Just now +16107727657 Virtual MaryJo Yarbrough- Virtual Outbound 0m 0s Pending" [ref=e377] [cursor=pointer]:
+                  - cell "Just now" [ref=e378]:
+                    - generic [ref=e380]: Just now
+                  - cell "+16107727657" [ref=e381]:
+                    - link "+16107727657" [ref=e382]:
+                      - /url: /dashboard/calls/4130588108
+                  - cell "Virtual MaryJo Yarbrough- Virtual" [ref=e383]:
+                    - generic [ref=e384]:
+                      - generic [ref=e385]: Virtual
+                      - generic [ref=e386]: MaryJo Yarbrough- Virtual
+                  - cell "Outbound" [ref=e387]:
+                    - generic [ref=e388]:
+                      - img [ref=e389]
+                      - text: Outbound
+                  - cell "0m 0s" [ref=e391]
+                  - cell "Pending" [ref=e392]:
+                    - generic [ref=e393]: Pending
+                  - cell [ref=e394]:
+                    - link [ref=e395]:
+                      - /url: /dashboard/calls/4130588108
+                      - img [ref=e396]
+                - row "Just now +13085290847 Alumni Karina Miesner- Alumni Outbound 0m 11s Pending" [ref=e399] [cursor=pointer]:
+                  - cell "Just now" [ref=e400]:
+                    - generic [ref=e402]: Just now
+                  - cell "+13085290847" [ref=e403]:
+                    - link "+13085290847" [ref=e404]:
+                      - /url: /dashboard/calls/4130587382
+                  - cell "Alumni Karina Miesner- Alumni" [ref=e405]:
+                    - generic [ref=e406]:
+                      - generic [ref=e407]: Alumni
+                      - generic [ref=e408]: Karina Miesner- Alumni
+                  - cell "Outbound" [ref=e409]:
+                    - generic [ref=e410]:
+                      - img [ref=e411]
+                      - text: Outbound
+                  - cell "0m 11s" [ref=e413]
+                  - cell "Pending" [ref=e414]:
+                    - generic [ref=e415]: Pending
+                  - cell [ref=e416]:
+                    - link [ref=e417]:
+                      - /url: /dashboard/calls/4130587382
+                      - img [ref=e418]
+                - row "Just now +19518551399 Aurora GMB Inbound 0m 0s Pending" [ref=e421] [cursor=pointer]:
+                  - cell "Just now" [ref=e422]:
+                    - generic [ref=e424]: Just now
+                  - cell "+19518551399" [ref=e425]:
+                    - link "+19518551399" [ref=e426]:
+                      - /url: /dashboard/calls/4130586857
+                  - cell "Aurora GMB" [ref=e427]:
+                    - generic [ref=e429]: Aurora GMB
+                  - cell "Inbound" [ref=e430]:
+                    - generic [ref=e431]:
+                      - img [ref=e432]
+                      - text: Inbound
+                  - cell "0m 0s" [ref=e434]
+                  - cell "Pending" [ref=e435]:
+                    - generic [ref=e436]: Pending
+                  - cell [ref=e437]:
+                    - link [ref=e438]:
+                      - /url: /dashboard/calls/4130586857
+                      - img [ref=e439]
+                - row "Just now +16107727657 Virtual MaryJo Yarbrough- Virtual Outbound 0m 23s Pending" [ref=e442] [cursor=pointer]:
+                  - cell "Just now" [ref=e443]:
+                    - generic [ref=e445]: Just now
+                  - cell "+16107727657" [ref=e446]:
+                    - link "+16107727657" [ref=e447]:
+                      - /url: /dashboard/calls/4130586386
+                  - cell "Virtual MaryJo Yarbrough- Virtual" [ref=e448]:
+                    - generic [ref=e449]:
+                      - generic [ref=e450]: Virtual
+                      - generic [ref=e451]: MaryJo Yarbrough- Virtual
+                  - cell "Outbound" [ref=e452]:
+                    - generic [ref=e453]:
+                      - img [ref=e454]
+                      - text: Outbound
+                  - cell "0m 23s" [ref=e456]
+                  - cell "Pending" [ref=e457]:
+                    - generic [ref=e458]: Pending
+                  - cell [ref=e459]:
+                    - link [ref=e460]:
+                      - /url: /dashboard/calls/4130586386
+                      - img [ref=e461]
+          - generic [ref=e464]: Showing 10 calls

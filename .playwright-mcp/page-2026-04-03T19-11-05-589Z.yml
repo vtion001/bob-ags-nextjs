@@ -1,0 +1,195 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e4]:
+      - generic [ref=e5]:
+        - img "BOB" [ref=e7]
+        - generic [ref=e8]:
+          - button [ref=e9] [cursor=pointer]:
+            - img [ref=e10]
+          - button [ref=e13] [cursor=pointer]:
+            - img [ref=e14]
+    - generic [ref=e16]:
+      - complementary [ref=e17]:
+        - navigation [ref=e18]:
+          - link "Calls View all calls" [ref=e19] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e20]:
+              - img [ref=e22]
+              - generic [ref=e24]:
+                - generic [ref=e25]: Calls
+                - generic [ref=e26]: View all calls
+          - link "Monitor Live monitoring" [active] [ref=e27] [cursor=pointer]:
+            - /url: /dashboard/monitor
+            - generic [ref=e28]:
+              - img [ref=e30]
+              - generic [ref=e32]:
+                - generic [ref=e33]: Monitor
+                - generic [ref=e34]: Live monitoring
+          - link "History Search calls" [ref=e35] [cursor=pointer]:
+            - /url: /dashboard/history
+            - generic [ref=e36]:
+              - img [ref=e38]
+              - generic [ref=e40]:
+                - generic [ref=e41]: History
+                - generic [ref=e42]: Search calls
+          - link "QA Logs Override history" [ref=e43] [cursor=pointer]:
+            - /url: /dashboard/qa-logs
+            - generic [ref=e44]:
+              - img [ref=e46]
+              - generic [ref=e48]:
+                - generic [ref=e49]: QA Logs
+                - generic [ref=e50]: Override history
+          - link "Agents Manage profiles" [ref=e51] [cursor=pointer]:
+            - /url: /dashboard/agents
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e56]:
+                - generic [ref=e57]: Agents
+                - generic [ref=e58]: Manage profiles
+          - link "Settings Preferences" [ref=e59] [cursor=pointer]:
+            - /url: /dashboard/settings
+            - generic [ref=e60]:
+              - img [ref=e62]
+              - generic [ref=e65]:
+                - generic [ref=e66]: Settings
+                - generic [ref=e67]: Preferences
+        - generic [ref=e69]:
+          - img [ref=e71]
+          - generic [ref=e73]:
+            - generic [ref=e74]: BOB Agent
+            - text: Admin
+      - main [ref=e75]:
+        - generic [ref=e89]:
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - generic [ref=e93]:
+                - heading "Live Monitor" [level=1] [ref=e94]
+                - paragraph [ref=e95]: Real-time call analysis powered by AssemblyAI
+              - generic [ref=e96]:
+                - generic [ref=e97]: Select a call from the list below to monitor
+                - button "Start Live Analysis" [ref=e98] [cursor=pointer]:
+                  - img [ref=e99]
+                  - text: Start Live Analysis
+            - generic [ref=e101]:
+              - generic [ref=e104]:
+                - img [ref=e106]
+                - heading "Real-Time Call Analysis" [level=2] [ref=e108]
+                - paragraph [ref=e109]: Click "Start Live Analysis" to begin real-time transcription and QA scoring. The microphone will capture audio and AssemblyAI will provide instant insights as the call progresses.
+                - generic [ref=e110]:
+                  - generic [ref=e111]:
+                    - img [ref=e112]
+                    - generic [ref=e114]:
+                      - paragraph [ref=e115]: Live Transcription
+                      - paragraph [ref=e116]: Real-time speaker detection
+                  - generic [ref=e117]:
+                    - img [ref=e118]
+                    - generic [ref=e120]:
+                      - paragraph [ref=e121]: Live QA Scoring
+                      - paragraph [ref=e122]: 25-criteria real-time evaluation
+                  - generic [ref=e123]:
+                    - img [ref=e124]
+                    - generic [ref=e126]:
+                      - paragraph [ref=e127]: Instant Insights
+                      - paragraph [ref=e128]: Flag pass/fail as call happens
+                  - generic [ref=e129]:
+                    - img [ref=e130]
+                    - generic [ref=e132]:
+                      - paragraph [ref=e133]: Duration Tracking
+                      - paragraph [ref=e134]: Know exactly where you are
+              - generic [ref=e136]:
+                - generic [ref=e137]:
+                  - heading "Active Calls" [level=3] [ref=e138]
+                  - generic [ref=e139]: 10 calls
+                - combobox [ref=e143]:
+                  - option "All Groups" [selected]
+                  - option "Alumni"
+                  - option "General"
+                  - option "MA"
+                  - option "Opener"
+                  - option "Phillies"
+                  - option "Virtual"
+                - generic [ref=e144]:
+                  - 'button "Legit Prisma 0:00 +18559635238 General Source: Legit Prisma" [ref=e145]':
+                    - generic [ref=e146]:
+                      - generic [ref=e147]: Legit Prisma
+                      - generic [ref=e148]: 0:00
+                    - generic [ref=e149]:
+                      - generic [ref=e150]: "+18559635238"
+                      - generic [ref=e151]: General
+                    - generic [ref=e152]: "Source: Legit Prisma"
+                  - 'button "Malerie Pace- Alumni 0:00 +19378803071 Alumni Source: Alumni Team" [ref=e153]':
+                    - generic [ref=e154]:
+                      - generic [ref=e155]: Malerie Pace- Alumni
+                      - generic [ref=e156]: 0:00
+                    - generic [ref=e157]:
+                      - generic [ref=e158]: "+19378803071"
+                      - generic [ref=e159]: Alumni
+                    - generic [ref=e160]: "Source: Alumni Team"
+                  - 'button "Karina Miesner- Alumni 0:00 +12393474864 Alumni Source: Alumni Team" [ref=e161]':
+                    - generic [ref=e162]:
+                      - generic [ref=e163]: Karina Miesner- Alumni
+                      - generic [ref=e164]: 0:00
+                    - generic [ref=e165]:
+                      - generic [ref=e166]: "+12393474864"
+                      - generic [ref=e167]: Alumni
+                    - generic [ref=e168]: "Source: Alumni Team"
+                  - 'button "Shanna McQueen- MA 0:00 +16196587656 MA Source: Travel Liason" [ref=e169]':
+                    - generic [ref=e170]:
+                      - generic [ref=e171]: Shanna McQueen- MA
+                      - generic [ref=e172]: 0:00
+                    - generic [ref=e173]:
+                      - generic [ref=e174]: "+16196587656"
+                      - generic [ref=e175]: MA
+                    - generic [ref=e176]: "Source: Travel Liason"
+                  - 'button "Kailey Bingo- Closer 0:00 +15618166010 General Source: REP LINES" [ref=e177]':
+                    - generic [ref=e178]:
+                      - generic [ref=e179]: Kailey Bingo- Closer
+                      - generic [ref=e180]: 0:00
+                    - generic [ref=e181]:
+                      - generic [ref=e182]: "+15618166010"
+                      - generic [ref=e183]: General
+                    - generic [ref=e184]: "Source: REP LINES"
+                  - 'button "Caleb Anderson- Alumni 0:00 +17279145190 Alumni Source: Alumni Team" [ref=e185]':
+                    - generic [ref=e186]:
+                      - generic [ref=e187]: Caleb Anderson- Alumni
+                      - generic [ref=e188]: 0:00
+                    - generic [ref=e189]:
+                      - generic [ref=e190]: "+17279145190"
+                      - generic [ref=e191]: Alumni
+                    - generic [ref=e192]: "Source: Alumni Team"
+                  - 'button "Robert Manzo- Virtual 0:00 +13464856988 Virtual Source: Trost Virtual Admissions" [ref=e193]':
+                    - generic [ref=e194]:
+                      - generic [ref=e195]: Robert Manzo- Virtual
+                      - generic [ref=e196]: 0:00
+                    - generic [ref=e197]:
+                      - generic [ref=e198]: "+13464856988"
+                      - generic [ref=e199]: Virtual
+                    - generic [ref=e200]: "Source: Trost Virtual Admissions"
+                  - 'button "Karina Miesner- Alumni 0:10 +12393474864 Alumni Source: Alumni Team" [ref=e201]':
+                    - generic [ref=e202]:
+                      - generic [ref=e203]: Karina Miesner- Alumni
+                      - generic [ref=e204]: 0:10
+                    - generic [ref=e205]:
+                      - generic [ref=e206]: "+12393474864"
+                      - generic [ref=e207]: Alumni
+                    - generic [ref=e208]: "Source: Alumni Team"
+                  - 'button "Kiel Asiniero Phillies 0:00 +18884231098 Phillies Source: Ember 12 Step" [ref=e209]':
+                    - generic [ref=e210]:
+                      - generic [ref=e211]: Kiel Asiniero Phillies
+                      - generic [ref=e212]: 0:00
+                    - generic [ref=e213]:
+                      - generic [ref=e214]: "+18884231098"
+                      - generic [ref=e215]: Phillies
+                    - generic [ref=e216]: "Source: Ember 12 Step"
+                  - 'button "Paytan Stevens- Opener 0:00 +18477131581 Opener Source: Direct" [ref=e217]':
+                    - generic [ref=e218]:
+                      - generic [ref=e219]: Paytan Stevens- Opener
+                      - generic [ref=e220]: 0:00
+                    - generic [ref=e221]:
+                      - generic [ref=e222]: "+18477131581"
+                      - generic [ref=e223]: Opener
+                    - generic [ref=e224]: "Source: Direct"
+          - button "View Analysis History (0)" [ref=e142] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e84] [cursor=pointer]:
+    - img [ref=e85]
+  - alert [ref=e88]

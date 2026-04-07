@@ -1,0 +1,67 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e47] [cursor=pointer]:
+    - img [ref=e48]
+  - alert [ref=e51]
+  - generic [ref=e52]:
+    - navigation [ref=e54]:
+      - generic [ref=e55]:
+        - img "BOB" [ref=e57]
+        - generic [ref=e58]:
+          - button [ref=e59] [cursor=pointer]:
+            - img [ref=e60]
+          - button [ref=e63] [cursor=pointer]:
+            - img [ref=e64]
+    - generic [ref=e66]:
+      - complementary [ref=e67]:
+        - navigation [ref=e68]:
+          - link "Calls View all calls" [ref=e69] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e70]:
+              - img [ref=e72]
+              - generic [ref=e74]:
+                - generic [ref=e75]: Calls
+                - generic [ref=e76]: View all calls
+          - link "Monitor Live monitoring" [ref=e77] [cursor=pointer]:
+            - /url: /dashboard/monitor
+            - generic [ref=e78]:
+              - img [ref=e80]
+              - generic [ref=e82]:
+                - generic [ref=e83]: Monitor
+                - generic [ref=e84]: Live monitoring
+          - link "History Search calls" [ref=e85] [cursor=pointer]:
+            - /url: /dashboard/history
+            - generic [ref=e86]:
+              - img [ref=e88]
+              - generic [ref=e90]:
+                - generic [ref=e91]: History
+                - generic [ref=e92]: Search calls
+          - link "QA Logs Override history" [ref=e93] [cursor=pointer]:
+            - /url: /dashboard/qa-logs
+            - generic [ref=e94]:
+              - img [ref=e96]
+              - generic [ref=e98]:
+                - generic [ref=e99]: QA Logs
+                - generic [ref=e100]: Override history
+          - link "Agents Manage profiles" [ref=e101] [cursor=pointer]:
+            - /url: /dashboard/agents
+            - generic [ref=e102]:
+              - img [ref=e104]
+              - generic [ref=e106]:
+                - generic [ref=e107]: Agents
+                - generic [ref=e108]: Manage profiles
+          - link "Settings Preferences" [ref=e109] [cursor=pointer]:
+            - /url: /dashboard/settings
+            - generic [ref=e110]:
+              - img [ref=e112]
+              - generic [ref=e115]:
+                - generic [ref=e116]: Settings
+                - generic [ref=e117]: Preferences
+        - generic [ref=e119]:
+          - img [ref=e121]
+          - generic [ref=e123]:
+            - generic [ref=e124]: BOB Agent
+            - text: Admin
+      - main [ref=e125]:
+        - generic [ref=e465]:
+          - button "← Back" [ref=e466] [cursor=pointer]
+          - paragraph [ref=e470]: Loading call details...

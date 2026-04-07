@@ -1,0 +1,214 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e16]:
+      - generic [ref=e17]:
+        - img "BOB" [ref=e19]
+        - generic [ref=e20]:
+          - button [ref=e21] [cursor=pointer]:
+            - img [ref=e22]
+          - button [ref=e25] [cursor=pointer]:
+            - img [ref=e26]
+    - generic [ref=e28]:
+      - complementary [ref=e29]:
+        - navigation [ref=e30]:
+          - link "Calls View all calls" [ref=e31] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e32]:
+              - img [ref=e34]
+              - generic [ref=e36]:
+                - generic [ref=e37]: Calls
+                - generic [ref=e38]: View all calls
+          - link "Monitor Live monitoring" [ref=e39] [cursor=pointer]:
+            - /url: /dashboard/monitor
+            - generic [ref=e40]:
+              - img [ref=e42]
+              - generic [ref=e44]:
+                - generic [ref=e45]: Monitor
+                - generic [ref=e46]: Live monitoring
+          - link "History Search calls" [ref=e47] [cursor=pointer]:
+            - /url: /dashboard/history
+            - generic [ref=e48]:
+              - img [ref=e50]
+              - generic [ref=e52]:
+                - generic [ref=e53]: History
+                - generic [ref=e54]: Search calls
+          - link "QA Logs Override history" [ref=e55] [cursor=pointer]:
+            - /url: /dashboard/qa-logs
+            - generic [ref=e56]:
+              - img [ref=e58]
+              - generic [ref=e60]:
+                - generic [ref=e61]: QA Logs
+                - generic [ref=e62]: Override history
+          - link "Agents Manage profiles" [ref=e63] [cursor=pointer]:
+            - /url: /dashboard/agents
+            - generic [ref=e64]:
+              - img [ref=e66]
+              - generic [ref=e68]:
+                - generic [ref=e69]: Agents
+                - generic [ref=e70]: Manage profiles
+          - link "Settings Preferences" [ref=e71] [cursor=pointer]:
+            - /url: /dashboard/settings
+            - generic [ref=e72]:
+              - img [ref=e74]
+              - generic [ref=e77]:
+                - generic [ref=e78]: Settings
+                - generic [ref=e79]: Preferences
+        - generic [ref=e81]:
+          - img [ref=e83]
+          - generic [ref=e85]:
+            - generic [ref=e86]: BOB Agent
+            - text: Admin
+      - main [ref=e87]:
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - heading "Settings" [level=1] [ref=e90]
+            - paragraph [ref=e91]: Manage your integrations and preferences
+          - generic [ref=e241]: Failed to save settings
+          - generic [ref=e92]:
+            - heading "AI Analysis" [level=2] [ref=e93]
+            - generic [ref=e95]:
+              - generic [ref=e96]: OpenRouter API Key
+              - textbox "Enter your OpenRouter API key" [ref=e97]
+              - paragraph [ref=e98]: API key for AI-powered analysis
+            - button "Save AI Settings" [ref=e99] [cursor=pointer]
+          - generic [ref=e100]:
+            - heading "Sync Settings" [level=2] [ref=e101]
+            - generic [ref=e102]:
+              - generic [ref=e103]:
+                - generic [ref=e104]:
+                  - paragraph [ref=e105]: Auto-sync Calls
+                  - paragraph [ref=e106]: Automatically sync calls from CTM
+                - button [ref=e107]
+              - generic [ref=e110]:
+                - generic [ref=e111]: Sync Interval (minutes)
+                - button "Every hour" [ref=e113]:
+                  - generic [ref=e114]: Every hour
+                  - img [ref=e115]
+            - button "Save Sync Settings" [ref=e117] [cursor=pointer]
+          - generic [ref=e118]:
+            - heading "Preferences" [level=2] [ref=e119]
+            - generic [ref=e120]:
+              - generic [ref=e121]:
+                - generic [ref=e122]:
+                  - paragraph [ref=e123]: Light Mode
+                  - paragraph [ref=e124]: Clean white interface
+                - button [ref=e125]
+              - generic [ref=e128]:
+                - generic [ref=e129]:
+                  - paragraph [ref=e130]: Email Notifications
+                  - paragraph [ref=e131]: Receive notifications for hot leads
+                - button [ref=e132]
+            - button "Save Preferences" [ref=e135] [cursor=pointer]
+          - generic [ref=e136]:
+            - generic [ref=e137]:
+              - generic [ref=e138]:
+                - heading "User Permissions" [level=2] [ref=e139]
+                - paragraph [ref=e140]: Manage user roles and access levels
+              - button "Add User" [active] [ref=e253] [cursor=pointer]:
+                - generic [ref=e142]:
+                  - img [ref=e143]
+                  - text: Add User
+            - generic [ref=e145]:
+              - generic [ref=e146]:
+                - generic [ref=e147]:
+                  - generic [ref=e149]: "1"
+                  - heading "Pending Approval" [level=3] [ref=e150]
+                - generic [ref=e152]:
+                  - generic [ref=e153]:
+                    - generic [ref=e154]:
+                      - img [ref=e156]
+                      - generic [ref=e158]:
+                        - paragraph [ref=e159]: v.rodriguez@allianceglobalsolutions.com
+                        - paragraph [ref=e160]: Awaiting approval
+                    - button "Reject" [ref=e161]:
+                      - img [ref=e162]
+                  - generic [ref=e164]:
+                    - combobox [ref=e165]:
+                      - option "Viewer - Monitor only" [selected]
+                      - option "QA - View calls & analysis"
+                      - option "Manager - Full access (no settings)"
+                      - option "Admin - Full access"
+                    - button "Approve" [ref=e166] [cursor=pointer]
+              - generic [ref=e167]:
+                - generic [ref=e168]:
+                  - generic [ref=e170]: "4"
+                  - heading "Approved Users" [level=3] [ref=e171]
+                - generic [ref=e172]:
+                  - generic [ref=e173]:
+                    - generic [ref=e174]:
+                      - generic [ref=e176]: K
+                      - generic [ref=e177]:
+                        - generic [ref=e178]:
+                          - paragraph [ref=e179]: kiel@allianceglobalsolutions.com
+                          - generic [ref=e180]: Viewer
+                        - paragraph [ref=e181]: Monitor tab only
+                    - combobox [ref=e182] [cursor=pointer]:
+                      - option "Viewer" [selected]
+                      - option "QA"
+                      - option "Manager"
+                      - option "Admin"
+                  - generic [ref=e183]:
+                    - generic [ref=e184]:
+                      - generic [ref=e186]: A
+                      - generic [ref=e187]:
+                        - generic [ref=e188]:
+                          - paragraph [ref=e189]: allyssa@allianceglobalsolutions.com
+                          - generic [ref=e190]: QA
+                        - paragraph [ref=e191]: View all calls, history, and run analysis
+                    - combobox [ref=e192] [cursor=pointer]:
+                      - option "Viewer"
+                      - option "QA" [selected]
+                      - option "Manager"
+                      - option "Admin"
+                  - generic [ref=e193]:
+                    - generic [ref=e194]:
+                      - generic [ref=e196]: J
+                      - generic [ref=e197]:
+                        - generic [ref=e198]:
+                          - paragraph [ref=e199]: jd@allianceglobalsolutions.com
+                          - generic [ref=e200]: Viewer
+                        - paragraph [ref=e201]: Monitor tab only
+                    - combobox [ref=e202] [cursor=pointer]:
+                      - option "Viewer" [selected]
+                      - option "QA"
+                      - option "Manager"
+                      - option "Admin"
+                  - generic [ref=e203]:
+                    - generic [ref=e204]:
+                      - generic [ref=e206]: A
+                      - generic [ref=e207]:
+                        - generic [ref=e208]:
+                          - paragraph [ref=e209]: agsdev@allianceglobalsolutions.com
+                          - generic [ref=e210]: Admin
+                        - paragraph [ref=e211]: Full access to all features
+                    - generic [ref=e212]: Full Access
+          - generic [ref=e213]:
+            - generic [ref=e215]:
+              - heading "CTM Agent Assignments" [level=2] [ref=e216]
+              - paragraph [ref=e217]: Link users to CTM agents or groups so they only see their own calls in live monitoring
+            - generic [ref=e218]:
+              - generic [ref=e219]:
+                - generic [ref=e220]: "0"
+                - generic [ref=e221]: Need Assignment
+                - generic [ref=e222]: No calls visible
+              - generic [ref=e223]:
+                - generic [ref=e224]: "0"
+                - generic [ref=e225]: Agent Linked
+                - generic [ref=e226]: See own calls
+              - generic [ref=e227]:
+                - generic [ref=e228]: "0"
+                - generic [ref=e229]: Group Linked
+                - generic [ref=e230]: See group calls
+            - generic [ref=e231]:
+              - paragraph [ref=e232]: No CTM agents or user groups found.
+              - paragraph [ref=e233]: Configure CTM credentials in the CTM Integrations section above.
+            - paragraph [ref=e235]:
+              - strong [ref=e236]: "How it works:"
+              - text: Assigning a CTM agent restricts a user to only see calls from that specific agent. Assigning a group gives them access to all calls from agents in that group. Users without assignment see no calls in live monitoring.
+          - generic [ref=e237]:
+            - heading "Danger Zone" [level=2] [ref=e238]
+            - paragraph [ref=e239]: Clear all stored credentials. This action cannot be undone.
+            - button "Clear All Credentials" [ref=e240] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e11] [cursor=pointer]:
+    - img [ref=e12]
+  - alert [ref=e15]
