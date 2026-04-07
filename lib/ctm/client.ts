@@ -1,3 +1,5 @@
+import type { Call, Agent, DashboardStats } from '@/lib/types'
+
 const BASE_URL = 'https://api.calltrackingmetrics.com/api/v1'
 
 export interface CTMConfig {
@@ -67,6 +69,38 @@ export class CTMClient {
 
   public getBasicAuthHeader(): string {
     return Buffer.from(`${this.accessKey}:${this.secretKey}`).toString('base64')
+  }
+
+  getStats(calls: Call[]) {
+    const totalCalls = calls.length
+    const answered = calls.filter(c => c.status === 'completed' || c.status === 'active').length
+    const missed = calls.filter(c => c.status === 'missed').length
+    const withRecordings = calls.filter(c => c.recordingUrl).length
+    const hotLeads = calls.filter(c => c.score && c.score >= 75).length
+    const analyzed = calls.filter(c => c.score !== undefined).length
+    const avgScore = calls.filter(c => c.score !== undefined).length > 0
+      ? Math.round(calls.reduce((sum, c) => sum + (c.score || 0), 0) / analyzed)
+      : 0
+
+    return {
+      totalCalls,
+      answered,
+      missed,
+      withRecordings,
+      hotLeads,
+      analyzed,
+      avgScore,
+    }
+  }
+
+  getDashboardStats(calls: Call[]): DashboardStats {
+    const stats = this.getStats(calls)
+    return {
+      totalCalls: stats.totalCalls,
+      analyzed: stats.analyzed,
+      hotLeads: stats.hotLeads,
+      avgScore: String(stats.avgScore),
+    }
   }
 }
 
