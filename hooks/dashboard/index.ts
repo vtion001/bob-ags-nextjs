@@ -1,4 +1,7 @@
 export * from './useCalls'
 export * from './useDashboardStats'
+export * from './useDashboard'
 export * from './useAgents'
+export * from './useAgentProfiles'
 export * from './useActiveCalls'
+export * from './useCallHistory'
