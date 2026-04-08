@@ -262,6 +262,12 @@ export default function HistoryFilters({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              onSearch()
+            }
+          }}
           placeholder="(772) 766-9678"
         />
 
