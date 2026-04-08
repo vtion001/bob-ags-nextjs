@@ -36,12 +36,10 @@ export async function GET(request: NextRequest) {
 
     // Fetch calls that have been analyzed (have score/rubric_results)
     // This matches what the QA Logs page expects
-    const { data, error, count } = await supabase
-      .from('calls')
-      .select('id, ctm_call_id, phone, caller_number, direction, duration, score, sentiment, created_at, agent_name, disposition', { count: 'exact' })
-      .not('score', 'is', null)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+    const { data, error } = await supabase.rpc('get_analyzed_calls_paginated', {
+      p_limit: limit,
+      p_offset: offset
+    })
 
     if (error) {
       return NextResponse.json({
@@ -52,10 +50,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    const calls = data || []
+    const total = calls.length > 0 ? calls[0].total_count || calls.length : 0
+
+    // Remove total_count from each call before returning
+    const cleanCalls = calls.map(({ total_count, ...call }: { total_count?: number; [key: string]: unknown }) => call)
+
     return NextResponse.json({
       success: true,
-      calls: data || [],
-      total: count || 0
+      calls: cleanCalls,
+      total
     })
   } catch (error) {
     return NextResponse.json({

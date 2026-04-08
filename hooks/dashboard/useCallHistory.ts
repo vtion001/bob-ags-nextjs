@@ -348,7 +348,7 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
 
     try {
       const normalizedPhone = searchQuery.replace(/\D/g, '')
-      const res = await fetch(`/api/ctm/calls/search?phone=${encodeURIComponent(normalizedPhone)}&hours=8760&direction=inbound`)
+      const res = await fetch(`/api/ctm/calls/search?phone=${encodeURIComponent(normalizedPhone)}&hours=8760`)
       
       if (!res.ok) {
         throw new Error('Search failed')

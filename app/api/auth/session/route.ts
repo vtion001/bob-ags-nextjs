@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await createServerSupabase(request)
-    const { data: { user } } = await supabase.auth.getSession()
+    const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
       return NextResponse.json(

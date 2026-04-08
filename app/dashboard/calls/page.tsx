@@ -72,7 +72,12 @@ export default function CallsPage() {
   }, [ctmAgentId])
 
   const fetchCalls = useCallback(async (options: { phone?: string; page?: number } = {}) => {
-    setIsLoading(true)
+    // For phone search, use isSearching state; for regular fetch use isLoading
+    if (options.phone) {
+      setIsSearching(true)
+    } else {
+      setIsLoading(true)
+    }
     setError(null)
 
     try {
@@ -83,13 +88,16 @@ export default function CallsPage() {
 
       let url = `/api/ctm/calls?hours=${hours}&limit=${limit}&page=${page}${agentParam}`
       if (options.phone) {
-        url = `/api/ctm/calls/search?phone=${encodeURIComponent(options.phone.replace(/\D/g, ''))}&hours=${hours}`
+        // Don't normalize here - let the backend handle phone parsing
+        // The backend's normalizePhoneForComparison handles any format
+        url = `/api/ctm/calls/search?phone=${encodeURIComponent(options.phone)}&hours=${hours}`
       }
 
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to fetch calls')
 
       const data = await res.json()
+      // Handle both { calls: [] } and { success: true, calls: [] } formats
       const fetchedCalls: Call[] = data.calls || []
 
       if (options.phone) {
@@ -240,7 +248,7 @@ export default function CallsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="(772) 766-9678 or 7727669678"
+              placeholder="Any format: (772) 766-9678, 7727669678, +1 772 766 9678, 766-9678"
             />
           </div>
           <div className="flex items-end gap-2">
@@ -274,11 +282,14 @@ export default function CallsPage() {
 
       {/* Calls Table */}
       <Card className="overflow-hidden">
-        {isLoading && calls.length === 0 ? (
+        {/* Loading/Searching State */}
+        {(isLoading || isSearching) && calls.length === 0 ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
               <div className="w-10 h-10 border-4 border-navy-100 border-t-navy-600 rounded-full animate-spin" />
-              <p className="text-navy-500">Loading calls...</p>
+              <p className="text-navy-500">
+                {isSearching ? `Searching for "${searchQuery}"...` : 'Loading calls...'}
+              </p>
             </div>
           </div>
         ) : calls.length === 0 ? (
@@ -286,8 +297,24 @@ export default function CallsPage() {
             <PhoneIcon className="w-12 h-12 text-navy-300 mb-3" />
             <p className="text-navy-600 font-medium mb-1">No calls found</p>
             <p className="text-navy-400 text-sm">
-              {searchQuery ? 'Try a different phone number' : 'No calls in the selected time range'}
+              {searchQuery
+                ? `No calls match "${searchQuery}". Try a different phone number or format.`
+                : 'No calls in the selected time range'}
             </p>
+            {searchQuery && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery('')
+                  setCurrentPage(1)
+                  fetchCalls({ page: 1 })
+                }}
+                className="mt-3"
+              >
+                Clear Search
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -300,29 +327,47 @@ export default function CallsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-navy-200 bg-navy-50">
               <p className="text-sm text-navy-500">
-                Showing page {currentPage} ({calls.length} calls)
+                {searchQuery ? (
+                  <>Found {calls.length} call{calls.length !== 1 ? 's' : ''} matching "{searchQuery}"</>
+                ) : (
+                  <>Showing page {currentPage} ({calls.length} calls)</>
+                )}
               </p>
-              <div className="flex items-center gap-2">
+              {searchQuery ? (
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 1 || isLoading}
+                  onClick={() => {
+                    setSearchQuery('')
+                    setCurrentPage(1)
+                    fetchCalls({ page: 1 })
+                  }}
                 >
-                  <ChevronLeftIcon className="w-4 h-4 mr-1" />
-                  Previous
+                  Clear Search
                 </Button>
-                <span className="text-sm text-navy-600 px-2">Page {currentPage}</span>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={!hasMore || isLoading}
-                >
-                  Next
-                  <ChevronRightIcon className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1 || isLoading}
+                  >
+                    <ChevronLeftIcon className="w-4 h-4 mr-1" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-navy-600 px-2">Page {currentPage}</span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={!hasMore || isLoading}
+                  >
+                    Next
+                    <ChevronRightIcon className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              )}
             </div>
           </>
         )}

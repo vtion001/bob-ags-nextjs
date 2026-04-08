@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import { useAgentProfiles } from '@/hooks/dashboard/useAgentProfiles'
 import { useAuth } from '@/contexts/AuthContext'
-import { AgentForm, AgentCard, CTMImportModal } from '@/components/agents'
+import { AgentForm, AgentList, CTMImportModal } from '@/components/agents'
 
 export default function AgentsPage() {
   const { role, ctmAgentId, isAdmin } = useAuth()
@@ -129,16 +129,11 @@ export default function AgentsPage() {
           )}
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredAgents.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              onEdit={showAllControls ? handleEdit : undefined}
-              onDelete={showAllControls ? handleDelete : undefined}
-            />
-          ))}
-        </div>
+        <AgentList
+          agents={filteredAgents}
+          onEdit={showAllControls ? handleEdit : undefined}
+          onDelete={showAllControls ? handleDelete : undefined}
+        />
       )}
     </div>
   )

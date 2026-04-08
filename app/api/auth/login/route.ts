@@ -26,11 +26,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({
+    // Set auth cookies on response (Supabase client doesn't do this automatically for signInWithPassword)
+    const response = NextResponse.json({
       success: true,
       user: data.user,
       session: data.session
     })
+
+    if (data.session) {
+      const isSecure = request.headers.get('x-forwarded-proto') === 'https'
+        || request.headers.get('x-url-scheme') === 'https'
+        || request.headers.get('referer')?.startsWith('https://')
+        || request.headers.get('host')?.includes('vercel.app')
+
+      const cookieOptions = {
+        httpOnly: true,
+        secure: isSecure,
+        sameSite: 'lax' as const,
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      }
+
+      response.cookies.set('sb-session', data.session.access_token, cookieOptions)
+      if (data.session.refresh_token) {
+        response.cookies.set('sb-refresh-token', data.session.refresh_token, cookieOptions)
+      }
+    }
+
+    return response
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(
