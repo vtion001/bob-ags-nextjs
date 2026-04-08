@@ -10,7 +10,7 @@ RETURNS TABLE (
   direction TEXT,
   duration INTEGER,
   status TEXT,
-  timestamp TIMESTAMPTZ,
+  created_at TIMESTAMPTZ,
   agent_name TEXT,
   score INTEGER,
   sentiment TEXT,
@@ -33,7 +33,7 @@ BEGIN
     c.direction,
     c.duration,
     c.status,
-    c.timestamp,
+    c.created_at,
     c.agent_name,
     c.score,
     c.sentiment,
@@ -47,7 +47,7 @@ BEGIN
     OR c.caller_number ILIKE '%' || p_phone || '%'
     OR REPLACE(c.phone, '+', '') ILIKE '%' || p_phone || '%'
     OR REPLACE(c.caller_number, '+', '') ILIKE '%' || p_phone || '%'
-  ORDER BY c.timestamp DESC
+  ORDER BY c.created_at DESC
   LIMIT 100;
 END;
 $$;
