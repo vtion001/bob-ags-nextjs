@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 BOB (Business Operations Butler) is a Next.js 16 call tracking and AI-powered quality assurance dashboard for substance abuse helpline calls. It integrates with CallTrackingMetrics (CTM) for call data and AssemblyAI for real-time transcription, with AI scoring via OpenRouter.
 
-**Tech Stack**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Supabase (SSR auth), AssemblyAI, OpenRouter
+**Tech Stack**: Next.js 16.1.6 (App Router), React 19, TypeScript, Tailwind CSS 4, Supabase (SSR auth), AssemblyAI, OpenRouter
 
 ## Commands
 
@@ -107,6 +107,7 @@ hooks/
 ├── monitor/           # useLiveAnalysis, useLiveAIInsights, useMonitorPage
 ├── calls/             # useCallDetail
 ├── settings/          # useSettings
+├── agents/            # Agent-related hooks
 └── use-mobile.ts      # Mobile detection hook
 
 supabase/
@@ -137,15 +138,28 @@ Two auth systems coexist:
 1. **Supabase SSR** (`@supabase/ssr`) - Primary auth, configured in `proxy.ts` (root) and `lib/supabase/server.ts`
 2. **Legacy HMAC sessions** (`lib/auth.ts`) - Custom session tokens for developer login
 
-`proxy.ts` creates a Supabase server client and refreshes sessions on every request. **Must use `getSession()` (not `getUser()`)** to refresh cookies. Using `getUser()` alone will cause `getSession()` to return null on API routes.
+**Session middleware** is in `proxy.ts` at the **project root** (not in `lib/`). This is an **Edge Runtime middleware** (runs at the Edge, not Node.js) - it creates a Supabase server client and refreshes sessions on every request via `export const config = { matcher: [...] }`.
+
+**Critical**: Always use `getSession()` (not `getUser()`) to refresh cookies on API routes. Using `getUser()` alone will cause `getSession()` to return null.
+
+**Dev bypass**: The `sb-dev-session` cookie allows local development without real Supabase auth. When present, it's converted to a fake `sb-session` placeholder so downstream Supabase client code works normally. Set this cookie manually or via the dev credentials login (`agsdev@allianceglobalsolutions.com` / `ags2026@@`).
+
+**Middleware matcher** excludes `_next/static`, `_next/image`, favicon, and static file extensions (svg, png, jpg, etc.) from session refresh.
 
 ### CTM Integration
 
-`lib/ctm/client.ts` is the base class; `lib/ctm/services/*.ts` contain feature-specific service modules with factory functions (createCallsService, createAgentsService, etc.). API routes in `app/api/ctm/` proxy requests to CTM to hide credentials.
+`lib/ctm/client.ts` is the base class; `lib/ctm/services/*.ts` contain feature-specific service modules with factory functions. API routes in `app/api/ctm/` proxy requests to CTM to hide credentials.
+
+Factory functions:
+```typescript
+createCTMClient(config)      // Creates configured CTMClient instance
+createCallsService(client)   // Calls: list/detail/transcript/bulk-sync
+createAgentsService(client)  // Agents: profiles/groups
+createNumbersService(client) // Numbers: search/purchase
+// etc. for: receivingNumbers, schedules, sources, voiceMenus, accounts
+```
 
 **CTM uses Basic Auth** with `Authorization: Basic base64(ACCESS_KEY:SECRET_KEY)`. API base: `https://api.calltrackingmetrics.com/api/v1`. Rate limit: 1000 req/min.
-
-**Key services:** `calls.ts` (list/detail/transcript/bulk-sync), `agents.ts` (agent profiles/groups), `numbers.ts` (tracking numbers/search/purchase), `receivingNumbers.ts`, `schedules.ts`, `sources.ts`, `accounts.ts`, `voiceMenus.ts`.
 
 ### AI Analysis System
 
@@ -154,13 +168,32 @@ Two auth systems coexist:
 - **Keyword fallback** when AI fails
 - **25-criterion rubric** for QA scoring (see `docs/AI_SCORING_SYSTEM.md`)
 
+Key modules:
+- `api-client.ts` - OpenRouter API communication
+- `result-parser.ts` - Parse AI responses into structured results
+- `prompt-builder.ts` - Build prompts for rubric evaluation
+- `keyword-matching.ts` - Fallback keyword-based analysis
+- `scoring.ts` - Score calculation logic
+- `extraction.ts` - Extract insights from transcripts
+- `rubric.ts` - QA rubric definitions
+- `helpers.ts` / `generation.ts` - Tag generation, disposition mapping
+
 ZTP (Zero Tolerance Policy) criteria (3.4, 5.1, 5.2) auto-fail calls if violated.
 
 ### Realtime Analysis
 
-`lib/realtime/` handles live call transcription via AssemblyAI streaming. Uses a rubric-based analyzer (`analyzer.ts`) that detects keywords in real-time and calculates live QA scores.
+`lib/realtime/` handles live call transcription via AssemblyAI streaming (WebSocket). For pre-recorded audio, use the REST API endpoints in `app/api/assemblyai/`.
+
+Key modules:
+- `assemblyai-realtime.ts` - WebSocket streaming transcriber
+- `analyzer.ts` - Live text analysis for insights
+- `audio-processor.ts` - Audio capture (AudioWorklet + ScriptProcessorNode fallback)
+- `constants.ts` - Realtime configuration constants
+- `types.ts` - RealtimeTranscript, RealtimeInsight, LiveCallState types
 
 **Flow:** Browser → AssemblyAI WebSocket (streaming audio) → Realtime analyzer → Live QA score updates via polling (`useMonitorPage` hook).
+
+**Audio processing**: Uses AudioWorklet with ScriptProcessorNode fallback for microphone capture.
 
 ### AI Scoring System (docs/AI_SCORING_SYSTEM.md)
 
@@ -184,6 +217,16 @@ Migrations in `supabase/migrations/` define the schema. Key tables:
 - `user_settings` - Per-user preferences and credentials
 - `live_analysis_logs` - Realtime analysis history
 - `qa_overrides` - Manual QA score overrides
+
+## Documentation
+
+Key docs in `/docs/`:
+- `AI_SCORING_SYSTEM.md` - 25-criterion rubric, ZTP rules, dispositions, score calculations
+- `CTM_API_DOCUMENTATION.md` - CTM API reference
+- `SUPABASE_SQL_MIGRATIONS.md` - Database schema migrations
+- `02_PRE_RECORDED_AUDIO.md` - AssemblyAI REST API for pre-recorded audio
+- `03_STREAMING_AUDIO.md` - AssemblyAI WebSocket streaming setup
+- `04_INTEGRATIONS_GUIDES.md` - AssemblyAI integrations (Twilio, LangChain, S3, etc.)
 
 ## Environment Variables
 
@@ -218,11 +261,6 @@ const calls = await callsService.getCalls({ hours: 24, limit: 100 })
 
 **Live Monitoring**: Uses polling with `useMonitorPage` hook, not WebSockets. AssemblyAI streaming via `lib/realtime/assemblyai-realtime.ts` with AudioWorklet (falls back to ScriptProcessorNode).
 
-**Session refresh middleware** is in `proxy.ts` at the **project root** (not in `lib/`). It uses Supabase SSR and also handles a **dev bypass session** (`sb-dev-session` cookie) that allows local development without real Supabase auth — the dev session is detected and converted to a fake `sb-session` placeholder so downstream Supabase client code works.
-
-**Middleware matcher** excludes `_next/static`, `_next/image`, favicon, and static file extensions (svg, png, jpg, etc.) from session refresh.
-
-**IMPORTANT**: In Supabase SSR, always use `getSession()` (not `getUser()`) to refresh cookies on API routes. Using `getUser()` alone will cause `getSession()` to return null.
 
 ## UI Components
 
