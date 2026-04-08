@@ -348,26 +348,69 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
 
     try {
       const normalizedPhone = searchQuery.replace(/\D/g, '')
-      const res = await fetch(`/api/ctm/calls/search?phone=${encodeURIComponent(normalizedPhone)}&hours=8760`)
-      
-      if (!res.ok) {
-        throw new Error('Search failed')
+
+      // First, try CTM API for recent calls
+      const ctmRes = await fetch(`/api/ctm/calls/search?phone=${encodeURIComponent(normalizedPhone)}&hours=8760`)
+
+      if (!ctmRes.ok) {
+        throw new Error('CTM search failed')
       }
 
-      const data = await res.json()
-      const searchedCalls: Call[] = data.calls || []
-      
+      const ctmData = await ctmRes.json()
+      let searchedCalls: Call[] = ctmData.calls || []
+
       console.log('[useCallHistory] Phone search results from CTM:', {
         searchQuery,
         normalizedPhone,
         resultsCount: searchedCalls.length
       })
 
+      // If CTM returns no results, try Supabase for historical calls
+      if (searchedCalls.length === 0) {
+        console.log('[useCallHistory] No CTM results, searching Supabase for historical calls...')
+
+        const supabaseRes = await fetch(`/api/calls/search?phone=${encodeURIComponent(normalizedPhone)}`)
+
+        if (supabaseRes.ok) {
+          const supabaseData = await supabaseRes.json()
+          if (supabaseData.calls && supabaseData.calls.length > 0) {
+            // Transform Supabase calls to match CTM Call format
+            searchedCalls = supabaseData.calls.map((call: any) => ({
+              id: call.ctm_call_id,
+              phone: call.phone || call.caller_number,
+              callerNumber: call.caller_number,
+              direction: call.direction,
+              duration: call.duration || 0,
+              status: call.status,
+              timestamp: call.timestamp,
+              name: call.agent_name || '',
+              agent: { id: '', name: call.agent_name || '', email: '' },
+              score: call.score,
+              sentiment: call.sentiment,
+              disposition: call.disposition,
+              source: call.source,
+              city: call.city,
+              state: call.state,
+              trackingNumber: '',
+              trackingLabel: '',
+              sourceId: '',
+              accountId: '',
+              notes: '',
+              talkTime: 0,
+              waitTime: 0,
+              ringTime: 0,
+            }))
+
+            console.log('[useCallHistory] Found historical calls in Supabase:', searchedCalls.length)
+          }
+        }
+      }
+
       if (searchedCalls.length > 0) {
         setAllCalls(searchedCalls)
         setFilteredCalls(searchedCalls)
       } else {
-        setError('No calls found for this phone number')
+        setError('No calls found for this phone number in recent or historical data')
       }
     } catch (err) {
       console.error('Phone search error:', err)
