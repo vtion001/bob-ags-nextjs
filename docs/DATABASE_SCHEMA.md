@@ -164,6 +164,16 @@ erDiagram
 | `get_analyzed_calls_count()` | Count analyzed calls | integer |
 | `search_calls_by_phone(phone)` | Search historical calls by phone | matching calls |
 
+## API Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/calls` | GET/POST | Fetch calls, sync from CTM |
+| `/api/calls/search` | GET | Search calls by phone in Supabase |
+| `/api/calls/bulk-analyze` | GET/POST | Bulk analyze calls with transcripts but no scores |
+| `/api/ctm/calls/analyze` | POST | Analyze individual call from CTM |
+| `/api/ctm/calls/bulk-sync` | GET/POST | Bulk sync calls from CTM to Supabase |
+
 ## API Routes → Database Mapping
 
 ```mermaid

@@ -22,18 +22,11 @@ export async function GET(request: NextRequest) {
       try {
         const devSession = JSON.parse(devSessionCookie.value)
         if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
+          const role = devSession.user.role || 'admin'
           return NextResponse.json({
             success: true,
-            role: 'admin',
-            permissions: {
-              can_view_calls: true,
-              can_view_monitor: true,
-              can_view_history: true,
-              can_view_agents: true,
-              can_manage_settings: true,
-              can_manage_users: true,
-              can_run_analysis: true,
-            }
+            role: role,
+            permissions: getPermissionsForRole(role)
           })
         }
       } catch {

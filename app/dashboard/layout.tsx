@@ -73,6 +73,14 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     if (!isLoading && role === 'qa' && pathname === '/dashboard') {
       // QA can view calls, stay on /dashboard
     }
+    // Block agents from accessing /dashboard/calls directly
+    if (!isLoading && role === 'agent' && pathname === '/dashboard/calls') {
+      window.location.href = '/dashboard/monitor'
+    }
+    // Block viewers from accessing /dashboard/calls directly
+    if (!isLoading && role === 'viewer' && pathname === '/dashboard/calls') {
+      window.location.href = '/dashboard/monitor'
+    }
   }, [isLoading, role, pathname])
 
   const getFilteredNavItems = (): NavItem[] => {
