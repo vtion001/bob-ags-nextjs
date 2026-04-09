@@ -21,23 +21,21 @@ export async function analyzeTranscript(
   client?: string,
   ctmStarRating?: number
 ): Promise<Analysis> {
-  const apiKey = process.env.OPENROUTER_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY
   const lower = transcript.toLowerCase()
 
   let aiResults: Record<string, { pass: boolean; details: string }> = {}
 
   if (apiKey) {
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002',
-          'X-Title': 'BOB Call Analysis',
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-3-haiku',
+          model: 'gpt-4o-mini',
           messages: [{ role: 'user', content: buildRubricPrompt(transcript) }],
           max_tokens: 2000,
           temperature: 0.1,
@@ -50,7 +48,7 @@ export async function analyzeTranscript(
         aiResults = parseRubricResults(content)
       }
     } catch (err) {
-      console.error('OpenRouter analysis error:', err)
+      console.error('OpenAI analysis error:', err)
     }
   }
 

@@ -3,69 +3,74 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+
+// Force dynamic rendering - this page requires browser environment and Supabase client
+export const dynamic = 'force-dynamic'
 
 type SignUpStatus = 'loading' | 'success' | 'pending' | 'denied' | 'error'
 
 export default function EmailCallback() {
   const router = useRouter()
-  const supabase = createClient()
   const [status, setStatus] = useState<SignUpStatus>('loading')
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser()
+    import('@/lib/supabase/client').then(({ createClient }) => {
+      const supabase = createClient()
 
-        if (error) {
-          console.error('Email callback error:', error)
-          setStatus('error')
-          setMessage('Email confirmation failed. Please try signing up again.')
-          setTimeout(() => router.push('/auth/signup'), 5000)
-          return
-        }
+      const handleCallback = async () => {
+        try {
+          const { data: { user }, error } = await supabase.auth.getUser()
 
-        if (!user) {
+          if (error) {
+            console.error('Email callback error:', error)
+            setStatus('error')
+            setMessage('Email confirmation failed. Please try signing up again.')
+            setTimeout(() => router.push('/auth/signup'), 5000)
+            return
+          }
+
+          if (!user) {
+            setStatus('pending')
+            setMessage('Please check your email and click the confirmation link to complete your registration.')
+            setTimeout(() => router.push('/auth/signup'), 10000)
+            return
+          }
+
+          const response = await fetch('/api/auth/agent-lookup', {
+            method: 'POST',
+          })
+
+          const result = await response.json()
+
+          if (result.status === 'auto_assign') {
+            setStatus('success')
+            setMessage(`Welcome! Your account has been created and linked to your CTM agent. Redirecting to dashboard...`)
+            setTimeout(() => router.push('/dashboard'), 3000)
+            return
+          }
+
+          if (result.status === 'deny' || result.status === 'manual') {
+            setStatus('pending')
+            setMessage('Your account has been created! An administrator will review your access and assign your CTM agent permissions shortly.')
+            setTimeout(() => router.push('/'), 8000)
+            return
+          }
+
           setStatus('pending')
-          setMessage('Please check your email and click the confirmation link to complete your registration.')
-          setTimeout(() => router.push('/auth/signup'), 10000)
-          return
-        }
-
-        const response = await fetch('/api/auth/agent-lookup', {
-          method: 'POST',
-        })
-
-        const result = await response.json()
-
-        if (result.status === 'auto_assign') {
-          setStatus('success')
-          setMessage(`Welcome! Your account has been created and linked to your CTM agent. Redirecting to dashboard...`)
-          setTimeout(() => router.push('/dashboard'), 3000)
-          return
-        }
-
-        if (result.status === 'deny' || result.status === 'manual') {
-          setStatus('pending')
-          setMessage('Your account has been created! An administrator will review your access and assign your CTM agent permissions shortly.')
+          setMessage('Your account has been created! An administrator will review your access shortly.')
           setTimeout(() => router.push('/'), 8000)
-          return
+        } catch (err) {
+          console.error('Unexpected error in email callback:', err)
+          setStatus('error')
+          setMessage('An unexpected error occurred during registration. Please try signing up again.')
+          setTimeout(() => router.push('/auth/signup'), 5000)
         }
-
-        setStatus('pending')
-        setMessage('Your account has been created! An administrator will review your access shortly.')
-        setTimeout(() => router.push('/'), 8000)
-      } catch (err) {
-        console.error('Unexpected error in email callback:', err)
-        setStatus('error')
-        setMessage('An unexpected error occurred during registration. Please try signing up again.')
-        setTimeout(() => router.push('/auth/signup'), 5000)
       }
-    }
 
-    handleCallback()
-  }, [router, supabase])
+      handleCallback()
+    })
+  }, [router])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">

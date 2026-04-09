@@ -15,22 +15,20 @@ function isDevUser(request: NextRequest): boolean {
   return false
 }
 
-async function analyzeWithOpenRouter(transcript: string, phone: string, ctmStarRating?: number) {
-  const apiKey = process.env.OPENROUTER_API_KEY
+async function analyzeWithOpenAI(transcript: string, phone: string, ctmStarRating?: number) {
+  const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    throw new Error('OpenRouter API key not configured')
+    throw new Error('OpenAI API key not configured')
   }
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001',
-      'X-Title': 'BOB Call Analysis',
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-3-haiku',
+      model: 'gpt-4o-mini',
       messages: [{
         role: 'user',
         content: `You are a quality assurance analyst for a substance abuse helpline. Analyze the following call transcript and evaluate it against each criterion.
@@ -81,7 +79,7 @@ Return exactly 25 lines, one for each criterion in order. For 4.2, 4.3, 4.4 use 
 
   if (!response.ok) {
     const errorText = await response.text()
-    throw new Error(`OpenRouter error: ${response.status} ${errorText}`)
+    throw new Error(`OpenAI error: ${response.status} ${errorText}`)
   }
 
   const data = await response.json()
@@ -326,8 +324,8 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Get AI evaluation from OpenRouter
-        const aiContent = await analyzeWithOpenRouter(call.transcript, call.phone || call.caller_number || '')
+        // Get AI evaluation from OpenAI
+        const aiContent = await analyzeWithOpenAI(call.transcript, call.phone || call.caller_number || '')
         const aiResults = parseRubricResults(aiContent)
         const evaluatedResults = evaluateRubric(call.transcript.toLowerCase(), RUBRIC_CRITERIA, aiResults)
         const { breakdown, ztpFailures, autoFailed } = calculateBreakdown(evaluatedResults)

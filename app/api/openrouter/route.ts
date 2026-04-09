@@ -36,11 +36,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
       return NextResponse.json({
         success: false,
-        error: 'OpenRouter API key not configured'
+        error: 'OpenAI API key not configured'
       }, { status: 500 })
     }
 
@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
       analysis
     })
   } catch (error) {
-    console.error('OpenRouter error:', error)
+    console.error('OpenAI error:', error)
     return NextResponse.json(
-      { error: 'Failed to process OpenRouter request' },
+      { error: 'Failed to process OpenAI request' },
       { status: 500 }
     )
   }
