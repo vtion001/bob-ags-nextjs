@@ -38,6 +38,8 @@ export default async function proxy(request: NextRequest) {
     path: '/',
   }
 
+  let response = NextResponse.next({ request: { headers: request.headers } })
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -48,7 +50,7 @@ export default async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value)
+            response.cookies.set({ name, value, ...options })
           })
         },
       },
@@ -57,8 +59,6 @@ export default async function proxy(request: NextRequest) {
 
   // Try to get existing session first (may return null without error if expired)
   const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-  let response = NextResponse.next({ request: { headers: request.headers } })
 
   if (session) {
     // Valid session - refresh cookies on response

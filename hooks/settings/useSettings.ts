@@ -309,18 +309,20 @@ export function useSettings(): UseSettingsReturn {
     if (!confirm('Are you sure you want to reject this user? This will remove their access.')) {
       return
     }
-    
+
     setIsSaving(true)
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-      
-      if (error) throw error
-      
+      const res = await fetch(`/api/users/permissions/update?user_id=${encodeURIComponent(userId)}`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to reject user')
+      }
+
       setUsers(users.filter(u => u.user_id !== userId))
-      
+
       setSaveMessage('User rejected and removed')
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (err: any) {
