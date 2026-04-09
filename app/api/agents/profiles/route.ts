@@ -4,14 +4,23 @@ import { createServerSupabase } from '@/lib/supabase/server'
 const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
 
 function isDevUser(request: NextRequest): boolean {
+  // Check for original dev session cookie (from proxy)
   const devSessionCookie = request.cookies.get('sb-dev-session')
-  if (!devSessionCookie) return false
-  try {
-    const devSession = JSON.parse(devSessionCookie.value)
-    if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-      return true
-    }
-  } catch {}
+  if (devSessionCookie) {
+    try {
+      const devSession = JSON.parse(devSessionCookie.value)
+      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
+        return true
+      }
+    } catch {}
+  }
+
+  // Check for placeholder session set by proxy after it consumed sb-dev-session
+  const sessionCookie = request.cookies.get('sb-session')
+  if (sessionCookie?.value === 'dev-session-placeholder') {
+    return true
+  }
+
   return false
 }
 
@@ -21,6 +30,7 @@ export async function GET(request: NextRequest) {
 
     if (isDevUser(request)) {
       userId = DEV_BYPASS_UID
+      console.log('[DEBUG] Dev user accessing agent profiles')
     } else {
       const supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
@@ -31,13 +41,27 @@ export async function GET(request: NextRequest) {
         )
       }
       userId = user.id
+      console.log('[DEBUG] User:', user.email, 'accessing agent profiles')
     }
 
     // Use service role key to bypass RLS and get all agent profiles
     const { createClient } = await import('@supabase/supabase-js')
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    console.log('[DEBUG] SUPABASE_URL:', supabaseUrl ? `SET (${supabaseUrl.substring(0, 20)}...)` : 'UNSET')
+    console.log('[DEBUG] SERVICE_ROLE_KEY:', serviceKey ? `SET (${serviceKey.substring(0, 20)}...)` : 'UNSET')
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('[DEBUG] Missing env vars - cannot create admin client')
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
     const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      supabaseUrl,
+      serviceKey,
       { auth: { persistSession: false } }
     )
 
@@ -45,6 +69,8 @@ export async function GET(request: NextRequest) {
       .from('agent_profiles')
       .select('*')
       .order('name')
+
+    console.log('[DEBUG] Query result - agents count:', agents?.length, 'error:', error)
 
     if (error) {
       console.error('Error fetching agent profiles:', error)

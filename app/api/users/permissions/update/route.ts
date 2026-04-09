@@ -5,14 +5,23 @@ import { DEFAULT_PERMISSIONS, RoleType } from '@/lib/settings/types'
 const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
 
 function isDevUser(request: NextRequest): boolean {
+  // Check for original dev session cookie (from proxy)
   const devSessionCookie = request.cookies.get('sb-dev-session')
-  if (!devSessionCookie) return false
-  try {
-    const devSession = JSON.parse(devSessionCookie.value)
-    if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-      return true
-    }
-  } catch {}
+  if (devSessionCookie) {
+    try {
+      const devSession = JSON.parse(devSessionCookie.value)
+      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
+        return true
+      }
+    } catch {}
+  }
+
+  // Check for placeholder session set by proxy after it consumed sb-dev-session
+  const sessionCookie = request.cookies.get('sb-session')
+  if (sessionCookie?.value === 'dev-session-placeholder') {
+    return true
+  }
+
   return false
 }
 
@@ -26,6 +35,7 @@ export async function GET(request: NextRequest) {
       userId = DEV_BYPASS_UID
       isAdminUser = true
       userEmail = 'agsdev@allianceglobalsolutions.com'
+      console.log('[DEBUG] Dev user detected, isAdminUser=true')
     } else {
       const supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
@@ -37,15 +47,40 @@ export async function GET(request: NextRequest) {
       }
       userId = user.id
       userEmail = user.email || null
+      console.log('[DEBUG] Logged in user:', userEmail, 'userId:', userId)
 
-      // Check if current user is admin
-      const { data: userRole } = await supabase
+      // Check if current user is admin - try by user_id first, then by email
+      const superAdminEmails = [
+        'agsdev@allianceglobalsolutions.com',
+        'v.rodriguez@allianceglobalsolutions.com',
+      ]
+      const userEmailLower = userEmail?.toLowerCase()
+
+      let { data: userRole } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .single()
 
-      isAdminUser = userRole?.role === 'admin'
+      console.log('[DEBUG] userRole by user_id:', userRole)
+
+      // If not found by user_id, try by email
+      if (!userRole && userEmailLower) {
+        const { data: userRoleByEmail } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('email', userEmailLower)
+          .single()
+
+        console.log('[DEBUG] userRole by email:', userRoleByEmail)
+        userRole = userRoleByEmail
+      }
+
+      // Superadmin emails always get admin access for this endpoint
+      const isSuperAdmin = superAdminEmails.includes(userEmailLower)
+      console.log('[DEBUG] isSuperAdmin:', isSuperAdmin)
+
+      isAdminUser = userRole?.role === 'admin' || isSuperAdmin
     }
 
     const supabase = await createServerSupabase(request)
@@ -63,6 +98,8 @@ export async function GET(request: NextRequest) {
         .from('user_roles')
         .select('*')
         .order('created_at', { ascending: false })
+
+      console.log('[DEBUG] All roles from service client:', allRoles?.length, 'error:', allRolesError)
 
       if (allRolesError) {
         console.error('Error fetching all roles:', allRolesError)
