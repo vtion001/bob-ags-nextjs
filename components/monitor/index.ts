@@ -1,6 +1,8 @@
 export { default as ActiveCallsList } from "./ActiveCallsList";
 export { default as CallDetailsCard } from "./CallDetailsCard";
+export { default as KnowledgeSuggestions } from "./KnowledgeSuggestions";
 export { default as LiveInsightsPanel } from "./LiveInsightsPanel";
+export { default as LiveAIInsightsPanel } from "./LiveAIInsightsPanel";
 export { default as MonitorHeader } from "./MonitorHeader";
 export { default as QAChecklist } from "./QAChecklist";
 export { default as ScoreProgress } from "./ScoreProgress";

@@ -32,6 +32,7 @@ import {
   getSentimentColor,
   getScoreColor,
 } from "@/lib/monitor/helpers"
+import { KnowledgeSuggestions } from "@/components/monitor"
 
 export default function MonitorPage() {
   const { role, isAgent } = useAuth()
@@ -389,6 +390,15 @@ export default function MonitorPage() {
                   <ScoreProgress
                     score={liveState.score || 100}
                     criteriaStatus={liveState.criteriaStatus || {}}
+                  />
+
+                  <KnowledgeSuggestions
+                    context={{
+                      insurance: liveState.insurance,
+                      state: liveState.callerLocation,
+                      substance: liveState.substance,
+                      isCrisis: isCrisis,
+                    }}
                   />
                 </div>
               </div>
