@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Superadmin emails always get admin access for this endpoint
-      const isSuperAdmin = userEmail && superAdminEmails.includes(userEmail)
+      const isSuperAdmin = userEmailLower && superAdminEmails.includes(userEmailLower)
       console.log('[DEBUG] isSuperAdmin:', isSuperAdmin)
 
       isAdminUser = !!(userRole?.role === 'admin' || isSuperAdmin)
@@ -90,11 +90,28 @@ export async function GET(request: NextRequest) {
     // If admin, return all users with their roles using service role key to bypass RLS
     if (isAdminUser) {
       const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+      console.log('[DEBUG] Env check - URL:', supabaseUrl ? 'SET' : 'UNSET', 'ServiceKey:', serviceKey ? 'SET' : 'UNSET')
+
+      if (!supabaseUrl || !serviceKey) {
+        console.error('[DEBUG] Missing env vars - cannot create admin client')
+        return NextResponse.json(
+          { error: 'Server configuration error - missing env vars' },
+          { status: 500 }
+        )
+      }
+
       const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        supabaseUrl,
+        serviceKey,
         { auth: { persistSession: false } }
       )
+
+      // First verify admin client works by listing tables
+      const { data: testData, error: testError } = await supabaseAdmin.from('user_roles').select('user_id').limit(1)
+      console.log('[DEBUG] Admin client test - rows:', testData?.length, 'error:', testError)
 
       const { data: allRoles, error: allRolesError } = await supabaseAdmin
         .from('user_roles')
@@ -102,6 +119,10 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
 
       console.log('[DEBUG] All roles from service client:', allRoles?.length, 'error:', allRolesError)
+      if (allRoles && allRoles.length > 0) {
+        console.log('[DEBUG] First user in result:', JSON.stringify(allRoles[0]))
+        console.log('[DEBUG] All user emails:', allRoles.map(u => `${u.email} (approved=${u.approved})`).join(', '))
+      }
 
       if (allRolesError) {
         console.error('Error fetching all roles:', allRolesError)
@@ -283,6 +304,65 @@ export async function PUT(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
       { error: 'Failed to update permissions', details: message, userId: targetUserIdValue },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    let currentUserId: string | null = null
+
+    if (isDevUser(request)) {
+      currentUserId = DEV_BYPASS_UID
+    } else {
+      const { supabase } = await createServerSupabase(request)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+      currentUserId = session.user.id
+    }
+
+    const { searchParams } = await request.nextUrl
+    const targetUserId = searchParams.get('user_id')
+
+    if (!targetUserId) {
+      return NextResponse.json(
+        { error: 'user_id is required' },
+        { status: 400 }
+      )
+    }
+
+    // Use service role to bypass RLS
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    )
+
+    const { error } = await supabaseAdmin
+      .from('user_roles')
+      .delete()
+      .eq('user_id', targetUserId)
+
+    if (error) {
+      console.error('Error deleting user role:', error)
+      return NextResponse.json(
+        { error: 'Failed to delete user', details: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json(
+      { error: 'Failed to delete user', details: message },
       { status: 500 }
     )
   }
