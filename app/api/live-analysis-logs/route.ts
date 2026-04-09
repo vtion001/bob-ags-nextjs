@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     let supabase
 
     if (!isDevUser) {
-      supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {

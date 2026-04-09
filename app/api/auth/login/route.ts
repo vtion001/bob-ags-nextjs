@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createServerSupabase(request)
+    const { supabase } = await createServerSupabase(request)
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password

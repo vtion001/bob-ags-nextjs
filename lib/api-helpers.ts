@@ -43,7 +43,7 @@ export async function authenticate(request: NextRequest): Promise<NextResponse |
     return null
   }
 
-  const supabase = await createServerSupabase(request)
+  const { supabase } = await createServerSupabase(request)
   // MUST use getSession() (not getUser()) to refresh the session cookie
   // getUser() only validates the JWT without refreshing, causing getSession() to return null on subsequent API calls
   const { data: { user } } = await supabase.auth.getSession()

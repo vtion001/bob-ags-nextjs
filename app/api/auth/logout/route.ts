@@ -3,7 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabase(request)
+    const { supabase } = await createServerSupabase(request)
     const { error } = await supabase.auth.signOut()
 
     if (error) {

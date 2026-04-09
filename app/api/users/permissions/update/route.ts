@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       userEmail = 'agsdev@allianceglobalsolutions.com'
       console.log('[DEBUG] Dev user detected, isAdminUser=true')
     } else {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       isAdminUser = userRole?.role === 'admin' || isSuperAdmin
     }
 
-    const supabase = await createServerSupabase(request)
+    const { supabase } = await createServerSupabase(request)
 
     // If admin, return all users with their roles using service role key to bypass RLS
     if (isAdminUser) {
@@ -161,7 +161,7 @@ export async function PUT(request: NextRequest) {
     if (isDevUser(request)) {
       currentUserId = DEV_BYPASS_UID
     } else {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(

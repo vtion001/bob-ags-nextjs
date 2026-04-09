@@ -23,7 +23,7 @@ function isDevUser(request: NextRequest): boolean {
 export async function GET(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       // MUST use getSession() to refresh cookies
       const { data: { user } } = await supabase.auth.getSession()
       if (!user) {

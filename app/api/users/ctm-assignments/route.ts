@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (isDevUser(request)) {
       userId = DEV_BYPASS_UID
     } else {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       userId = user.id
     }
 
-    const supabase = await createServerSupabase(request)
+    const { supabase } = await createServerSupabase(request)
 
     // Get CTM assignments from Supabase
     const { data: assignmentsData, error } = await supabase
@@ -101,7 +101,7 @@ export async function PUT(request: NextRequest) {
     if (isDevUser(request)) {
       userId = DEV_BYPASS_UID
     } else {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(
@@ -112,7 +112,7 @@ export async function PUT(request: NextRequest) {
       userId = user.id
     }
 
-    const supabase = await createServerSupabase(request)
+    const { supabase } = await createServerSupabase(request)
 
     const body = await request.json()
 

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(

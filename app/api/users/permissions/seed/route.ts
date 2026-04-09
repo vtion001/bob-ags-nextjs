@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (isDevUser(request)) {
       userId = DEV_BYPASS_UID
     } else {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       userId = user.id
     }
 
-    const supabase = await createServerSupabase(request)
+    const { supabase } = await createServerSupabase(request)
 
     // Seed default permissions for user
     const { data, error } = await supabase

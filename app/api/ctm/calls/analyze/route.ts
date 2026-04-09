@@ -404,7 +404,7 @@ function generateSummary(results: ReturnType<typeof evaluateRubric>, score: numb
 export async function GET(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       // MUST use getSession() to refresh cookies
       const { data: { user } } = await supabase.auth.getSession()
       if (!user) {
@@ -428,7 +428,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       // MUST use getSession() to refresh cookies
       const { data: { user } } = await supabase.auth.getSession()
       if (!user) {

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Return empty qa-overrides - stored in Supabase
-    const supabase = await createServerSupabase(request)
-    const { data, error } = await supabase
+    const { supabase: supabaseForQuery } = await createServerSupabase(request)
+    const { data, error } = await supabaseForQuery
       .from('qa_overrides')
       .select('*')
       .limit(100)
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isDevUser) {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(
@@ -80,8 +80,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Store QA override in Supabase
-    const supabase = await createServerSupabase(request)
-    const { data, error } = await supabase
+    const { supabase: supabaseForInsert } = await createServerSupabase(request)
+    const { data, error } = await supabaseForInsertForQuery
       .from('qa_overrides')
       .insert(body)
       .select()

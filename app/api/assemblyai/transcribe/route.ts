@@ -29,7 +29,7 @@ async function getCTMAudioProxyUrl(callId: string): Promise<string | null> {
 export async function POST(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       // MUST use getSession() to refresh cookies
       const { data: { user } } = await supabase.auth.getSession()
       if (!user) {

@@ -24,7 +24,7 @@ function isDevUser(request: NextRequest): boolean {
 export async function POST(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

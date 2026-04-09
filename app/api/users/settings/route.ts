@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   try {
     let userId: string | null = null
-    let supabase = await createServerSupabase(request)
+    let { supabase } = await createServerSupabase(request)
 
     if (!isDevUser) {
       const { data: { user } } = await supabase.auth.getUser()

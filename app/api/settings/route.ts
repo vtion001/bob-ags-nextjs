@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     let supabase = null
     if (!isDevUser) {
-      supabase = await createServerSupabase(request)
+      supabase = (await createServerSupabase(request)).supabase
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       userId = user.id
     } else {
       // For dev user, create supabase client without auth
-      supabase = await createServerSupabase(request)
+      supabase = (await createServerSupabase(request)).supabase
     }
 
     const { data: userSettings, error } = await supabase
@@ -88,14 +88,14 @@ export async function POST(request: NextRequest) {
 
     let supabase = null
     if (!isDevUser) {
-      supabase = await createServerSupabase(request)
+      supabase = (await createServerSupabase(request)).supabase
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       userId = user.id
     } else {
-      supabase = await createServerSupabase(request)
+      supabase = (await createServerSupabase(request)).supabase
     }
 
     const body = await request.json()
@@ -158,14 +158,14 @@ export async function DELETE(request: NextRequest) {
 
     let supabase = null
     if (!isDevUser) {
-      supabase = await createServerSupabase(request)
+      supabase = (await createServerSupabase(request)).supabase
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       userId = user.id
     } else {
-      supabase = await createServerSupabase(request)
+      supabase = (await createServerSupabase(request)).supabase
     }
 
     const { error } = await supabase

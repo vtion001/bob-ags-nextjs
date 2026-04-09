@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createServerSupabase(request)
+    const { supabase } = await createServerSupabase(request)
 
     // Create admin client with service role key
     const supabaseAdmin = createSupabaseAdmin(
