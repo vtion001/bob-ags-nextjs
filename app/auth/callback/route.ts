@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { CTMClient } from '@/lib/ctm'
+import { createAgentsService } from '@/lib/ctm/services/agents'
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
@@ -83,8 +83,8 @@ export async function GET(request: NextRequest) {
   
   if (!currentSettings.ctm_agent_id) {
     try {
-      const ctmClient = new CTMClient()
-      const agents = await ctmClient.agents.getAgents()
+      const agentsService = createAgentsService()
+      const agents = await agentsService.getAgents()
       
       const match = agents.find(
         (agent) => agent.email?.toLowerCase() === user.email?.toLowerCase()
@@ -132,8 +132,8 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (!existingProfile) {
-        const ctmClient = new CTMClient()
-        const agents = await ctmClient.agents.getAgents()
+        const agentsService = createAgentsService()
+        const agents = await agentsService.getAgents()
         const match = agents.find((agent) => agent.id === currentSettings.ctm_agent_id)
 
         if (match) {

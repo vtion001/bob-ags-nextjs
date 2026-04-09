@@ -75,6 +75,7 @@ export interface CriterionResult {
   deduction: number
   severity: string
   category: string
+  na?: boolean
 }
 
 export interface RubricBreakdown {

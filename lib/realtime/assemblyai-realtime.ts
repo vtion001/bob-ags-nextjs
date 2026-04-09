@@ -159,7 +159,7 @@ export class AssemblyAIRealtime {
   }
 
   private async startAudioPipeline(): Promise<void> {
-    if (!this.audioContext || !this.transcriber) return
+    if (!this.audioContext || !this.transcriber || !this.mediaStream) return
 
     this.microphone = this.audioContext.createMediaStreamSource(this.mediaStream)
 

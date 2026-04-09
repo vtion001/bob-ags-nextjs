@@ -14,6 +14,7 @@ interface QAOverrideResult extends CriterionResult {
   overridden?: boolean
   overridePass?: boolean
   overrideNote?: string
+  na?: boolean
 }
 
 interface QAManualOverrideCardProps {

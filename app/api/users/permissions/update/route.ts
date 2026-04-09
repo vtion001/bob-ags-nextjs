@@ -77,10 +77,10 @@ export async function GET(request: NextRequest) {
       }
 
       // Superadmin emails always get admin access for this endpoint
-      const isSuperAdmin = superAdminEmails.includes(userEmailLower)
+      const isSuperAdmin = userEmail && superAdminEmails.includes(userEmail)
       console.log('[DEBUG] isSuperAdmin:', isSuperAdmin)
 
-      isAdminUser = userRole?.role === 'admin' || isSuperAdmin
+      isAdminUser = (userRole?.role === 'admin' || isSuperAdmin) ?? false
     }
 
     const { supabase } = await createServerSupabase(request)

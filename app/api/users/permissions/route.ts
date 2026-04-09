@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       ]
 
       // Special case: superadmin emails always get admin permissions
-      if (superAdminEmails.includes(userEmail)) {
+      if (userEmail && superAdminEmails.includes(userEmail)) {
         return NextResponse.json({
           success: true,
           role: 'admin',

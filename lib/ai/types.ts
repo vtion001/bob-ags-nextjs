@@ -1,5 +1,4 @@
-// Re-export shared types from lib/types for AI module
-export type { CriterionResult, RubricBreakdown } from '../types'
+import type { CriterionResult, RubricBreakdown } from '../types'
 
 // AI-specific types
 export interface Analysis {

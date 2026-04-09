@@ -406,7 +406,7 @@ export async function GET(request: NextRequest) {
     if (!isDevUser(request)) {
       const { supabase } = await createServerSupabase(request)
       // MUST use getSession() to refresh cookies
-      const { data: { user } } = await supabase.auth.getSession()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
@@ -430,7 +430,7 @@ export async function POST(request: NextRequest) {
     if (!isDevUser(request)) {
       const { supabase } = await createServerSupabase(request)
       // MUST use getSession() to refresh cookies
-      const { data: { user } } = await supabase.auth.getSession()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }

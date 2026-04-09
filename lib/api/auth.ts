@@ -15,7 +15,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<{
   error: Response | null
 }> {
   try {
-    const supabase = await createServerSupabase(request)
+    const { supabase } = await createServerSupabase(request)
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -70,7 +70,7 @@ export async function requireAdmin(request: NextRequest): Promise<{
 }
 
 export async function getUserSettings(request: NextRequest, userId: string) {
-  const supabase = await createServerSupabase(request)
+  const { supabase } = await createServerSupabase(request)
   const { data: userSettings } = await supabase
     .from('user_settings')
     .select('settings')

@@ -120,7 +120,7 @@ export function useLiveAnalysis(options: UseLiveAnalysisOptions = {}): UseLiveAn
       console.log('[LiveAnalysis] Calling rt.connect()...');
 
       try {
-        await rt.connect(callId || undefined);
+        await rt.connect();
         console.log('[LiveAnalysis] rt.connect() completed successfully');
       } catch (err) {
         console.error('[LiveAnalysis] rt.connect() threw error:', err);

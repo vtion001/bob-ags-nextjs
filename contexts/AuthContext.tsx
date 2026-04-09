@@ -142,7 +142,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // We catch it and redirect to login before the error propagates
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'AUTH_ERROR') {
+      // AUTH_ERROR is not in the AuthChangeEvent type but Supabase fires it
+      // when token refresh fails (e.g., revoked or expired refresh token)
+      if ((event as string) === 'AUTH_ERROR') {
         console.warn('[Auth] Auth error detected, redirecting to login')
         window.location.href = '/'
       }

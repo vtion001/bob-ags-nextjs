@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Store QA override in Supabase
     const { supabase: supabaseForInsert } = await createServerSupabase(request)
-    const { data, error } = await supabaseForInsertForQuery
+    const { data, error } = await supabaseForInsert
       .from('qa_overrides')
       .insert(body)
       .select()

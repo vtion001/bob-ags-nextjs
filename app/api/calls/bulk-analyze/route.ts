@@ -281,7 +281,7 @@ export async function POST(request: NextRequest) {
     const { supabase, response } = await createServerSupabase(request)
 
     if (!isDevUser(request)) {
-      const { data: { user } } = await supabase.auth.getSession()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
@@ -419,7 +419,7 @@ export async function GET(request: NextRequest) {
     const { supabase, response } = await createServerSupabase(request)
 
     if (!isDevUser(request)) {
-      const { data: { user } } = await supabase.auth.getSession()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }

@@ -12,7 +12,7 @@ import type {
   CTMAgent,
   CTMUserGroup,
   RoleType,
-} from './types/permissions'
+} from './types'
 import { DEFAULT_PERMISSIONS } from './types/permissions'
 import { DEFAULT_SETTINGS } from './types/credentials'
 
