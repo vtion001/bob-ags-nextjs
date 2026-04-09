@@ -121,9 +121,23 @@ export function useSettings(): UseSettingsReturn {
           
           if (ctmRes.ok) {
             const ctmData = await ctmRes.json()
-            setCtmAssignments(ctmData.users || [])
-            setCtmAgents(ctmData.ctmAgents || [])
-            setCtmUserGroups(ctmData.ctmUserGroups || [])
+            setCtmAssignments(ctmData.assignments || [])
+          }
+
+          // Fetch CTM agents and user groups from their respective endpoints
+          const [agentsRes, groupsRes] = await Promise.all([
+            fetch('/api/ctm/agents'),
+            fetch('/api/ctm/agents/groups'),
+          ])
+
+          if (agentsRes.ok) {
+            const agentsData = await agentsRes.json()
+            setCtmAgents(agentsData.agents || agentsData.data || [])
+          }
+
+          if (groupsRes.ok) {
+            const groupsData = await groupsRes.json()
+            setCtmUserGroups(groupsData.user_groups || groupsData.data || [])
           }
         }
       }

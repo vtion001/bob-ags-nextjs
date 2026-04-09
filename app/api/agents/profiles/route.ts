@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       userId = DEV_BYPASS_UID
       console.log('[DEBUG] Dev user accessing agent profiles')
     } else {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     if (isDevUser(request)) {
       userId = DEV_BYPASS_UID
     } else {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(
@@ -163,7 +163,7 @@ export async function PUT(request: NextRequest) {
     if (isDevUser(request)) {
       userId = DEV_BYPASS_UID
     } else {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(
@@ -222,7 +222,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
-      const supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json(

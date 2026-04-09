@@ -45,15 +45,7 @@ export async function createServerSupabase(request: NextRequest) {
     cookieStorage,
   }
 
-  // Create a proxy so the result can be used directly as the supabase client
-  // This maintains backward compatibility with existing code
-  return new Proxy(result, {
-    get(target, prop) {
-      if (prop === 'supabase' || prop === 'response' || prop === 'cookieStorage') {
-        return target[prop as keyof typeof target]
-      }
-      // Forward all other property accesses to the supabase client
-      return (target.supabase as any)[prop as string]
-    },
-  }) as typeof supabase & { supabase: typeof supabase; response: typeof response; cookieStorage: Map<string, { value: string; options?: CookieOptions }> }
+  // Return the result directly - callers should use proper destructuring
+  // This avoids issues with Proxy's then trap intercepting await
+  return result as typeof result & { supabase: typeof supabase }
 }

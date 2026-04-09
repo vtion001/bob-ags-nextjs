@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createServerSupabase(request)
 
     // Get CTM assignments from Supabase
-    const { data, error } = await supabase
+    const { data: assignmentsData, error } = await supabase
       .from('ctm_assignments')
       .select('*')
       .eq('user_id', userId!)
@@ -54,9 +54,36 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Get user info (email and role) for each assignment
+    const userIds = (assignmentsData || []).map(a => a.user_id).filter(Boolean)
+    let userMap: Record<string, { email: string; role: string }> = {}
+
+    if (userIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('user_roles')
+        .select('user_id, email, role')
+        .in('user_id', userIds)
+
+      if (usersData) {
+        userMap = usersData.reduce((acc, u) => {
+          acc[u.user_id] = { email: u.email || u.user_id, role: u.role || 'viewer' }
+          return acc
+        }, {} as Record<string, { email: string; role: string }>)
+      }
+    }
+
+    // Transform raw assignments to CTMAssignment format
+    const transformedAssignments = (assignmentsData || []).map(a => ({
+      userId: a.user_id,
+      email: userMap[a.user_id]?.email || a.user_id,
+      role: userMap[a.user_id]?.role || 'viewer',
+      ctmAgentId: a.ctm_agent_id || null,
+      ctmUserGroupId: a.ctm_user_group_id || null,
+    }))
+
     return NextResponse.json({
       success: true,
-      assignments: data || []
+      assignments: transformedAssignments
     })
   } catch (error) {
     console.error('CTM assignments error:', error)
