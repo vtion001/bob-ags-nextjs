@@ -18,10 +18,9 @@ export async function GET(request: NextRequest) {
 
   try {
     let userId: string | null = null
-    let supabase
+    const { supabase } = await createServerSupabase(request)
 
     if (!isDevUser) {
-      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
@@ -33,17 +32,19 @@ export async function GET(request: NextRequest) {
       userId = user.id
     } else {
       userId = DEV_BYPASS_UID
-      // Use service role key to bypass RLS for dev users
-      const { createClient } = await import('@supabase/supabase-js')
-      supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { persistSession: false } }
-      )
     }
 
     const searchParams = request.nextUrl.searchParams
     const limit = parseInt(searchParams.get('limit') || '50', 10)
+
+    // Dev users get empty results (they don't have a real auth entry)
+    if (isDevUser) {
+      return NextResponse.json({
+        success: true,
+        data: [],
+        logs: []
+      })
+    }
 
     const { data: logs, error } = await supabase
       .from('live_analysis_logs')
@@ -89,10 +90,9 @@ export async function POST(request: NextRequest) {
 
   try {
     let userId: string | null = null
-    let supabase
 
     if (!isDevUser) {
-      supabase = await createServerSupabase(request)
+      const { supabase } = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
@@ -102,46 +102,44 @@ export async function POST(request: NextRequest) {
         )
       }
       userId = user.id
-    } else {
-      userId = DEV_BYPASS_UID
-      // Use service role key to bypass RLS for dev users
-      const { createClient } = await import('@supabase/supabase-js')
-      supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { persistSession: false } }
-      )
-    }
 
-    const body = await request.json()
-    const { call_id, call_phone, call_direction, call_timestamp, suggested_disposition, insights, transcript_preview } = body
+      const body = await request.json()
+      const { call_id, call_phone, call_direction, call_timestamp, suggested_disposition, insights, transcript_preview } = body
 
-    const { data: log, error } = await supabase
-      .from('live_analysis_logs')
-      .insert({
-        user_id: userId,
-        call_id,
-        call_phone,
-        call_direction,
-        call_timestamp,
-        suggested_disposition,
-        insights,
-        transcript_preview
+      const { data: log, error } = await supabase
+        .from('live_analysis_logs')
+        .insert({
+          user_id: userId,
+          call_id,
+          call_phone,
+          call_direction,
+          call_timestamp,
+          suggested_disposition,
+          insights,
+          transcript_preview
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error creating live analysis log:', error)
+        return NextResponse.json(
+          { error: 'Failed to create live analysis log' },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: log
       })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating live analysis log:', error)
-      return NextResponse.json(
-        { error: 'Failed to create live analysis log' },
-        { status: 500 }
-      )
     }
 
+    // Dev user — return mock success without persisting
     return NextResponse.json({
       success: true,
-      data: log
+      data: { id: 'dev-mock', user_id: DEV_BYPASS_UID },
+      note: 'Dev mode'
     })
   } catch (error) {
     console.error('Error creating live analysis log:', error)
@@ -167,10 +165,9 @@ export async function DELETE(request: NextRequest) {
 
   try {
     let userId: string | null = null
-    let supabase
+    const { supabase } = await createServerSupabase(request)
 
     if (!isDevUser) {
-      supabase = await createServerSupabase(request)
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
@@ -182,16 +179,16 @@ export async function DELETE(request: NextRequest) {
       userId = user.id
     } else {
       userId = DEV_BYPASS_UID
-      // Use service role key to bypass RLS for dev users
-      const { createClient } = await import('@supabase/supabase-js')
-      supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { persistSession: false } }
-      )
     }
 
-    // Delete all logs for this user
+    // Dev users get a no-op delete
+    if (isDevUser) {
+      return NextResponse.json({
+        success: true,
+        message: 'Dev mode - delete skipped'
+      })
+    }
+
     const { error } = await supabase
       .from('live_analysis_logs')
       .delete()
