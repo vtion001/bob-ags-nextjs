@@ -35,14 +35,17 @@ export async function GET(request: NextRequest) {
     }
 
     const { supabase } = await createServerSupabase(request)
-    const { data: { user } } = await supabase.auth.getUser()
+    // MUST use getSession() to refresh tokens, otherwise auth.uid() returns null
+    const { data: { session } } = await supabase.auth.getSession()
 
-    if (!user) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
+
+    const user = session.user
 
     // Get user permissions from Supabase - check by user_id first, then fallback to email
     let { data: userRole, error } = await supabase
@@ -50,6 +53,8 @@ export async function GET(request: NextRequest) {
       .select('role, permissions')
       .eq('user_id', user.id)
       .single()
+
+    console.log('[permissions] user:', user.email, 'userRole:', userRole, 'error:', error)
 
     // If no match by user_id, try by email (for users created via OAuth or when user_id didn't match)
     if (error || !userRole) {

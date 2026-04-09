@@ -38,13 +38,15 @@ export async function GET(request: NextRequest) {
       console.log('[DEBUG] Dev user detected, isAdminUser=true')
     } else {
       const { supabase } = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      // MUST use getSession() to refresh tokens, otherwise auth.uid() returns null
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         )
       }
+      const user = session.user
       userId = user.id
       userEmail = user.email || null
       console.log('[DEBUG] Logged in user:', userEmail, 'userId:', userId)
@@ -162,14 +164,15 @@ export async function PUT(request: NextRequest) {
       currentUserId = DEV_BYPASS_UID
     } else {
       const { supabase } = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      // MUST use getSession() to refresh tokens, otherwise auth.uid() returns null
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         )
       }
-      currentUserId = user.id
+      currentUserId = session.user.id
     }
 
     const body = await request.json()

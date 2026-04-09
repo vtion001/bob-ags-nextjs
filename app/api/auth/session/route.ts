@@ -42,14 +42,22 @@ export async function GET(request: NextRequest) {
     }
 
     const { supabase } = await createServerSupabase(request)
-    const { data: { user } } = await supabase.auth.getUser()
+    // MUST use getSession() (not getUser()) to ensure token refresh
+    // getUser() only validates JWT locally without refresh, causing auth.uid() to return null
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-    if (!user) {
+    if (sessionError) {
+      console.error('Session error:', sessionError.message)
+    }
+
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'No active session' },
         { status: 401 }
       )
     }
+
+    const user = session.user
 
     // Get user role and permissions
     const { data: userRole } = await supabase
@@ -57,6 +65,8 @@ export async function GET(request: NextRequest) {
       .select('role, permissions')
       .eq('user_id', user.id)
       .single()
+
+    console.log('[session] user:', user.email, 'userRole:', userRole, 'error:', sessionError)
 
     return NextResponse.json({
       success: true,
