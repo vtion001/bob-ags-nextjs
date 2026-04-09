@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       const isSuperAdmin = userEmail && superAdminEmails.includes(userEmail)
       console.log('[DEBUG] isSuperAdmin:', isSuperAdmin)
 
-      isAdminUser = (userRole?.role === 'admin' || isSuperAdmin) ?? false
+      isAdminUser = !!(userRole?.role === 'admin' || isSuperAdmin)
     }
 
     const { supabase } = await createServerSupabase(request)

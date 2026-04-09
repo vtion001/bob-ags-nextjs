@@ -1,4 +1,4 @@
-import { CriterionResult } from './types'
+import { CriterionResult } from '@/lib/types'
 
 export function generateTags(
   results: CriterionResult[],

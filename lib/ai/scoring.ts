@@ -1,4 +1,4 @@
-import { CriterionResult, RubricBreakdown } from './types'
+import { CriterionResult, RubricBreakdown } from '@/lib/types'
 import { RUBRIC_CRITERIA, ALWAYS_NA_CRITERIA } from './rubric'
 import { keywordMatch, generateDetails } from './keyword-matching'
 

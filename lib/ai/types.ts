@@ -1,5 +1,8 @@
 import type { CriterionResult, RubricBreakdown } from '../types'
 
+// Re-export for convenience
+export type { CriterionResult, RubricBreakdown }
+
 // AI-specific types
 export interface Analysis {
   qualification_score: number

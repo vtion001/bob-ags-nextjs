@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import type { CriterionResult } from '@/lib/ai'
+import type { CriterionResult } from '@/lib/types'
 import { useAuth } from '@/contexts/AuthContext'
 import { CheckIcon, XIcon, Edit3Icon, SaveIcon, RotateCcwIcon, AlertTriangleIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
