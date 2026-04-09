@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
     if (!isDevUser(request)) {
       const { supabase } = await createServerSupabase(request)
       // MUST use getSession() to refresh cookies
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
     }

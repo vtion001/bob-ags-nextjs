@@ -21,15 +21,15 @@ export async function GET(request: NextRequest) {
     const { supabase } = await createServerSupabase(request)
 
     if (!isDevUser) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!user) {
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         )
       }
-      userId = user.id
+      userId = session.user.id
     } else {
       userId = DEV_BYPASS_UID
     }
@@ -93,15 +93,15 @@ export async function POST(request: NextRequest) {
 
     if (!isDevUser) {
       const { supabase } = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!user) {
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         )
       }
-      userId = user.id
+      userId = session.user.id
 
       const body = await request.json()
       const { call_id, call_phone, call_direction, call_timestamp, suggested_disposition, insights, transcript_preview } = body
@@ -168,15 +168,15 @@ export async function DELETE(request: NextRequest) {
     const { supabase } = await createServerSupabase(request)
 
     if (!isDevUser) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!user) {
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         )
       }
-      userId = user.id
+      userId = session.user.id
     } else {
       userId = DEV_BYPASS_UID
     }

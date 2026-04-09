@@ -134,11 +134,11 @@ export async function POST(request: NextRequest) {
   let userId: string | null = null
 
   if (!isDevUser) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    userId = user.id
+    userId = session.user.id
   } else {
     userId = DEV_BYPASS_UID
   }

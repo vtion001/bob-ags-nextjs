@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
       const { supabase } = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
     }
@@ -88,11 +88,11 @@ export async function POST(request: NextRequest) {
       userId = DEV_BYPASS_UID
     } else {
       const { supabase } = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-      userId = user.id
+      userId = session.user.id
     }
 
     const body = await request.json()

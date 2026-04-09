@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
     const { supabase } = await createServerSupabase(request)
 
     if (!isDevUser) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!user) {
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
@@ -89,15 +89,15 @@ export async function POST(request: NextRequest) {
     const { supabase } = await createServerSupabase(request)
 
     if (!isDevUser) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!user) {
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         )
       }
-      userId = user.id
+      userId = session.user.id
     } else {
       userId = DEV_BYPASS_UID
     }

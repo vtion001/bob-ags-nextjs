@@ -33,13 +33,14 @@ export async function GET(request: NextRequest) {
       console.log('[DEBUG] Dev user accessing agent profiles')
     } else {
       const { supabase } = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         )
       }
+      const user = session.user
       userId = user.id
       console.log('[DEBUG] User:', user.email, 'accessing agent profiles')
     }
@@ -101,14 +102,14 @@ export async function POST(request: NextRequest) {
       userId = DEV_BYPASS_UID
     } else {
       const { supabase } = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         )
       }
-      userId = user.id
+      userId = session.user.id
     }
 
     const body = await request.json()
@@ -164,14 +165,14 @@ export async function PUT(request: NextRequest) {
       userId = DEV_BYPASS_UID
     } else {
       const { supabase } = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         )
       }
-      userId = user.id
+      userId = session.user.id
     }
 
     const body = await request.json()
@@ -223,8 +224,8 @@ export async function DELETE(request: NextRequest) {
   try {
     if (!isDevUser(request)) {
       const { supabase } = await createServerSupabase(request)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
@@ -233,7 +234,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
+    const id = searchParams.get('id') ?? undefined
 
     if (!id) {
       return NextResponse.json(
