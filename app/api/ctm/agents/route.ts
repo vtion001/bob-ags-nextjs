@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
 
     if (!agentsService.isConfigured()) {
       return NextResponse.json(
-        { error: 'CTM not configured' },
-        { status: 500 }
+        { error: 'CTM not configured', data: [], agents: [] },
+        { status: 200 }
       )
     }
 
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
       message.includes('CTM not configured')
     ) {
       return NextResponse.json(
-        { error: 'CTM not configured' },
-        { status: 500 }
+        { error: 'CTM not configured', data: [], agents: [] },
+        { status: 200 }
       )
     }
 
@@ -44,8 +44,8 @@ export async function GET(request: NextRequest) {
       message.includes('network')
     ) {
       return NextResponse.json(
-        { error: 'CTM API unavailable' },
-        { status: 503 }
+        { success: true, data: [], agents: [] },
+        { status: 200 }
       )
     }
 
