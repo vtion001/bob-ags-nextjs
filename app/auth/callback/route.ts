@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const devEmail = 'agsdev@allianceglobalsolutions.com'
     const isDev = email === devEmail
 
-    await supabase.from('user_roles').insert({
+    const { error: insertError } = await supabase.from('user_roles').insert({
       user_id: user.id,
       email: email,
       role: isDev ? 'admin' : 'viewer',
@@ -48,6 +48,11 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    if (insertError) {
+      console.error('Failed to insert user_roles:', insertError)
+      return NextResponse.redirect(new URL('/?error=registration_failed', request.url))
+    }
+
     // Also create public.users entry for OAuth users
     await supabase.from('users').upsert({
       id: user.id,
@@ -60,12 +65,17 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  // Check if user is approved
+  // Verify user_roles row was created before checking approval status
   const { data: userRole } = await supabase
     .from('user_roles')
     .select('approved')
     .eq('user_id', user.id)
     .single()
+
+  if (!userRole) {
+    console.error('User role not found after insert/lookup')
+    return NextResponse.redirect(new URL('/?error=registration_failed', request.url))
+  }
 
   if (userRole?.approved === false) {
     await supabase.auth.signOut()

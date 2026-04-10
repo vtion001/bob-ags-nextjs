@@ -149,7 +149,34 @@ export function useSettings(): UseSettingsReturn {
   }, [])
 
   useEffect(() => {
-    loadSettings()
+    let mounted = true
+
+    const initSettings = async () => {
+      // Check for existing session first (fallback for already-established sessions)
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (session) {
+        if (mounted) loadSettings()
+        return
+      }
+
+      // No session yet, wait for SIGNED_IN event after OAuth callback
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session && mounted) {
+          loadSettings()
+        }
+      })
+
+      return () => {
+        subscription.unsubscribe()
+      }
+    }
+
+    initSettings()
+
+    return () => {
+      mounted = false
+    }
   }, [loadSettings])
 
   const handleSave = async () => {

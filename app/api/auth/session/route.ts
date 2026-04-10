@@ -60,13 +60,28 @@ export async function GET(request: NextRequest) {
     const user = session.user
 
     // Get user role and permissions
-    const { data: userRole } = await supabase
+    const { data: userRole, error: roleError } = await supabase
       .from('user_roles')
       .select('role, permissions')
       .eq('user_id', user.id)
       .single()
 
-    console.log('[session] user:', user.email, 'userRole:', userRole, 'error:', sessionError)
+    // Distinguish between "row not found" and actual query errors
+    if (roleError) {
+      if (roleError.code === 'PGRST116') {
+        // Row not found - OK to fall back to viewer as last resort
+        console.log('[session] user:', user.email, 'role query: no row found, falling back to viewer')
+      } else {
+        // Query failed (RLS blocked, connection error, etc.) - don't silently give viewer
+        console.error('[session] user:', user.email, 'role query failed:', roleError.message, 'code:', roleError.code)
+        return NextResponse.json(
+          { error: 'Failed to fetch user role' },
+          { status: 500 }
+        )
+      }
+    } else {
+      console.log('[session] user:', user.email, 'userRole:', userRole, 'sessionError:', sessionError)
+    }
 
     return NextResponse.json({
       success: true,
