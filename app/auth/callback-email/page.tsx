@@ -9,12 +9,21 @@ type SignUpStatus = 'loading' | 'success' | 'pending' | 'denied' | 'error'
 
 export default function EmailCallback() {
   const router = useRouter()
-  const supabase = createClient()
   const [status, setStatus] = useState<SignUpStatus>('loading')
   const [message, setMessage] = useState('')
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Guard against missing env vars during static generation
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        setStatus('error')
+        setMessage('Configuration error. Please contact support.')
+        setTimeout(() => router.push('/'), 5000)
+        return
+      }
+
+      const supabase = createClient()
+
       try {
         const { data: { user }, error } = await supabase.auth.getUser()
 
@@ -65,7 +74,7 @@ export default function EmailCallback() {
     }
 
     handleCallback()
-  }, [router, supabase])
+  }, [router])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
