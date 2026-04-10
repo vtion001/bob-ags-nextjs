@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Prefer': 'return=minimal'
+        'Prefer': 'resolution=merge-duplicates'
       },
       body: JSON.stringify({
         user_id: userId,
