@@ -148,6 +148,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('[Auth] Auth error detected, redirecting to login')
         window.location.href = '/'
       }
+      // INITIAL_SESSION and SIGNED_IN indicate a valid session was established
+      // Refresh auth state to pick up any changes
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        fetchAll()
+      }
     })
     return () => subscription.unsubscribe()
   }, [])

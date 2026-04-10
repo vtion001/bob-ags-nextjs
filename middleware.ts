@@ -36,6 +36,7 @@ export default async function proxy(request: NextRequest) {
     secure: isSecure,
     sameSite: 'lax' as const,
     path: '/',
+    maxAge: 60 * 60 * 24 * 7,
   }
 
   let response = NextResponse.next({ request: { headers: request.headers } })
