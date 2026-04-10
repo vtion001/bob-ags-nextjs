@@ -8,6 +8,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const agentsService = new AgentsService()
+
+    if (!agentsService.isConfigured()) {
+      return NextResponse.json(
+        { error: 'CTM not configured' },
+        { status: 500 }
+      )
+    }
+
     const agents = await agentsService.getAgents()
 
     return NextResponse.json({
@@ -15,7 +23,32 @@ export async function GET(request: NextRequest) {
       data: agents,
       agents
     })
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+
+    if (
+      message.includes('CTM credentials not configured') ||
+      message.includes('CTM not configured')
+    ) {
+      return NextResponse.json(
+        { error: 'CTM not configured' },
+        { status: 500 }
+      )
+    }
+
+    if (
+      message.includes('fetch failed') ||
+      message.includes('ENOTFOUND') ||
+      message.includes('ECONNREFUSED') ||
+      message.includes('timeout') ||
+      message.includes('network')
+    ) {
+      return NextResponse.json(
+        { error: 'CTM API unavailable' },
+        { status: 503 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch agents from CallTrackingMetrics' },
       { status: 502 }

@@ -8,17 +8,24 @@ export async function GET(request: NextRequest) {
 
   try {
     const callsService = new CallsService()
-    const calls = await callsService.getActiveCalls()
+
+    // Defensive: getActiveCalls() may return null if CTM returns an empty/non-JSON body.
+    // Normalize to [] so downstream polling code never receives null.
+    const raw = await callsService.getActiveCalls()
+    const calls = Array.isArray(raw) ? raw : []
 
     return NextResponse.json({
       success: true,
       calls
     })
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch active calls from CallTrackingMetrics' },
-      { status: 502 }
-    )
+    // Never throw 500 for CTM failures — degrade gracefully with empty array.
+    // The monitor page polls this every few seconds; a 500 would trigger
+    // auth errors / logout loops on the client.
+    return NextResponse.json({
+      success: true,
+      calls: []
+    })
   }
 }
 

@@ -10,6 +10,7 @@ interface UseMonitorPageOptions {
   role?: 'admin' | 'manager' | 'viewer' | 'qa' | 'agent'
   assignedAgentId?: string | null
   onNewCallAutoStart?: (call: Call) => void
+  enabled?: boolean
 }
 
 interface UseMonitorPageReturn {
@@ -41,7 +42,7 @@ interface UseMonitorPageReturn {
 }
 
 export function useMonitorPage(options?: UseMonitorPageOptions): UseMonitorPageReturn {
-  const { role = 'viewer', assignedAgentId = null, onNewCallAutoStart } = options || {}
+  const { role = 'viewer', assignedAgentId = null, onNewCallAutoStart, enabled = true } = options || {}
   const [activeCalls, setActiveCalls] = useState<Call[]>([])
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
   const [selectedCallData, setSelectedCallData] = useState<Call | null>(null)
@@ -196,6 +197,14 @@ export function useMonitorPage(options?: UseMonitorPageOptions): UseMonitorPageR
   }, [gracePeriodRemaining, isInGracePeriod, stopMonitoring])
 
   useEffect(() => {
+    // Don't set up polling if disabled (e.g., no active session)
+    if (!enabled) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+      return
+    }
     if (isMonitoring) {
       if (pollingRef.current) {
         clearInterval(pollingRef.current)
@@ -212,7 +221,7 @@ export function useMonitorPage(options?: UseMonitorPageOptions): UseMonitorPageR
         pollingRef.current = null
       }
     }
-  }, [fetchActiveCalls, pollingInterval, isMonitoring])
+  }, [fetchActiveCalls, pollingInterval, isMonitoring, enabled])
 
   const handleStartMonitoring = useCallback(async () => {
     const callIdToUse = selectedCallId || selectedCallData?.id

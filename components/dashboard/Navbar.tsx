@@ -18,11 +18,13 @@ export default function Navbar({ email, onLogout }: NavbarProps) {
     setIsLoading(true)
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
-      window.location.href = '/'
+      // Use router.push instead of window.location.href to allow React components
+      // to properly unmount before navigation, stopping intervals and cleanup effects
+      router.push('/')
     } catch (error) {
       console.error('Logout failed:', error)
-    } finally {
-      setIsLoading(false)
+      // Still navigate to login on error
+      router.push('/')
     }
   }
 

@@ -59,28 +59,38 @@ export async function GET(request: NextRequest) {
 
     const user = session.user
 
-    // Get user role and permissions
-    const { data: userRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role, permissions')
-      .eq('user_id', user.id)
-      .single()
+    // Get user role and permissions — wrap in try/catch for safety
+    let userRole = null
+    try {
+      const { data, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role, permissions')
+        .eq('user_id', user.id)
+        .single()
 
-    // Distinguish between "row not found" and actual query errors
-    if (roleError) {
-      if (roleError.code === 'PGRST116') {
-        // Row not found - OK to fall back to viewer as last resort
-        console.log('[session] user:', user.email, 'role query: no row found, falling back to viewer')
+      if (roleError) {
+        // Distinguish between "row not found" and actual query errors
+        if (roleError.code === 'PGRST116') {
+          // Row not found - OK to fall back to viewer
+          console.log('[session] user:', user.email, 'role query: no row found, falling back to viewer')
+        } else {
+          // Query failed (RLS blocked, connection error, etc.) — return 500
+          console.error('[session] user:', user.email, 'role query failed:', roleError.message, 'code:', roleError.code)
+          return NextResponse.json(
+            { error: 'Failed to fetch user role' },
+            { status: 500 }
+          )
+        }
       } else {
-        // Query failed (RLS blocked, connection error, etc.) - don't silently give viewer
-        console.error('[session] user:', user.email, 'role query failed:', roleError.message, 'code:', roleError.code)
-        return NextResponse.json(
-          { error: 'Failed to fetch user role' },
-          { status: 500 }
-        )
+        userRole = data
+        console.log('[session] user:', user.email, 'userRole:', userRole, 'sessionError:', sessionError)
       }
-    } else {
-      console.log('[session] user:', user.email, 'userRole:', userRole, 'sessionError:', sessionError)
+    } catch (error) {
+      console.error('[session] user:', user.email, 'role query threw:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch user role' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({

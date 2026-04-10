@@ -35,8 +35,13 @@ import { formatDuration } from "@/lib/utils/formatters"
 import { KnowledgeSuggestions } from "@/components/monitor"
 
 export default function MonitorPage() {
-  const { role, isAgent } = useAuth()
+  const { role, isAgent, isReady, email } = useAuth()
   const [assignedAgentId, setAssignedAgentId] = useState<string | null>(null)
+
+  // Guard: don't render or poll if not authenticated
+  if (!isReady || !email) {
+    return null
+  }
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -75,7 +80,7 @@ export default function MonitorPage() {
     hasAgentAssignment,
     gracePeriodRemaining,
     isInGracePeriod,
-  } = useMonitorPage({ role: role as 'admin' | 'manager' | 'viewer' | 'qa' | 'agent', assignedAgentId })
+  } = useMonitorPage({ role: role as 'admin' | 'manager' | 'viewer' | 'qa' | 'agent', assignedAgentId, enabled: !!email && isReady })
 
   const {
     aiInsights,
