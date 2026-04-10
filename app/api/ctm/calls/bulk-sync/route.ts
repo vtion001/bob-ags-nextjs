@@ -1,31 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-
-const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
+import { authenticate } from '@/lib/api-helpers'
 
 export async function GET(request: NextRequest) {
   try {
-    const devSessionCookie = request.cookies.get('sb-dev-session')
-    let isDevUser = false
-    if (devSessionCookie) {
-      try {
-        const devSession = JSON.parse(devSessionCookie.value)
-        if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-          isDevUser = true
-        }
-      } catch {}
-    }
-
-    if (!isDevUser) {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-    }
+    const authError = await authenticate(request)
+    if (authError) return authError
 
     // Bulk sync is a no-op in standalone mode - returns empty result
     return NextResponse.json({
@@ -43,27 +22,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const devSessionCookie = request.cookies.get('sb-dev-session')
-    let isDevUser = false
-    if (devSessionCookie) {
-      try {
-        const devSession = JSON.parse(devSessionCookie.value)
-        if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-          isDevUser = true
-        }
-      } catch {}
-    }
-
-    if (!isDevUser) {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-    }
+    const authError = await authenticate(request)
+    if (authError) return authError
 
     // Bulk sync is a no-op in standalone mode - returns empty result
     return NextResponse.json({

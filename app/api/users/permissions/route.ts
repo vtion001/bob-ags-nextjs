@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
 import { DEFAULT_PERMISSIONS, RoleType, UserPermissions } from '@/lib/settings/types'
-
-// Dev bypass constants
-const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
-const DEV_BYPASS_EMAIL = 'dev@bob.local'
 
 function getPermissionsForRole(role: string): UserPermissions {
   const validRoles: RoleType[] = ['admin', 'manager', 'viewer', 'qa', 'agent']

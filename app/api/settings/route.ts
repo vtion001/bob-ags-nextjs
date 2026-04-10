@@ -1,37 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-
-const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
+import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
 
 export async function GET(request: NextRequest) {
   try {
-    // Dev bypass check
-    const devSessionCookie = request.cookies.get('sb-dev-session')
-    let isDevUser = false
-    let userId = null
+    let userId: string | null = null
 
-    if (devSessionCookie) {
-      try {
-        const devSession = JSON.parse(devSessionCookie.value)
-        if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-          isDevUser = true
-          userId = DEV_BYPASS_UID
-        }
-      } catch {}
-    }
-
-    let supabase = null
-    if (!isDevUser) {
-      supabase = (await createServerSupabase(request)).supabase
+    if (isDevUser(request)) {
+      userId = DEV_BYPASS_UID
+    } else {
+      const { supabase } = await createServerSupabase(request)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       userId = session.user.id
-    } else {
-      // For dev user, create supabase client without auth
-      supabase = (await createServerSupabase(request)).supabase
     }
+
+    const supabase = (await createServerSupabase(request)).supabase
 
     const { data: userSettings, error } = await supabase
       .from('user_settings')
@@ -71,37 +57,26 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Dev bypass check
-    const devSessionCookie = request.cookies.get('sb-dev-session')
-    let isDevUser = false
-    let userId = null
+    let userId: string | null = null
+    const isDev = isDevUser(request)
 
-    if (devSessionCookie) {
-      try {
-        const devSession = JSON.parse(devSessionCookie.value)
-        if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-          isDevUser = true
-          userId = DEV_BYPASS_UID
-        }
-      } catch {}
-    }
-
-    let supabase = null
-    if (!isDevUser) {
-      supabase = (await createServerSupabase(request)).supabase
+    if (isDev) {
+      userId = DEV_BYPASS_UID
+    } else {
+      const { supabase } = await createServerSupabase(request)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       userId = session.user.id
-    } else {
-      supabase = (await createServerSupabase(request)).supabase
     }
+
+    const supabase = (await createServerSupabase(request)).supabase
 
     const body = await request.json()
 
     // Dev users don't have real auth entries - skip actual DB write but return success
-    if (isDevUser) {
+    if (isDev) {
       return NextResponse.json({
         success: true,
         settings: body,
@@ -141,32 +116,21 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Dev bypass check
-    const devSessionCookie = request.cookies.get('sb-dev-session')
-    let isDevUser = false
-    let userId = null
+    let userId: string | null = null
+    const isDev = isDevUser(request)
 
-    if (devSessionCookie) {
-      try {
-        const devSession = JSON.parse(devSessionCookie.value)
-        if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-          isDevUser = true
-          userId = DEV_BYPASS_UID
-        }
-      } catch {}
-    }
-
-    let supabase = null
-    if (!isDevUser) {
-      supabase = (await createServerSupabase(request)).supabase
+    if (isDev) {
+      userId = DEV_BYPASS_UID
+    } else {
+      const { supabase } = await createServerSupabase(request)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       userId = session.user.id
-    } else {
-      supabase = (await createServerSupabase(request)).supabase
     }
+
+    const supabase = (await createServerSupabase(request)).supabase
 
     const { error } = await supabase
       .from('user_settings')

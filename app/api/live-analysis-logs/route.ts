@@ -1,26 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-
-const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
+import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
 
 export async function GET(request: NextRequest) {
-  // Dev bypass check
-  const devSessionCookie = request.cookies.get('sb-dev-session')
-  let isDevUser = false
-  if (devSessionCookie) {
-    try {
-      const devSession = JSON.parse(devSessionCookie.value)
-      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-        isDevUser = true
-      }
-    } catch {}
-  }
-
   try {
     let userId: string | null = null
     const { supabase } = await createServerSupabase(request)
 
-    if (!isDevUser) {
+    if (!isDevUser(request)) {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session?.user) {
@@ -38,7 +25,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10)
 
     // Dev users get empty results (they don't have a real auth entry)
-    if (isDevUser) {
+    if (isDevUser(request)) {
       return NextResponse.json({
         success: true,
         data: [],
@@ -76,22 +63,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Dev bypass check
-  const devSessionCookie = request.cookies.get('sb-dev-session')
-  let isDevUser = false
-  if (devSessionCookie) {
-    try {
-      const devSession = JSON.parse(devSessionCookie.value)
-      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-        isDevUser = true
-      }
-    } catch {}
-  }
-
   try {
     let userId: string | null = null
 
-    if (!isDevUser) {
+    if (!isDevUser(request)) {
       const { supabase } = await createServerSupabase(request)
       const { data: { session } } = await supabase.auth.getSession()
 
@@ -151,23 +126,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  // Dev bypass check
-  const devSessionCookie = request.cookies.get('sb-dev-session')
-  let isDevUser = false
-  if (devSessionCookie) {
-    try {
-      const devSession = JSON.parse(devSessionCookie.value)
-      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-        isDevUser = true
-      }
-    } catch {}
-  }
-
   try {
     let userId: string | null = null
     const { supabase } = await createServerSupabase(request)
 
-    if (!isDevUser) {
+    if (!isDevUser(request)) {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session?.user) {
@@ -182,7 +145,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Dev users get a no-op delete
-    if (isDevUser) {
+    if (isDevUser(request)) {
       return NextResponse.json({
         success: true,
         message: 'Dev mode - delete skipped'

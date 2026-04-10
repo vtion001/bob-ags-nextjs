@@ -5,11 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
+// Re-export formatDuration from centralized formatters
+export { formatDuration } from './utils/formatters'
 
 export function getScoreBadge(score: number): { label: string; color: string } {
   if (score >= 80) return { label: 'Excellent', color: 'bg-green-100 text-green-800' }

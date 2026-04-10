@@ -12,11 +12,20 @@ export function formatTime(date: Date | string): string {
   return `${days}d ago`
 }
 
-export function formatDuration(seconds: number): string {
+export function formatDurationLong(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins}m ${secs}s`
 }
+
+export function formatDurationCompact(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+// Backwards compatibility alias
+export const formatDuration = formatDurationCompact
 
 export function formatPhone(phone: string): string {
   const cleaned = phone.replace(/\D/g, '')

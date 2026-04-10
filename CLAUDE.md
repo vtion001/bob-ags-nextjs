@@ -19,7 +19,7 @@ pnpm lint     # Run ESLint
 
 **Package manager:** pnpm (not npm). Node 22.x required.
 
-**Testing:** No test suite configured yet.
+**Testing:** Playwright is installed (`@playwright/test`). Run tests with `pnpm exec playwright test`. Run a single test with `pnpm exec playwright test path/to/test.spec.ts`.
 
 ## Code Style
 
@@ -282,6 +282,15 @@ Dark navy theme with cyan accents:
 - Navy 900: `#0A1628` (primary)
 - Background: `#050D18`
 - Cyan Accent: `#00D4FF`
+
+## Key Pages
+
+- `/` — Login page with demo/dev credential support
+- `/dashboard` — Stats overview + recent calls table
+- `/dashboard/calls/[id]` — Call detail: score, transcript, AI insights
+- `/dashboard/monitor` — Live call monitoring with polling
+- `/dashboard/history` — Search with phone/score/date filters + CSV export
+- `/dashboard/settings` — Store CTM and OpenRouter API credentials
 
 ## Demo Credentials
 

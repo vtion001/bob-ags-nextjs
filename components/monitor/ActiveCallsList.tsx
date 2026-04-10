@@ -1,6 +1,8 @@
 import React from "react";
 import Card from "@/components/ui/Card";
 import type { Call } from "@/lib/ctm";
+import { formatDuration } from "@/lib/utils/formatters";
+import { extractGroup } from "@/lib/monitor/helpers";
 
 interface ActiveCallsListProps {
   calls: Call[];
@@ -11,27 +13,6 @@ interface ActiveCallsListProps {
   onGroupChange: (group: string) => void;
   role?: string;
   assignedAgentId?: string | null;
-}
-
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-function extractGroup(agentName: string | undefined, source?: string): string {
-  if (!agentName || agentName === "Unknown Agent") {
-    if (source) return source;
-    return "Unassigned";
-  }
-  const KNOWN_GROUPS = ["Phillies", "Referrals", "Virtual", "Opener", "Alumni", "Finance", "General", "MA", "Hulk Onsite", "Hulk Offsite", "Legit MH", "Legit Beacon", "Travel Liason", "Daylight Misc", "Ember 12 Step", "Marty Direct", "Trost Virtual Admissions", "Retention Team", "Direct"];
-  for (const group of KNOWN_GROUPS) {
-    if (agentName.includes(group)) {
-      return group;
-    }
-  }
-  const parts = agentName.split(" - ");
-  return parts.length > 1 ? parts[parts.length - 1].trim() : "General";
 }
 
 interface CallButtonProps {

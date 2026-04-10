@@ -1,25 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { analyzeTranscript } from '@/lib/ai/analyzer'
-
-const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
-
-function isDevUser(request: NextRequest): boolean {
-  const devSessionCookie = request.cookies.get('sb-dev-session')
-  if (devSessionCookie) {
-    try {
-      const devSession = JSON.parse(devSessionCookie.value)
-      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-        return true
-      }
-    } catch {}
-  }
-  const sessionCookie = request.cookies.get('sb-session')
-  if (sessionCookie?.value === 'dev-session-placeholder') {
-    return true
-  }
-  return false
-}
+import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
 
 export async function POST(request: NextRequest) {
   try {

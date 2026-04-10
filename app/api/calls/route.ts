@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { CallsService } from '@/lib/ctm/services/calls'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { createCallsService } from '@/lib/ctm/services/calls'
+import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
 
 export async function GET(request: NextRequest) {
   try {
@@ -117,23 +118,11 @@ export async function GET(request: NextRequest) {
 
 // POST handler for storing call/analysis data to Supabase
 export async function POST(request: NextRequest) {
-  const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
-  const devSessionCookie = request.cookies.get('sb-dev-session')
-  let isDevUser = false
-  if (devSessionCookie) {
-    try {
-      const devSession = JSON.parse(devSessionCookie.value)
-      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-        isDevUser = true
-      }
-    } catch {}
-  }
-
   const { supabase, response } = await createServerSupabase(request)
 
   let userId: string | null = null
 
-  if (!isDevUser) {
+  if (!isDevUser(request)) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

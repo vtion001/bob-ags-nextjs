@@ -7,6 +7,8 @@ export const KNOWN_GROUPS = [
 
 export const PHILLIES_GROUP_NAME = "Phillies"
 
+import { formatDuration } from '@/lib/utils/formatters'
+
 export function extractGroup(agentName: string | undefined, source?: string): string {
   if (!agentName || agentName === "Unknown Agent") {
     if (source) return source;
@@ -19,12 +21,6 @@ export function extractGroup(agentName: string | undefined, source?: string): st
   }
   const parts = agentName.split(" - ");
   return parts.length > 1 ? parts[parts.length - 1].trim() : "General";
-}
-
-export function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
 export function getSentimentColor(sentiment: string): string {

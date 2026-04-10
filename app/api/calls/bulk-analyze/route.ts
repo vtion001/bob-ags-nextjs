@@ -1,24 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-
-const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
-
-function isDevUser(request: NextRequest): boolean {
-  const devSessionCookie = request.cookies.get('sb-dev-session')
-  if (devSessionCookie) {
-    try {
-      const devSession = JSON.parse(devSessionCookie.value)
-      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-        return true
-      }
-    } catch {}
-  }
-  const sessionCookie = request.cookies.get('sb-session')
-  if (sessionCookie?.value === 'dev-session-placeholder') {
-    return true
-  }
-  return false
-}
+import { isDevUser } from '@/lib/auth/is-dev-user'
+import { evaluateRubric, calculateBreakdown, calculateScore } from '@/lib/ai/scoring'
+import { generateTags, getDisposition, generateSummary } from '@/lib/ai/generation'
 
 async function analyzeWithOpenAI(transcript: string, phone: string, ctmStarRating?: number) {
   const apiKey = process.env.OPENAI_API_KEY
@@ -113,169 +97,6 @@ function parseRubricResults(content: string): Record<string, { pass: boolean; de
   return results
 }
 
-function evaluateRubric(
-  lower: string,
-  rubricCriteria: Array<{ id: string; name: string; category: string; severity: string; deduction: number; passPhrases: string[]; failPhrases: string[]; ztp: boolean; autoFail: boolean }>,
-  aiResults: Record<string, { pass: boolean; details: string }>
-): Array<{ id: string; criterion: string; pass: boolean; ztp: boolean; autoFail: boolean; details: string; deduction: number; severity: string; category: string; na?: boolean }> {
-  const ALWAYS_NA_CRITERIA = ['4.2', '4.3', '4.4']
-
-  function keywordMatch(criterion: typeof rubricCriteria[0]): boolean {
-    const passCount = criterion.passPhrases.filter(p => lower.includes(p.toLowerCase())).length
-    const failCount = criterion.failPhrases.filter(p => lower.includes(p.toLowerCase())).length
-    if (criterion.ztp || criterion.autoFail) return failCount === 0
-    return passCount > failCount
-  }
-
-  function generateDetails(criterion: typeof rubricCriteria[0]): string {
-    const found = criterion.passPhrases.find(p => lower.includes(p.toLowerCase()))
-    if (found) return `Detected: "${found}"`
-    const missed = criterion.failPhrases.find(p => lower.includes(p.toLowerCase()))
-    if (missed) return `Issue detected: "${missed}"`
-    return criterion.ztp || criterion.autoFail ? 'No violations detected' : 'Not clearly detected in transcript'
-  }
-
-  return rubricCriteria.map(criterion => {
-    if (ALWAYS_NA_CRITERIA.includes(criterion.id)) {
-      return {
-        id: criterion.id,
-        criterion: criterion.name,
-        pass: true,
-        na: true,
-        ztp: criterion.ztp,
-        autoFail: criterion.autoFail,
-        details: 'N/A - Requires manual Salesforce verification',
-        deduction: 0,
-        severity: criterion.severity,
-        category: criterion.category,
-      }
-    }
-
-    const aiResult = aiResults[criterion.id]
-    const pass = aiResult ? aiResult.pass : keywordMatch(criterion)
-    const details = aiResult?.details || generateDetails(criterion)
-    return {
-      id: criterion.id,
-      criterion: criterion.name,
-      pass,
-      ztp: criterion.ztp,
-      autoFail: criterion.autoFail,
-      details,
-      deduction: pass ? 0 : criterion.deduction,
-      severity: criterion.severity,
-      category: criterion.category,
-    }
-  })
-}
-
-function calculateBreakdown(results: ReturnType<typeof evaluateRubric>) {
-  const breakdown = {
-    opening_score: 0, opening_max: 0,
-    probing_score: 0, probing_max: 0,
-    qualification_score_detail: 0, qualification_max: 0,
-    closing_score: 0, closing_max: 0,
-    compliance_score: 0, compliance_max: 0
-  }
-  let ztpFailures = 0
-  let autoFailed = false
-
-  for (const r of results) {
-    if (r.na) continue
-    const points = r.ztp ? 10 : r.severity === 'Minor' ? 2 : r.severity === 'Major' ? 5 : 0
-    const key = r.category === 'Opening' ? 'opening' :
-                 r.category === 'Probing' ? 'probing' :
-                 r.category === 'Qualification' ? 'qualification' :
-                 r.category === 'Closing' ? 'closing' : 'compliance'
-    const scoreKey = `${key}_score` as keyof typeof breakdown
-    const maxKey = `${key}_max` as keyof typeof breakdown
-    breakdown[maxKey] += points
-    if (r.pass) breakdown[scoreKey] += points
-    if (r.ztp && !r.pass) ztpFailures++
-    if (r.autoFail && !r.pass) autoFailed = true
-  }
-
-  return { breakdown, ztpFailures, autoFailed }
-}
-
-function calculateScore(breakdown: ReturnType<typeof calculateBreakdown>['breakdown'], ztpFailures: number, autoFailed: boolean): number {
-  if (autoFailed || ztpFailures >= 2) return 0
-  const totalMax = breakdown.opening_max + breakdown.probing_max + breakdown.qualification_max + breakdown.closing_max + breakdown.compliance_max
-  const totalScore = breakdown.opening_score + breakdown.probing_score + breakdown.qualification_score_detail + breakdown.closing_score + breakdown.compliance_score
-  if (totalMax === 0) return 50
-  return Math.round((totalScore / totalMax) * 100)
-}
-
-const RUBRIC_CRITERIA = [
-  { id: '1.1', name: 'Used approved greeting', category: 'Opening', severity: 'Minor', deduction: 2, passPhrases: ['hello flyland', 'flyland this is'], failPhrases: ['hi there', 'flyland help line'], ztp: false, autoFail: false },
-  { id: '1.2', name: 'Confirmed caller name and relationship', category: 'Opening', severity: 'Minor', deduction: 2, passPhrases: ["what's your name", 'can i get your name', 'may i have your name'], failPhrases: [], ztp: false, autoFail: false, naTriggers: ['facility inquiry'] },
-  { id: '1.3', name: 'Identified reason for call promptly', category: 'Opening', severity: 'Major', deduction: 5, passPhrases: ['how can i help', 'what brings you', 'reason for your call'], failPhrases: ['assumed reason', 'jumped to questions'], ztp: false, autoFail: false },
-  { id: '1.4', name: 'Verified caller location (state)', category: 'Opening', severity: 'Major', deduction: 5, passPhrases: ['what state', 'which state', 'located in', 'state are you'], failPhrases: ['never asks state'], ztp: false, autoFail: false },
-  { id: '2.1', name: 'Asked about sober/clean time', category: 'Probing', severity: 'Major', deduction: 5, passPhrases: ['last drink', 'last drug use', 'when was your last', 'how long has it been'], failPhrases: ['how long sober', 'skips time'], ztp: false, autoFail: false },
-  { id: '2.2', name: 'Inquired about substance/type of struggle', category: 'Probing', severity: 'Major', deduction: 5, passPhrases: ['what substance', 'struggling with', 'alcohol drugs', 'drug or alcohol'], failPhrases: ['gives detox advice'], ztp: false, autoFail: false },
-  { id: '2.3', name: 'Asked about insurance type and details', category: 'Probing', severity: 'Major', deduction: 5, passPhrases: ['type of insurance', 'private or state', 'medicaid', 'medicare', 'insurance do you have'], failPhrases: ['only asks do you have insurance', 'skips insurance'], ztp: false, autoFail: false },
-  { id: '2.4', name: 'Gathered additional info concisely', category: 'Probing', severity: 'Minor', deduction: 2, passPhrases: ['openness to help', 'facility name', 'follow-up'], failPhrases: ['probes too many times', 'repeated questions'], ztp: false, autoFail: false },
-  { id: '2.5', name: 'Verified caller phone number', category: 'Probing', severity: 'Minor', deduction: 2, passPhrases: ['best number', 'phone number', 'reach you'], failPhrases: ['skips phone when needed'], ztp: false, autoFail: false },
-  { id: '3.1', name: 'Correctly assessed eligibility', category: 'Qualification', severity: 'Major', deduction: 5, passPhrases: ['transferring you', 'referring to', 'qualified'], failPhrases: ['wrong transfer', 'wrong referral', 'offers self-pay when prohibited'], ztp: false, autoFail: false },
-  { id: '3.2', name: 'Handled caller-specific needs correctly', category: 'Qualification', severity: 'Major', deduction: 5, passPhrases: ['treatment', 'samhsa', 'al-anon', 'aa', 'na'], failPhrases: ['wrong resource', 'incorrect referral'], ztp: false, autoFail: false },
-  { id: '3.3', name: 'Used approved rebuttals/scripts', category: 'Qualification', severity: 'Major', deduction: 5, passPhrases: ['we are a helpline', 'to best help you', 'approved rebuttal'], failPhrases: ['deviates script', 'pressures caller'], ztp: false, autoFail: false },
-  { id: '3.4', name: 'Avoided unqualified transfers', category: 'Qualification', severity: 'ZTP', deduction: 0, passPhrases: ['does not transfer state insurance', 'no transfer for self-pay', 'correctly disqualified'], failPhrases: ['transfers state insurance', 'transfers self-pay', 'unqualified transfer'], ztp: true, autoFail: true },
-  { id: '3.5', name: 'Escalated qualified leads promptly', category: 'Qualification', severity: 'Major', deduction: 5, passPhrases: ['transferring now', 'let me get you', 'transfer in'], failPhrases: ['delays transfer', 'fails to tag'], ztp: false, autoFail: false },
-  { id: '3.6', name: 'Provided correct referrals for non-qualifying', category: 'Qualification', severity: 'Major', deduction: 5, passPhrases: ['988', 'samhsa', 'here are resources'], failPhrases: ['wrong referral', 'missing referral'], ztp: false, autoFail: false },
-  { id: '3.7', name: 'Maintained empathy and professionalism', category: 'Qualification', severity: 'Minor', deduction: 2, passPhrases: ['i understand', 'thank you for', "that's understandable", 'appreciate you'], failPhrases: ['irritation', 'no empathy', 'dismissive'], ztp: false, autoFail: false },
-  { id: '4.1', name: 'Ended call professionally', category: 'Closing', severity: 'Minor', deduction: 2, passPhrases: ['let me get you', 'here are the resources', 'thank you for calling', 'transferring now'], failPhrases: ['abrupt hang-up', 'unclear next steps'], ztp: false, autoFail: false },
-  { id: '4.2', name: 'Documented in Salesforce within 5 minutes', category: 'Closing', severity: 'Major', deduction: 5, passPhrases: ['documented', 'logged', 'salesforce', 'notes taken'], failPhrases: ['no documentation', 'late documentation'], ztp: false, autoFail: false },
-  { id: '4.3', name: 'Applied correct star rating/disposition', category: 'Closing', severity: 'Major', deduction: 5, passPhrases: ['4 stars', 'qualified transfer', 'correct rating'], failPhrases: ['wrong stars', 'incorrect disposition'], ztp: false, autoFail: false },
-  { id: '4.4', name: 'Noted follow-up/callback requests', category: 'Closing', severity: 'Minor', deduction: 2, passPhrases: ['callback request', 'follow-up noted', 'will call back'], failPhrases: ['callback omitted'], ztp: false, autoFail: false },
-  { id: '5.1', name: 'Upheld patient confidentiality (HIPAA)', category: 'Compliance', severity: 'ZTP', deduction: 0, passPhrases: ['hipaa', 'confidential', 'protected health'], failPhrases: ['shares info unauthorized', 'hipaa breach', 'unauthorized disclosure'], ztp: true, autoFail: true },
-  { id: '5.2', name: 'Avoided providing medical advice', category: 'Compliance', severity: 'ZTP', deduction: 0, passPhrases: ['i cannot advise', 'not a medical', 'consult a professional'], failPhrases: ['detox advice', 'withdrawal advice', 'dosage', 'treatment recommendation'], ztp: true, autoFail: true },
-  { id: '5.3', name: 'Maintained response time', category: 'Compliance', severity: 'Minor', deduction: 2, passPhrases: ['responding promptly', 'answered quickly'], failPhrases: ['delayed response'], ztp: false, autoFail: false },
-  { id: '5.4', name: 'Demonstrated soft skills', category: 'Compliance', severity: 'Minor', deduction: 2, passPhrases: ['active listening', 'clear communication', 'professional'], failPhrases: ['interruptions', 'unclear'], ztp: false, autoFail: false },
-  { id: '5.5', name: 'Adhered to SOP/tools', category: 'Compliance', severity: 'Major', deduction: 5, passPhrases: ['using ctm', 'using zoho', 'approved tools'], failPhrases: ['unapproved script', 'deviates from tools'], ztp: false, autoFail: false },
-]
-
-function generateTags(results: ReturnType<typeof evaluateRubric>, score: number, insurance: string, state: string): string[] {
-  const tags: string[] = []
-  if (score >= 85) tags.push('excellent')
-  else if (score >= 70) tags.push('good')
-  else if (score >= 50) tags.push('needs-improvement')
-  else tags.push('poor')
-  const failed = results.filter(r => !r.pass)
-  const categories = [...new Set(failed.map(r => r.category))]
-  for (const cat of categories) tags.push(`${cat.toLowerCase()}-gap`)
-  if (results.find(r => r.id === '3.4' && !r.pass)) tags.push('unqualified-transfer')
-  if (results.find(r => r.id === '5.1' && !r.pass)) tags.push('hipaa-risk')
-  if (results.find(r => r.id === '5.2' && !r.pass)) tags.push('medical-advice-risk')
-  const ztpFails = results.filter(r => !r.pass && r.ztp)
-  if (ztpFails.length > 0) tags.push('ztp-violation')
-  if (insurance) tags.push(`insurance:${insurance}`)
-  if (state) tags.push(`state:${state}`)
-  return [...new Set(tags)]
-}
-
-function getDisposition(results: ReturnType<typeof evaluateRubric>, score: number, autoFailed: boolean): string {
-  if (autoFailed) return 'Auto-fail: Critical violation - Requires supervisor review'
-  const qualify3 = results.find(r => r.id === '3.4')
-  if (qualify3 && !qualify3.pass) return 'Unqualified - Do not transfer (state insurance/self-pay/out-of-state/VA/Kaiser)'
-  if (score >= 80) return 'Qualified Lead - Transfer to treatment facility (tag: Qualified Transfer, 4 stars)'
-  if (score >= 60) return 'Warm Lead - Provide resources and schedule callback (3 stars)'
-  if (score >= 40) return 'Refer - Provide SAMHSA/988 and general resources (2 stars)'
-  return 'Do Not Refer - Outside scope or not interested (1 star)'
-}
-
-function generateSummary(results: ReturnType<typeof evaluateRubric>, score: number, autoFailed: boolean): string {
-  if (autoFailed) return 'Auto-failed due to critical compliance violation (ZTP). Call requires immediate supervisor review.'
-  const failed = results.filter(r => !r.pass)
-  const categories = [...new Set(failed.map(r => r.category))]
-  if (categories.length === 0) return 'Excellent call. Agent followed all quality standards across all categories.'
-  const worst = failed.filter(r => r.severity === 'Major' || r.severity === 'ZTP')
-  const categorySummary = categories.map(c => {
-    const catFails = failed.filter(r => r.category === c)
-    return `${c} (${catFails.length} issue${catFails.length > 1 ? 's' : ''})`
-  }).join(', ')
-  if (worst.length > 0) return `Call scored ${score}/100. Major issues in: ${categorySummary}. Requires coaching on critical criteria.`
-  return `Call scored ${score}/100. Minor issues in: ${categorySummary}. Generally good performance with room for refinement.`
-}
-
 export async function POST(request: NextRequest) {
   try {
     const { supabase, response } = await createServerSupabase(request)
@@ -332,7 +153,7 @@ export async function POST(request: NextRequest) {
         // Get AI evaluation from OpenAI
         const aiContent = await analyzeWithOpenAI(call.transcript, call.phone || call.caller_number || '')
         const aiResults = parseRubricResults(aiContent)
-        const evaluatedResults = evaluateRubric(call.transcript.toLowerCase(), RUBRIC_CRITERIA, aiResults)
+        const evaluatedResults = evaluateRubric(call.transcript.toLowerCase(), aiResults)
         const { breakdown, ztpFailures, autoFailed } = calculateBreakdown(evaluatedResults)
         const score = calculateScore(breakdown, ztpFailures, autoFailed)
 

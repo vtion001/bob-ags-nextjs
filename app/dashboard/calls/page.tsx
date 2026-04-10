@@ -7,6 +7,7 @@ import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import CallTable from '@/components/dashboard/CallTable'
 import { useAuth } from '@/contexts/AuthContext'
+import { formatDuration } from '@/lib/utils/formatters'
 import { Call } from '@/lib/ctm'
 import {
   PhoneIcon,
@@ -160,12 +161,7 @@ export default function CallsPage() {
     }
   }
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}m ${secs}s`
-  }
-
+  
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       <div className="mb-8">

@@ -1,5 +1,6 @@
 import React from "react";
 import Card from "@/components/ui/Card";
+import CollapsiblePanel from "@/components/ui/CollapsiblePanel";
 import { RUBRIC_CRITERIA } from "@/lib/ai";
 
 interface CriteriaStatus {
@@ -22,6 +23,24 @@ function getScoreColor(score: number): string {
   return "text-red-600";
 }
 
+function ChecklistIcon() {
+  return (
+    <svg
+      className="w-5 h-5 text-navy-600"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+      />
+    </svg>
+  )
+}
+
 export default function QAChecklist({
   criteriaStatus,
   score,
@@ -33,48 +52,13 @@ export default function QAChecklist({
 
   return (
     <Card className="p-0 overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full p-4 flex items-center justify-between hover:bg-navy-50 transition-colors"
+      <CollapsiblePanel
+        title="QA Checklist"
+        icon={<ChecklistIcon />}
+        expanded={expanded}
+        onToggle={onToggle}
+        rightElement={<span className={`text-lg font-bold ${getScoreColor(score)}`}>{score}</span>}
       >
-        <div className="flex items-center gap-2">
-          <svg
-            className="w-5 h-5 text-navy-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-            />
-          </svg>
-          <h3 className="text-lg font-bold text-navy-900">
-            QA Checklist
-          </h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-lg font-bold ${getScoreColor(score)}`}>
-            {score}
-          </span>
-          <svg
-            className={`w-5 h-5 text-navy-400 transition-transform ${expanded ? "rotate-180" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </div>
-      </button>
-      {expanded && (
         <div className="divide-y divide-navy-100">
           {ALL_CATEGORIES.map((category) => (
             <div key={category}>
@@ -132,7 +116,7 @@ export default function QAChecklist({
             </div>
           ))}
         </div>
-      )}
+      </CollapsiblePanel>
     </Card>
   );
 }

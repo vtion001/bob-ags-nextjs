@@ -28,10 +28,10 @@ import {
 import LiveAnalysisLogHistory from "@/components/monitor/LiveAnalysisLogHistory"
 import {
   extractGroup,
-  formatDuration,
   getSentimentColor,
   getScoreColor,
 } from "@/lib/monitor/helpers"
+import { formatDuration } from "@/lib/utils/formatters"
 import { KnowledgeSuggestions } from "@/components/monitor"
 
 export default function MonitorPage() {

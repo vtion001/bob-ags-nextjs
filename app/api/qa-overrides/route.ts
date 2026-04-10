@@ -1,25 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-
-const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
+import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
 
 export async function GET(request: NextRequest) {
-  // Dev bypass check
-  const devSessionCookie = request.cookies.get('sb-dev-session')
-  let isDevUser = false
-  if (devSessionCookie) {
-    try {
-      const devSession = JSON.parse(devSessionCookie.value)
-      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-        isDevUser = true
-      }
-    } catch {}
-  }
-
   try {
     const { supabase } = await createServerSupabase(request)
 
-    if (!isDevUser) {
+    if (!isDevUser(request)) {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session?.user) {
@@ -72,23 +59,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Dev bypass check
-  const devSessionCookie = request.cookies.get('sb-dev-session')
-  let isDevUser = false
-  if (devSessionCookie) {
-    try {
-      const devSession = JSON.parse(devSessionCookie.value)
-      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-        isDevUser = true
-      }
-    } catch {}
-  }
-
   try {
     let userId: string | null = null
     const { supabase } = await createServerSupabase(request)
 
-    if (!isDevUser) {
+    if (!isDevUser(request)) {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session?.user) {

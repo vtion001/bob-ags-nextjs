@@ -1,28 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-
-const DEV_BYPASS_UID = '00000000-0000-0000-0000-000000000001'
-
-function isDevUser(request: NextRequest): boolean {
-  // Check for original dev session cookie (from proxy)
-  const devSessionCookie = request.cookies.get('sb-dev-session')
-  if (devSessionCookie) {
-    try {
-      const devSession = JSON.parse(devSessionCookie.value)
-      if (devSession.dev && devSession.user?.id === DEV_BYPASS_UID) {
-        return true
-      }
-    } catch {}
-  }
-
-  // Check for placeholder session set by proxy after it consumed sb-dev-session
-  const sessionCookie = request.cookies.get('sb-session')
-  if (sessionCookie?.value === 'dev-session-placeholder') {
-    return true
-  }
-
-  return false
-}
+import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,21 +33,41 @@ export async function GET(request: NextRequest) {
     if (!supabaseUrl || !serviceKey) {
       console.error('[DEBUG] Missing env vars - cannot create admin client')
       return NextResponse.json(
-        { error: 'Server configuration error' },
+        { error: 'Server configuration error', supabaseUrl: !!supabaseUrl, serviceKey: !!serviceKey },
         { status: 500 }
       )
     }
 
-    const supabaseAdmin = createClient(
-      supabaseUrl,
-      serviceKey,
-      { auth: { persistSession: false } }
-    )
+    let supabaseAdmin
+    try {
+      supabaseAdmin = createClient(
+        supabaseUrl,
+        serviceKey,
+        { auth: { persistSession: false } }
+      )
+    } catch (err) {
+      console.error('[DEBUG] Failed to create admin client:', err)
+      return NextResponse.json(
+        { error: 'Failed to initialize database client' },
+        { status: 500 }
+      )
+    }
 
-    const { data: agents, error } = await supabaseAdmin
-      .from('agent_profiles')
-      .select('*')
-      .order('name')
+    let agents, error
+    try {
+      const result = await supabaseAdmin
+        .from('agent_profiles')
+        .select('*')
+        .order('name')
+      agents = result.data
+      error = result.error
+    } catch (err) {
+      console.error('[DEBUG] Query threw exception:', err)
+      return NextResponse.json(
+        { error: 'Database query failed', detail: String(err) },
+        { status: 500 }
+      )
+    }
 
     console.log('[DEBUG] Query result - agents count:', agents?.length, 'error:', error)
 
@@ -233,7 +231,7 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = request.nextUrl
     const id = searchParams.get('id') ?? undefined
 
     if (!id) {

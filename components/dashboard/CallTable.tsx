@@ -16,6 +16,7 @@ import {
   StarIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils/formatters'
 
 export interface CallTableProps {
   calls: Call[]
@@ -41,12 +42,6 @@ function formatTime(date: Date | string) {
   if (minutes < 60) return `${minutes}m ago`
   if (hours < 24) return `${hours}h ago`
   return `${days}d ago`
-}
-
-function formatDuration(seconds: number) {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins}m ${secs}s`
 }
 
 function formatDateFull(date: Date | string) {
