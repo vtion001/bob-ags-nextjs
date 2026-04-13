@@ -1,0 +1,46 @@
+version: '3.9'
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: bob
+      POSTGRES_USER: bob_user
+      POSTGRES_PASSWORD: local_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bob_user -d bob"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  laravel:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file: ./backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    env_file: .env.local
+    environment:
+      NEXT_PUBLIC_LARAVEL_API_URL: http://laravel:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - laravel
+
+volumes:
+  postgres_data:

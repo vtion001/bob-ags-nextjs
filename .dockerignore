@@ -1,0 +1,13 @@
+.git
+.next
+node_modules
+.env*.local
+.env
+npm-debug.log*
+README.md
+.playwright-mcp/
+test-results/
+tests/
+sonarqube/
+docs/
+supabase/
