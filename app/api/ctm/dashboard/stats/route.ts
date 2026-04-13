@@ -1,53 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { CallsService } from '@/lib/ctm/services/calls'
-import { authenticate } from '@/lib/api-helpers'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
-  const authError = await authenticate(request)
-  if (authError) return authError
-
   try {
     const searchParams = request.nextUrl.searchParams
-    const hours = parseInt(searchParams.get('hours') || '24', 10)
-    const sourceId = searchParams.get('source_id')
-    const agentId = searchParams.get('agent_id')
+    const queryParams = searchParams.toString()
 
-    const callsService = new CallsService()
-
-    // Use getAllCalls to iterate through all pages and get accurate totals
-    // getAllCalls pages through up to 500 pages (100k calls) if no limit specified
-    const calls = await callsService.getAllCalls({
-      hours,
-      sourceId: sourceId || undefined,
-      agentId: agentId || undefined,
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/ctm/dashboard/stats${queryParams ? `?${queryParams}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
     })
 
-    // Calculate stats from ALL calls (not just a page of 100-500)
-    const totalCalls = calls.length
-    const answered = calls.filter(c => c.status === 'completed' || c.status === 'active').length
-    const missed = calls.filter(c => c.status === 'missed').length
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to fetch dashboard stats' },
+        { status: response.status }
+      )
+    }
 
-    const durations = calls.filter(c => c.duration).map(c => c.duration!)
-    const avgDuration = durations.length > 0
-      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
-      : 0
-
-    const scores = calls.filter(c => c.score !== undefined && c.score !== null).map(c => c.score!)
-    const avgScore = scores.length > 0
-      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-      : 0
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      stats: {
-        totalCalls,
-        answered,
-        missed,
-        avgDuration,
-        avgScore,
+      stats: data.stats || {
+        totalCalls: 0,
+        answered: 0,
+        missed: 0,
+        avgDuration: 0,
+        avgScore: 0,
       }
     })
   } catch (error) {
+    console.error('[ctm/dashboard/stats] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch dashboard stats from CallTrackingMetrics' },
       { status: 502 }

@@ -1,74 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
   try {
-    let userId: string | null = null
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/users/ctm-assignments`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    if (isDevUser(request)) {
-      userId = DEV_BYPASS_UID
-    } else {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-      userId = session.user.id
-    }
-
-    const { supabase } = await createServerSupabase(request)
-
-    // Get CTM assignments from Supabase
-    const { data: assignmentsData, error } = await supabase
-      .from('ctm_assignments')
-      .select('*')
-      .eq('user_id', userId!)
-
-    if (error) {
-      console.error('Error fetching CTM assignments:', error)
+    if (!response.ok) {
       return NextResponse.json({
         success: true,
         assignments: []
       })
     }
 
-    // Get user info (email and role) for each assignment
-    const userIds = (assignmentsData || []).map(a => a.user_id).filter(Boolean)
-    let userMap: Record<string, { email: string; role: string }> = {}
-
-    if (userIds.length > 0) {
-      const { data: usersData } = await supabase
-        .from('user_roles')
-        .select('user_id, email, role')
-        .in('user_id', userIds)
-
-      if (usersData) {
-        userMap = usersData.reduce((acc, u) => {
-          acc[u.user_id] = { email: u.email || u.user_id, role: u.role || 'viewer' }
-          return acc
-        }, {} as Record<string, { email: string; role: string }>)
-      }
-    }
-
-    // Transform raw assignments to CTMAssignment format
-    const transformedAssignments = (assignmentsData || []).map(a => ({
-      userId: a.user_id,
-      email: userMap[a.user_id]?.email || a.user_id,
-      role: userMap[a.user_id]?.role || 'viewer',
-      ctmAgentId: a.ctm_agent_id || null,
-      ctmUserGroupId: a.ctm_user_group_id || null,
-    }))
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      assignments: transformedAssignments
+      assignments: data.assignments || []
     })
   } catch (error) {
-    console.error('CTM assignments error:', error)
+    console.error('[ctm-assignments] Proxy error:', error)
     return NextResponse.json({
       success: true,
       assignments: []
@@ -78,50 +38,34 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    let userId: string | null = null
-
-    if (isDevUser(request)) {
-      userId = DEV_BYPASS_UID
-    } else {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-      userId = session.user.id
-    }
-
-    const { supabase } = await createServerSupabase(request)
-
     const body = await request.json()
 
-    // Update CTM assignments in Supabase
-    const { data, error } = await supabase
-      .from('ctm_assignments')
-      .upsert({
-        user_id: userId!,
-        ...body
-      })
-      .select()
-      .single()
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/users/ctm-assignments`, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    })
 
-    if (error) {
-      console.error('Error updating CTM assignments:', error)
+    const data = await response.json()
+
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'Failed to update CTM assignments' },
-        { status: 500 }
+        { error: data.error || 'Failed to update CTM assignments' },
+        { status: response.status }
       )
     }
 
     return NextResponse.json({
       success: true,
-      assignments: data
+      assignments: data.assignments || []
     })
   } catch (error) {
-    console.error('CTM assignments error:', error)
+    console.error('[ctm-assignments] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to update CTM assignments' },
       { status: 500 }

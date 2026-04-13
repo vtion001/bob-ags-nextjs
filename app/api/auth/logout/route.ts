@@ -1,42 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
   try {
-    const { supabase } = await createServerSupabase(request)
-    const { error } = await supabase.auth.signOut()
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/logout`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    if (error) {
-      console.error('Logout error:', error)
+    const data = await response.json()
+
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'Failed to logout' },
-        { status: 500 }
+        { error: data.error || 'Logout failed' },
+        { status: response.status }
       )
     }
 
-    // Explicitly clear session cookies to prevent any requests after logout
-    // from using old session tokens. This ensures the client-side cookies
-    // are invalidated immediately, stopping any polling loops.
-    const response = NextResponse.json({
+    // Clear any leftover Supabase cookies for cleanliness
+    const nextResponse = NextResponse.json({
       success: true,
-      message: 'Logged out successfully'
+      message: data.message || 'Logged out successfully'
     })
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-      maxAge: 0, // Expire immediately
-    }
+    nextResponse.cookies.set('sb-session', '', { maxAge: 0, path: '/' })
+    nextResponse.cookies.set('sb-refresh-token', '', { maxAge: 0, path: '/' })
+    nextResponse.cookies.set('sb-dev-session', '', { maxAge: 0, path: '/' })
 
-    response.cookies.set('sb-session', '', cookieOptions)
-    response.cookies.set('sb-refresh-token', '', cookieOptions)
-    response.cookies.set('sb-dev-session', '', cookieOptions)
-
-    return response
+    return nextResponse
   } catch (error) {
-    console.error('Logout error:', error)
+    console.error('[logout] Proxy error:', error)
     return NextResponse.json(
       { error: 'An error occurred during logout' },
       { status: 500 }

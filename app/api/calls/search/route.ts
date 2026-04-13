@@ -1,41 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const phone = searchParams.get('phone')
+    const queryParams = searchParams.toString()
 
-    if (!phone) {
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/calls/search${queryParams ? `?${queryParams}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'phone parameter is required' },
-        { status: 400 }
+        { error: 'Failed to search calls' },
+        { status: response.status }
       )
     }
 
-    const { supabase, response } = await createServerSupabase(request)
-
-    // Search calls by phone number using the RPC function
-    const { data: calls, error } = await supabase
-      .rpc('search_calls_by_phone', { p_phone: phone })
-
-    if (error) {
-      console.error('Supabase phone search error:', error)
-      return NextResponse.json(
-        { error: 'Failed to search calls in Supabase' },
-        { status: 502 }
-      )
-    }
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      calls: calls || [],
+      calls: data.calls || [],
       source: 'supabase'
     })
   } catch (error) {
-    console.error('Phone search error:', error)
+    console.error('[calls/search] Proxy error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to search calls' },
       { status: 500 }
     )
   }

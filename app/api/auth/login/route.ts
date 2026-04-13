@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,49 +14,38 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { supabase } = await createServerSupabase(request)
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/login`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
     })
 
-    if (error) {
+    const data = await response.json()
+
+    if (!response.ok) {
       return NextResponse.json(
-        { error: error.message || 'Login failed' },
-        { status: 401 }
+        { error: data.error || 'Login failed' },
+        { status: response.status }
       )
     }
 
-    // Set auth cookies on response (Supabase client doesn't do this automatically for signInWithPassword)
-    const response = NextResponse.json({
+    // Return Laravel session data
+    return NextResponse.json({
       success: true,
       user: data.user,
-      session: data.session
+      session: {
+        expires_at: Date.now() + (7 * 24 * 60 * 60 * 1000)
+      },
+      role: data.role,
+      permissions: data.permissions
     })
-
-    if (data.session) {
-      const isSecure = request.headers.get('x-forwarded-proto') === 'https'
-        || request.headers.get('x-url-scheme') === 'https'
-        || request.headers.get('referer')?.startsWith('https://')
-        || request.headers.get('host')?.includes('vercel.app')
-
-      const cookieOptions = {
-        httpOnly: true,
-        secure: isSecure,
-        sameSite: 'lax' as const,
-        path: '/',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-      }
-
-      response.cookies.set('sb-session', data.session.access_token, cookieOptions)
-      if (data.session.refresh_token) {
-        response.cookies.set('sb-refresh-token', data.session.refresh_token, cookieOptions)
-      }
-    }
-
-    return response
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('[login] Proxy error:', error)
     return NextResponse.json(
       { error: 'An error occurred during login' },
       { status: 500 }

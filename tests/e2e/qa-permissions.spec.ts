@@ -7,7 +7,7 @@ test.describe('QA Role Permissions', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to login page
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
   })
 
   test('1. Login as QA user', async ({ page }) => {
@@ -34,7 +34,7 @@ test.describe('QA Role Permissions', () => {
 
     // Navigate to calls page
     await page.goto('/dashboard/calls')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(1000)
 
     // Verify page loaded
@@ -56,7 +56,7 @@ test.describe('QA Role Permissions', () => {
 
     // Navigate to monitor page
     await page.goto('/dashboard/monitor')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/monitor')
@@ -76,7 +76,7 @@ test.describe('QA Role Permissions', () => {
 
     // Navigate to history page
     await page.goto('/dashboard/history')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/history')
@@ -96,7 +96,7 @@ test.describe('QA Role Permissions', () => {
 
     // Navigate to agents page
     await page.goto('/dashboard/agents')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/agents')
@@ -116,7 +116,7 @@ test.describe('QA Role Permissions', () => {
 
     // Navigate to qa-logs page
     await page.goto('/dashboard/qa-logs')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/qa-logs')
@@ -136,7 +136,7 @@ test.describe('QA Role Permissions', () => {
 
     // Navigate to settings page
     await page.goto('/dashboard/settings')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/settings')
@@ -171,7 +171,7 @@ test.describe('QA Role Permissions', () => {
 
     // Navigate to history page
     await page.goto('/dashboard/history')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Wait for permissions to load and button to appear
     await page.waitForTimeout(2000)

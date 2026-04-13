@@ -1,33 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { CallsService } from '@/lib/ctm/services/calls'
-import { authenticate } from '@/lib/api-helpers'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
-  const authError = await authenticate(request)
-  if (authError) return authError
-
   try {
     const searchParams = request.nextUrl.searchParams
-    const phone = searchParams.get('phone')
-    const hours = parseInt(searchParams.get('hours') || '8760', 10)
-    const direction = searchParams.get('direction') as 'inbound' | 'outbound' | null
+    const queryParams = searchParams.toString()
 
-    if (!phone) {
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/ctm/calls/search${queryParams ? `?${queryParams}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'phone parameter is required' },
-        { status: 400 }
+        { error: 'Failed to search calls' },
+        { status: response.status }
       )
     }
 
-    const callsService = new CallsService()
-    // Phone search has no limit - fetch all matching calls
-    const calls = await callsService.searchCallsByPhone(phone, hours, undefined, direction || undefined)
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      calls
+      calls: data.calls || []
     })
   } catch (error) {
+    console.error('[ctm/calls/search] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to search calls in CallTrackingMetrics' },
       { status: 502 }

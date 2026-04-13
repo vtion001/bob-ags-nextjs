@@ -8,6 +8,10 @@ export interface UserSettings {
   email_notifications: boolean
   auto_sync_calls: boolean
   call_sync_interval: number
+  // Laravel settings fields
+  ctm_agent_id?: string | null
+  theme?: string
+  notifications_enabled?: boolean
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -20,4 +24,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   email_notifications: false,
   auto_sync_calls: true,
   call_sync_interval: 60,
+  ctm_agent_id: null,
+  theme: 'dark',
+  notifications_enabled: true,
 }

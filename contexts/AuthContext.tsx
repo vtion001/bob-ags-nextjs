@@ -1,10 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-
-// Supabase browser client singleton for auth error handling
-const supabase = createClient()
+import { authApi, userApi, ctmApi } from '@/lib/laravel/api-client'
 
 export interface Permissions {
   can_view_calls: boolean
@@ -42,6 +39,7 @@ export interface AuthContextValue {
   isLoading: boolean
   isReady: boolean
   refetch: () => Promise<void>
+  isAuthenticated: boolean
 }
 
 const DEFAULT_PERMISSIONS: Permissions = {
@@ -71,59 +69,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const currentFetch = ++fetchCountRef.current
 
     try {
-      const [sessionRes, permsRes, agentsRes, groupsRes, settingsRes] = await Promise.all([
-        fetch('/api/auth/session'),
-        fetch('/api/users/permissions'),
-        fetch('/api/ctm/agents'),
-        fetch('/api/ctm/agents/groups'),
-        fetch('/api/users/settings'),
+      // Fetch user, permissions, agents, and settings in parallel
+      const [userRes, permsRes, agentsRes, settingsRes] = await Promise.all([
+        authApi.getUser(),
+        userApi.getPermissions(),
+        ctmApi.getAgents(),
+        userApi.getSettings(),
       ])
 
       if (currentFetch !== fetchCountRef.current) return
 
-      // Only redirect to login on 401 Unauthorized, not on backend errors
-      if (sessionRes.status === 401) {
-        window.location.href = '/'
-        return
+      setEmail(userRes.user?.email ?? null)
+      setRole(userRes.role || 'viewer')
+      setPermissions((userRes.permissions as unknown as Permissions) || DEFAULT_PERMISSIONS)
+
+      if (agentsRes.agents) {
+        setAgents(agentsRes.agents as Agent[])
       }
 
-      // For other errors (502, 503, 500, etc), don't redirect - backend may be temporarily unavailable
-      if (!sessionRes.ok) {
-        console.error('Session API error:', sessionRes.status, '- backend may be unavailable')
-        // Set a reasonable loading state and let the UI handle the error gracefully
-        if (currentFetch === fetchCountRef.current) {
-          setIsLoading(false)
-          setIsReady(true)
-        }
-        return
+      // Extract user groups from agents response
+      if (agentsRes.userGroups) {
+        setUserGroups(agentsRes.userGroups as UserGroup[])
       }
 
-      const sessionData = await sessionRes.json()
-      setEmail(sessionData.email)
-
-      if (permsRes.ok) {
-        const permData = await permsRes.json()
-        setRole(permData.role || 'viewer')
-        setPermissions(permData.permissions || DEFAULT_PERMISSIONS)
-      }
-
-      if (agentsRes.ok) {
-        const agentsData = await agentsRes.json()
-        setAgents(agentsData.agents || [])
-        setUserGroups(agentsData.userGroups || [])
-      }
-
-      if (settingsRes.ok) {
-        const settingsData = await settingsRes.json()
-        setCtmAgentId(settingsData.settings?.ctm_agent_id || null)
+      if (settingsRes.settings?.ctm_agent_id) {
+        setCtmAgentId(settingsRes.settings.ctm_agent_id)
       }
     } catch (error) {
       console.error('Auth fetch failed:', error)
-      // Network errors (CORS, DNS, etc) don't mean we're logged out
-      // Backend is unreachable but user may still be authenticated via Supabase
+      // Network errors or 401 mean we're not authenticated
       if (currentFetch === fetchCountRef.current) {
-        setIsLoading(false)
-        setIsReady(true)
+        setEmail(null)
+        setRole('viewer')
+        setPermissions(DEFAULT_PERMISSIONS)
+        setAgents([])
+        setUserGroups([])
+        setCtmAgentId(null)
       }
     } finally {
       if (currentFetch === fetchCountRef.current) {
@@ -136,26 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchAll()
   }, [fetchAll])
-
-  // Handle Supabase browser client auto-refresh errors
-  // When refresh token is invalid/expired, Supabase fires AUTH_ERROR
-  // We catch it and redirect to login before the error propagates
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // AUTH_ERROR is not in the AuthChangeEvent type but Supabase fires it
-      // when token refresh fails (e.g., revoked or expired refresh token)
-      if ((event as string) === 'AUTH_ERROR') {
-        console.warn('[Auth] Auth error detected, redirecting to login')
-        window.location.href = '/'
-      }
-      // INITIAL_SESSION and SIGNED_IN indicate a valid session was established
-      // Refresh auth state to pick up any changes
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-        fetchAll()
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
 
   return (
     <AuthContext.Provider
@@ -172,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isReady,
         refetch: fetchAll,
+        isAuthenticated: !!email,
       }}
     >
       {children}

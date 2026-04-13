@@ -1,44 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { isDevUser } from '@/lib/auth/is-dev-user'
 
-export async function GET(request: NextRequest) {
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { supabase } = await createServerSupabase(request)
-
-    if (!isDevUser(request)) {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-    }
-
+    const { id } = await params
     const searchParams = request.nextUrl.searchParams
-    const callId = searchParams.get('callId')
+    const callId = searchParams.get('callId') || id
 
-    if (!callId) {
-      return NextResponse.json({ error: 'callId is required' }, { status: 400 })
-    }
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/calls/${callId}/notes`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    // Get notes from Supabase
-    const { data, error } = await supabase
-      .from('call_notes')
-      .select('*')
-      .eq('call_id', callId)
-      .order('created_at', { ascending: true })
-
-    if (error) {
+    if (!response.ok) {
       return NextResponse.json({
         success: true,
         notes: []
       })
     }
 
+    const data = await response.json()
+
     return NextResponse.json({
       success: true,
-      notes: data || []
+      notes: data.notes || []
     })
   } catch (error) {
+    console.error('[calls/[id]/notes] Proxy error:', error)
     return NextResponse.json({
       success: true,
       notes: []
@@ -46,47 +43,41 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { supabase } = await createServerSupabase(request)
-
-    if (!isDevUser(request)) {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-    }
-
+    const { id } = await params
     const body = await request.json()
     const { callId, notes } = body || {}
 
-    if (!callId) {
-      return NextResponse.json({ error: 'callId is required' }, { status: 400 })
-    }
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/calls/${callId || id}/notes`, {
+      method: 'PATCH',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ notes }),
+    })
 
-    // Update or insert notes in Supabase
-    const { data, error } = await supabase
-      .from('call_notes')
-      .upsert({
-        call_id: callId,
-        notes: notes || '',
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (error) {
+    if (!response.ok) {
       return NextResponse.json(
         { error: 'Failed to update notes' },
-        { status: 500 }
+        { status: response.status }
       )
     }
 
+    const data = await response.json()
+
     return NextResponse.json({
       success: true,
-      notes: data
+      notes: data.notes
     })
   } catch (error) {
+    console.error('[calls/[id]/notes] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to update notes' },
       { status: 500 }

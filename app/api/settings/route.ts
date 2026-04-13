@@ -1,53 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
   try {
-    let userId: string | null = null
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/settings`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    if (isDevUser(request)) {
-      userId = DEV_BYPASS_UID
-    } else {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      userId = session.user.id
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to fetch settings' },
+        { status: response.status }
+      )
     }
 
-    const supabase = (await createServerSupabase(request)).supabase
-
-    const { data: userSettings, error } = await supabase
-      .from('user_settings')
-      .select('settings')
-      .eq('user_id', userId)
-      .single()
-
-    if (error || !userSettings) {
-      return NextResponse.json({
-        success: true,
-        settings: {
-          ctm_access_key: '',
-          ctm_secret_key: '',
-          ctm_account_id: '',
-          openrouter_api_key: '',
-          default_client: 'flyland',
-          light_mode: true,
-          email_notifications: false,
-          auto_sync_calls: true,
-          call_sync_interval: 60,
-        }
-      })
-    }
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      settings: userSettings.settings
+      settings: data.settings
     })
   } catch (error) {
-    console.error('Error fetching settings:', error)
+    console.error('[settings] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch settings' },
       { status: 500 }
@@ -57,56 +38,34 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    let userId: string | null = null
-    const isDev = isDevUser(request)
-
-    if (isDev) {
-      userId = DEV_BYPASS_UID
-    } else {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      userId = session.user.id
-    }
-
-    const supabase = (await createServerSupabase(request)).supabase
-
     const body = await request.json()
 
-    // Dev users don't have real auth entries - skip actual DB write but return success
-    if (isDev) {
-      return NextResponse.json({
-        success: true,
-        settings: body,
-        note: 'Dev mode - settings not persisted'
-      })
-    }
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/settings`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    })
 
-    const { data, error } = await supabase
-      .from('user_settings')
-      .upsert({
-        user_id: userId,
-        settings: body
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error saving settings:', error)
+    if (!response.ok) {
       return NextResponse.json(
         { error: 'Failed to save settings' },
-        { status: 500 }
+        { status: response.status }
       )
     }
+
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
       settings: data.settings
     })
   } catch (error) {
-    console.error('Error saving settings:', error)
+    console.error('[settings] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to save settings' },
       { status: 500 }
@@ -116,32 +75,20 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    let userId: string | null = null
-    const isDev = isDevUser(request)
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/settings`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    if (isDev) {
-      userId = DEV_BYPASS_UID
-    } else {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      userId = session.user.id
-    }
-
-    const supabase = (await createServerSupabase(request)).supabase
-
-    const { error } = await supabase
-      .from('user_settings')
-      .delete()
-      .eq('user_id', userId)
-
-    if (error) {
-      console.error('Error deleting settings:', error)
+    if (!response.ok) {
       return NextResponse.json(
         { error: 'Failed to delete settings' },
-        { status: 500 }
+        { status: response.status }
       )
     }
 
@@ -150,7 +97,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Settings deleted successfully'
     })
   } catch (error) {
-    console.error('Error deleting settings:', error)
+    console.error('[settings] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to delete settings' },
       { status: 500 }

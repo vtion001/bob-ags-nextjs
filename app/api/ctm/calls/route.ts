@@ -1,35 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { CallsService } from '@/lib/ctm/services/calls'
-import { authenticate } from '@/lib/api-helpers'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
-  const authError = await authenticate(request)
-  if (authError) return authError
-
   try {
     const searchParams = request.nextUrl.searchParams
-    const limit = parseInt(searchParams.get('limit') || '100', 10)
-    const hours = parseInt(searchParams.get('hours') || '24', 10)
-    const status = searchParams.get('status')
-    const sourceId = searchParams.get('source_id')
-    const agentId = searchParams.get('agent_id')
-    const page = parseInt(searchParams.get('page') || '1', 10)
+    const queryParams = searchParams.toString()
 
-    const callsService = new CallsService()
-    const calls = await callsService.getCalls({
-      limit,
-      hours,
-      status: status || undefined,
-      sourceId: sourceId || undefined,
-      agentId: agentId || undefined,
-      page
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/ctm/calls${queryParams ? `?${queryParams}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
     })
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to fetch calls' },
+        { status: response.status }
+      )
+    }
+
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      calls
+      calls: data.calls || []
     })
   } catch (error) {
+    console.error('[ctm/calls] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch calls from CallTrackingMetrics' },
       { status: 502 }

@@ -1,56 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { AgentsService } from '@/lib/ctm/services/agents'
-import { authenticate } from '@/lib/api-helpers'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
-  const authError = await authenticate(request)
-  if (authError) return authError
-
   try {
-    const agentsService = new AgentsService()
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/ctm/agents`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    if (!agentsService.isConfigured()) {
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'CTM not configured', data: [], agents: [] },
-        { status: 200 }
+        { error: 'Failed to fetch agents', data: [], agents: [] },
+        { status: response.status }
       )
     }
 
-    const agents = await agentsService.getAgents()
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      data: agents,
-      agents
+      data: data.agents || [],
+      agents: data.agents || []
     })
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error)
-
-    if (
-      message.includes('CTM credentials not configured') ||
-      message.includes('CTM not configured')
-    ) {
-      return NextResponse.json(
-        { error: 'CTM not configured', data: [], agents: [] },
-        { status: 200 }
-      )
-    }
-
-    if (
-      message.includes('fetch failed') ||
-      message.includes('ENOTFOUND') ||
-      message.includes('ECONNREFUSED') ||
-      message.includes('timeout') ||
-      message.includes('network')
-    ) {
-      return NextResponse.json(
-        { success: true, data: [], agents: [] },
-        { status: 200 }
-      )
-    }
-
+  } catch (error) {
+    console.error('[ctm/agents] Proxy error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch agents from CallTrackingMetrics' },
+      { error: 'Failed to fetch agents from CallTrackingMetrics', data: [], agents: [] },
       { status: 502 }
     )
   }

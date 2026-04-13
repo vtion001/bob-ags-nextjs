@@ -1,57 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
   try {
-    let userId: string | null = null
-    let { supabase } = await createServerSupabase(request)
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/users/settings`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    if (!isDevUser(request)) {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-      userId = session.user.id
-    } else {
-      userId = DEV_BYPASS_UID
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to fetch settings' },
+        { status: response.status }
+      )
     }
 
-    const { data: userSettings, error } = await supabase
-      .from('user_settings')
-      .select('settings')
-      .eq('user_id', userId)
-      .single()
+    const data = await response.json()
 
-    if (error || !userSettings) {
-      return NextResponse.json({
-        success: true,
-        settings: {
-          ctm_access_key: '',
-          ctm_secret_key: '',
-          ctm_account_id: '',
-          openrouter_api_key: '',
-          default_client: 'flyland',
-          light_mode: true,
-          email_notifications: false,
-          auto_sync_calls: true,
-          call_sync_interval: 60,
-        }
-      })
+    return NextResponse.json({
+      success: true,
+      settings: data.settings || {}
+    })
+  } catch (error) {
+    console.error('[settings] Proxy error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch user settings' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/users/settings`, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: data.error || 'Failed to update settings' },
+        { status: response.status }
+      )
     }
 
     return NextResponse.json({
       success: true,
-      settings: userSettings.settings
+      settings: data.settings || {}
     })
   } catch (error) {
-    console.error('Error fetching user settings:', error)
+    console.error('[settings] Proxy error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch user settings' },
+      { error: 'Failed to update user settings' },
       { status: 500 }
     )
   }

@@ -8,7 +8,7 @@ test.describe('Admin Role Permissions', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to login page
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
   })
 
   test('should login as admin user', async ({ page }) => {
@@ -35,7 +35,7 @@ test.describe('Admin Role Permissions', () => {
 
     // Navigate to calls page
     await page.goto('/dashboard/calls')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/calls')
@@ -55,7 +55,7 @@ test.describe('Admin Role Permissions', () => {
 
     // Navigate to monitor page
     await page.goto('/dashboard/monitor')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/monitor')
@@ -75,7 +75,7 @@ test.describe('Admin Role Permissions', () => {
 
     // Navigate to history page
     await page.goto('/dashboard/history')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/history')
@@ -99,7 +99,7 @@ test.describe('Admin Role Permissions', () => {
 
     // Navigate to agents page
     await page.goto('/dashboard/agents')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/agents')
@@ -119,7 +119,7 @@ test.describe('Admin Role Permissions', () => {
 
     // Navigate to qa-logs page
     await page.goto('/dashboard/qa-logs')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify page loaded
     expect(page.url()).toContain('/dashboard/qa-logs')
@@ -165,7 +165,7 @@ test.describe('Admin Role Permissions', () => {
 
     // Navigate to history page
     await page.goto('/dashboard/history')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify Bulk Analyze button exists and is visible
     const bulkAnalyzeButton = page.getByRole('button', { name: /bulk analyze/i })

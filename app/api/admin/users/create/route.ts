@@ -1,141 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
-import { isDevUser } from '@/lib/auth/is-dev-user'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isDevUser(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await request.json()
-    const { email, password, role = 'viewer' } = body
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'email and password are required' },
-        { status: 400 }
-      )
-    }
-
-    const { supabase } = await createServerSupabase(request)
-
-    // Create admin client with service role key
-    const supabaseAdmin = createSupabaseAdmin(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
-    // Create the auth user using admin client
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { role }
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/admin/users/create`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
     })
 
-    if (authError) {
-      console.error('Error creating auth user:', authError)
+    if (!response.ok) {
       return NextResponse.json(
-        { error: authError.message },
-        { status: 400 }
+        { error: 'Failed to create user' },
+        { status: response.status }
       )
     }
 
-    const userId = authData.user.id
-
-    // Get default permissions for the role
-    const rolePermissions: Record<string, any> = {
-      admin: {
-        can_view_calls: true,
-        can_view_monitor: true,
-        can_view_history: true,
-        can_view_agents: true,
-        can_manage_settings: true,
-        can_manage_users: true,
-        can_run_analysis: true,
-      },
-      manager: {
-        can_view_calls: true,
-        can_view_monitor: true,
-        can_view_history: true,
-        can_view_agents: true,
-        can_manage_settings: false,
-        can_manage_users: false,
-        can_run_analysis: true,
-      },
-      qa: {
-        can_view_calls: true,
-        can_view_monitor: true,
-        can_view_history: true,
-        can_view_agents: true,
-        can_manage_settings: false,
-        can_manage_users: false,
-        can_run_analysis: true,
-      },
-      viewer: {
-        can_view_calls: true,
-        can_view_monitor: true,
-        can_view_history: false,
-        can_view_agents: false,
-        can_manage_settings: false,
-        can_manage_users: false,
-        can_run_analysis: false,
-      },
-      agent: {
-        can_view_calls: false,
-        can_view_monitor: true,
-        can_view_history: false,
-        can_view_agents: false,
-        can_manage_settings: false,
-        can_manage_users: false,
-        can_run_analysis: false,
-      },
-    }
-
-    const permissions = rolePermissions[role] || rolePermissions.viewer
-
-    // Create user_roles entry
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .upsert({
-        user_id: userId,
-        email: email.toLowerCase(),
-        role,
-        approved: true,
-        permissions,
-      })
-
-    if (roleError) {
-      console.error('Error creating user_roles entry:', roleError)
-      // Auth user was created, but role assignment failed
-      return NextResponse.json({
-        success: true,
-        warning: 'Auth user created but role assignment failed',
-        userId,
-        error: roleError.message
-      })
-    }
-
-    // Create public.users entry
-    await supabase
-      .from('users')
-      .upsert({
-        id: userId,
-        email: email.toLowerCase(),
-        is_superadmin: role === 'admin',
-      })
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      userId,
-      email,
-      role,
-      permissions
+      ...data
     })
   } catch (error) {
-    console.error('Create user error:', error)
+    console.error('[admin/users/create] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to create user' },
       { status: 500 }

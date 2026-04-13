@@ -1,39 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { isDevUser } from '@/lib/auth/is-dev-user'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isDevUser(request)) {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-    }
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/qa-overrides`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    // Return empty qa-overrides - stored in Supabase
-    const { supabase: supabaseForQuery } = await createServerSupabase(request)
-    const { data, error } = await supabaseForQuery
-      .from('qa_overrides')
-      .select('*')
-      .limit(100)
-
-    if (error) {
+    if (!response.ok) {
       return NextResponse.json({
         success: true,
         qa_overrides: []
       })
     }
 
+    const data = await response.json()
+
     return NextResponse.json({
       success: true,
-      qa_overrides: data || []
+      qa_overrides: data.qa_overrides || []
     })
   } catch (error) {
+    console.error('[qa-override] Proxy error:', error)
     return NextResponse.json({
       success: true,
       qa_overrides: []
@@ -43,39 +38,34 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isDevUser(request)) {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-    }
-
     const body = await request.json()
 
-    // Store QA override in Supabase
-    const { supabase: supabaseForInsert } = await createServerSupabase(request)
-    const { data, error } = await supabaseForInsert
-      .from('qa_overrides')
-      .insert(body)
-      .select()
-      .single()
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/qa-overrides`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    })
 
-    if (error) {
+    if (!response.ok) {
       return NextResponse.json(
         { error: 'Failed to create QA override' },
-        { status: 500 }
+        { status: response.status }
       )
     }
 
+    const data = await response.json()
+
     return NextResponse.json({
       success: true,
-      qa_override: data
+      qa_override: data.qa_override
     })
   } catch (error) {
+    console.error('[qa-override] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to create QA override' },
       { status: 500 }

@@ -1,23 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { CallsService } from '@/lib/ctm/services/calls'
-import { authenticate } from '@/lib/api-helpers'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
-  const authError = await authenticate(request)
-  if (authError) return authError
-
   try {
     const searchParams = request.nextUrl.searchParams
-    const minutes = parseInt(searchParams.get('minutes') || '5', 10)
+    const queryParams = searchParams.toString()
 
-    const callsService = new CallsService()
-    const calls = await callsService.getRecentCalls(minutes)
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/ctm/monitor/active-calls${queryParams ? `?${queryParams}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to fetch active calls' },
+        { status: response.status }
+      )
+    }
+
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      calls
+      calls: data.calls || []
     })
   } catch (error) {
+    console.error('[ctm/monitor/active-calls] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch active calls from CallTrackingMetrics' },
       { status: 502 }

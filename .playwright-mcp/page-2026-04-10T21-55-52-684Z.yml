@@ -1,0 +1,33 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Create Account" [level=2] [ref=e6]
+      - paragraph [ref=e7]:
+        - text: Already have an account?
+        - link "Sign in" [ref=e8] [cursor=pointer]:
+          - /url: /
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]: Full Name
+        - textbox "John Doe" [ref=e13]
+      - generic [ref=e14]:
+        - generic [ref=e15]: Work Email
+        - textbox "you@company.com" [ref=e16]
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]: Password
+          - textbox "Min. 6 characters" [ref=e20]
+        - button [ref=e21]:
+          - img [ref=e22]
+      - generic [ref=e25]:
+        - generic [ref=e26]: Confirm Password
+        - textbox "Re-enter password" [ref=e27]
+      - button "Create Account" [ref=e28] [cursor=pointer]
+    - generic [ref=e33]: or continue with
+    - button "Google" [ref=e34] [cursor=pointer]:
+      - img [ref=e35]
+      - text: Google
+    - paragraph [ref=e40]: By creating an account, you agree to our Terms of Service and Privacy Policy.
+  - button "Open Next.js Dev Tools" [ref=e46] [cursor=pointer]:
+    - img [ref=e47]
+  - alert [ref=e50]

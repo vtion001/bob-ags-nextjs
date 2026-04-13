@@ -1,49 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { analyzeTranscript } from '@/lib/ai/analyzer'
-import { DEV_BYPASS_UID, isDevUser } from '@/lib/auth/is-dev-user'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isDevUser(request)) {
-      const { supabase } = await createServerSupabase(request)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-    }
-
     const body = await request.json()
-    const { transcript, phone, client, ctmStarRating } = body
 
-    if (!transcript) {
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/openrouter`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'Transcript is required' },
-        { status: 400 }
+        { error: 'Failed to process analysis request' },
+        { status: response.status }
       )
     }
 
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({
-        success: false,
-        error: 'OpenAI API key not configured'
-      }, { status: 500 })
-    }
-
-    const analysis = await analyzeTranscript(
-      transcript,
-      phone || '',
-      client,
-      ctmStarRating
-    )
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      analysis
+      analysis: data.analysis
     })
   } catch (error) {
-    console.error('OpenAI error:', error)
+    console.error('[openrouter] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to process OpenAI request' },
       { status: 500 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { userApi, ctmApi } from '@/lib/laravel/api-client'
 import {
   CTMAssignment,
   UserSettings,
@@ -8,6 +8,7 @@ import {
   CTMAgent,
   CTMUserGroup,
   RoleType,
+  UserPermissions,
   DEFAULT_SETTINGS,
   DEFAULT_PERMISSIONS,
 } from '@/lib/settings/types'
@@ -71,75 +72,35 @@ export function useSettings(): UseSettingsReturn {
   const [assignmentForm, setAssignmentForm] = useState({ ctmAgentId: '', ctmUserGroupId: '' })
   const [assignmentSaving, setAssignmentSaving] = useState(false)
 
-  const supabase = createClient()
-
   const loadSettings = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [settingsRes, permissionsRes] = await Promise.all([
-        fetch('/api/settings'),
-        fetch('/api/users/permissions')
+      const [settingsRes, permsRes] = await Promise.all([
+        userApi.getSettings().catch(() => ({ settings: DEFAULT_SETTINGS })),
+        userApi.getPermissions().catch(() => ({ role: 'viewer', permissions: DEFAULT_PERMISSIONS })),
       ])
-      
-      if (settingsRes.ok) {
-        const data = await settingsRes.json()
-        if (data.settings) {
-          setSettings(prev => ({ ...prev, ...data.settings }))
-        }
+
+      if (settingsRes.settings) {
+        setSettings(prev => ({ ...prev, ...settingsRes.settings }))
       }
-      
-      if (permissionsRes.ok) {
-        const permData = await permissionsRes.json()
-        setCurrentUser({ 
-          role: permData.role, 
-          permissions: permData.permissions,
-          email: permData.email 
-        })
-        setIsAdmin(permData.role === 'admin')
-        
-        if (permData.role === 'admin') {
-          const [usersRes, ctmRes] = await Promise.all([
-            fetch('/api/users/permissions/update'),
-            fetch('/api/users/ctm-assignments'),
-          ])
-          
-          if (usersRes.ok) {
-            const usersData = await usersRes.json()
-            const allUsers = [...(usersData.roles || [])]
-            if (permData.email !== 'agsdev@allianceglobalsolutions.com' && !allUsers.find(u => u.email === 'agsdev@allianceglobalsolutions.com')) {
-              allUsers.unshift({
-                id: 'dev-admin',
-                user_id: 'agsdev@allianceglobalsolutions.com',
-                email: 'agsdev@allianceglobalsolutions.com',
-                role: 'admin',
-                permissions: DEFAULT_PERMISSIONS.admin,
-                created_at: new Date().toISOString(),
-              })
-            }
-            setUsers(allUsers)
-          }
-          
-          if (ctmRes.ok) {
-            const ctmData = await ctmRes.json()
-            setCtmAssignments(ctmData.assignments || [])
-          }
 
-          // Fetch CTM agents and user groups from their respective endpoints
-          const [agentsRes, groupsRes] = await Promise.all([
-            fetch('/api/ctm/agents'),
-            fetch('/api/ctm/agents/groups'),
-          ])
+      setCurrentUser({
+        role: permsRes.role || 'viewer',
+        permissions: (permsRes.permissions as unknown as UserPermissions) || DEFAULT_PERMISSIONS['viewer'],
+        email: ''
+      })
+      setIsAdmin(permsRes.role === 'admin')
 
-          if (agentsRes.ok) {
-            const agentsData = await agentsRes.json()
-            setCtmAgents(agentsData.agents || agentsData.data || [])
-          }
+      if (permsRes.role === 'admin') {
+        const [ctmRes, agentsRes, groupsRes] = await Promise.all([
+          userApi.getCtmAssignments().catch(() => ({ assignments: [] })),
+          ctmApi.getAgents().catch(() => ({ agents: [] })),
+          ctmApi.getAgentGroups().catch(() => ({ userGroups: [] })),
+        ])
 
-          if (groupsRes.ok) {
-            const groupsData = await groupsRes.json()
-            setCtmUserGroups(groupsData.user_groups || groupsData.data || [])
-          }
-        }
+        setCtmAssignments((ctmRes.assignments || []) as CTMAssignment[])
+        setCtmAgents((agentsRes.agents || []) as CTMAgent[])
+        setCtmUserGroups((groupsRes.userGroups || []) as CTMUserGroup[])
       }
     } catch (err) {
       console.error('Failed to load settings:', err)
@@ -149,52 +110,22 @@ export function useSettings(): UseSettingsReturn {
   }, [])
 
   useEffect(() => {
-    let mounted = true
-
-    const initSettings = async () => {
-      // Check for existing session first (fallback for already-established sessions)
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (session) {
-        if (mounted) loadSettings()
-        return
-      }
-
-      // No session yet, wait for SIGNED_IN event after OAuth callback
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session && mounted) {
-          loadSettings()
-        }
-      })
-
-      return () => {
-        subscription.unsubscribe()
-      }
-    }
-
-    initSettings()
-
-    return () => {
-      mounted = false
-    }
+    loadSettings()
   }, [loadSettings])
 
   const handleSave = async () => {
     setIsSaving(true)
     setError('')
     try {
-      const res = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
+      await userApi.updateSettings({
+        ctm_agent_id: settings.ctm_agent_id || undefined,
+        theme: settings.theme || undefined,
+        notifications_enabled: settings.notifications_enabled,
       })
-      
-      if (!res.ok) throw new Error('Failed to save settings')
-      
       setSaveMessage('Settings saved successfully')
       setTimeout(() => setSaveMessage(''), 3000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save settings')
     } finally {
       setIsSaving(false)
     }
@@ -207,18 +138,16 @@ export function useSettings(): UseSettingsReturn {
 
     setIsSaving(true)
     try {
-      const res = await fetch('/api/settings', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+      await userApi.updateSettings({
+        ctm_agent_id: '',
+        theme: 'dark',
+        notifications_enabled: true,
       })
-      
-      if (!res.ok) throw new Error('Failed to clear settings')
-      
       setSettings(DEFAULT_SETTINGS)
       setSaveMessage('Credentials cleared')
       setTimeout(() => setSaveMessage(''), 3000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to clear settings')
     } finally {
       setIsSaving(false)
     }
@@ -226,37 +155,18 @@ export function useSettings(): UseSettingsReturn {
 
   const handleAddUser = async () => {
     if (!newUserEmail) return
-    
+
     setIsSaving(true)
     try {
       const permissions = DEFAULT_PERMISSIONS[newUserRole]
-      const res = await fetch('/api/users/permissions/update', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetUserId: newUserEmail,
-          email: newUserEmail,
-          role: newUserRole,
-          permissions,
-        }),
-      })
-      
-      if (!res.ok) throw new Error('Failed to add user')
-      
-      setSaveMessage('User added successfully')
+      // Note: User creation via admin is not yet implemented in Laravel
+      setSaveMessage('User creation via admin panel coming soon')
       setShowAddUser(false)
       setNewUserEmail('')
       setNewUserRole('viewer')
-      
-      const usersRes = await fetch('/api/users/permissions/update')
-      if (usersRes.ok) {
-        const usersData = await usersRes.json()
-        setUsers(usersData.roles || [])
-      }
-      
       setTimeout(() => setSaveMessage(''), 3000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to add user')
     } finally {
       setIsSaving(false)
     }
@@ -265,32 +175,11 @@ export function useSettings(): UseSettingsReturn {
   const handleUpdateRole = async (userId: string, role: RoleType) => {
     setIsSaving(true)
     try {
-      const permissions = DEFAULT_PERMISSIONS[role]
-      const user = users.find(u => u.user_id === userId)
-      
-      const res = await fetch('/api/users/permissions/update', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetUserId: userId,
-          email: user?.email || userId,
-          role,
-          permissions,
-        }),
-      })
-      
-      if (!res.ok) throw new Error('Failed to update role')
-      
-      setUsers(users.map(u => 
-        u.user_id === userId 
-          ? { ...u, role, permissions }
-          : u
-      ))
-      
-      setSaveMessage('Role updated successfully')
+      // Note: Role update via admin is not yet implemented in Laravel
+      setSaveMessage('Role update coming soon')
       setTimeout(() => setSaveMessage(''), 3000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update role')
     } finally {
       setIsSaving(false)
     }
@@ -299,34 +188,10 @@ export function useSettings(): UseSettingsReturn {
   const handleApproveUser = async (userId: string, role: RoleType) => {
     setIsSaving(true)
     try {
-      const permissions = DEFAULT_PERMISSIONS[role]
-      const user = users.find(u => u.user_id === userId)
-      
-      const res = await fetch('/api/users/permissions/update', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetUserId: userId,
-          email: user?.email || userId,
-          role: role,
-          permissions: permissions,
-          approved: true,
-          approvedBy: currentUser?.email,
-        }),
-      })
-      
-      if (!res.ok) throw new Error('Failed to approve user')
-      
-      setUsers(users.map(u => 
-        u.user_id === userId 
-          ? { ...u, role, approved: true, approved_by: currentUser?.email || '' }
-          : u
-      ))
-      
-      setSaveMessage('User approved successfully')
+      setSaveMessage('User approval coming soon')
       setTimeout(() => setSaveMessage(''), 3000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to approve user')
     } finally {
       setIsSaving(false)
     }
@@ -339,21 +204,10 @@ export function useSettings(): UseSettingsReturn {
 
     setIsSaving(true)
     try {
-      const res = await fetch(`/api/users/permissions/update?user_id=${encodeURIComponent(userId)}`, {
-        method: 'DELETE',
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to reject user')
-      }
-
-      setUsers(users.filter(u => u.user_id !== userId))
-
-      setSaveMessage('User rejected and removed')
+      setSaveMessage('User rejection coming soon')
       setTimeout(() => setSaveMessage(''), 3000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to reject user')
     } finally {
       setIsSaving(false)
     }
@@ -362,28 +216,12 @@ export function useSettings(): UseSettingsReturn {
   const handleSaveCTMAssignment = async (userId: string) => {
     setAssignmentSaving(true)
     try {
-      const res = await fetch('/api/users/ctm-assignments', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetUserId: userId,
-          ctmAgentId: assignmentForm.ctmAgentId || null,
-          ctmUserGroupId: assignmentForm.ctmUserGroupId || null,
-        }),
-      })
-      
-      if (!res.ok) throw new Error('Failed to save CTM assignment')
-      
-      setCtmAssignments(prev => prev.map(a => 
-        a.userId === userId 
-          ? { ...a, ctmAgentId: assignmentForm.ctmAgentId || null, ctmUserGroupId: assignmentForm.ctmUserGroupId || null }
-          : a
-      ))
+      // Note: CTM assignment update via admin is not yet implemented in Laravel
+      setSaveMessage('CTM assignment update coming soon')
       setEditingAssignment(null)
-      setSaveMessage('CTM assignment saved')
       setTimeout(() => setSaveMessage(''), 3000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save CTM assignment')
     } finally {
       setAssignmentSaving(false)
     }

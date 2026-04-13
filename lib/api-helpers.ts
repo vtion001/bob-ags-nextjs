@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { isDevUser } from './auth/is-dev-user'
 
 // Re-export from canonical location for backwards compatibility
 export { DEV_BYPASS_UID, isDevUser } from './auth/is-dev-user'

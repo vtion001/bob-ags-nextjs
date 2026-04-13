@@ -1,48 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { createClient } from '@supabase/supabase-js'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const secret = searchParams.get('secret')
+  try {
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/admin/fix-user-role`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-  if (secret !== 'ags-admin-fix-2026') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to fix user role' },
+        { status: response.status }
+      )
+    }
+
+    const data = await response.json()
+
+    return NextResponse.json({
+      success: true,
+      message: data.message || 'User role updated'
+    })
+  } catch (error) {
+    console.error('[admin/fix-user-role] Proxy error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fix user role' },
+      { status: 500 }
+    )
   }
-
-  const devEmail = 'agsdev@allianceglobalsolutions.com'
-
-  // Use service role client to bypass RLS
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  )
-
-  // Update user_roles to admin
-  const { error: roleError } = await supabaseAdmin
-    .from('user_roles')
-    .update({ role: 'admin', approved: true })
-    .eq('email', devEmail)
-
-  if (roleError) {
-    console.error('Role update error:', roleError)
-    return NextResponse.json({ error: roleError.message }, { status: 500 })
-  }
-
-  // Update users to superadmin
-  const { error: userError } = await supabaseAdmin
-    .from('users')
-    .update({ is_superadmin: true })
-    .eq('email', devEmail)
-
-  if (userError) {
-    console.error('User update error:', userError)
-    return NextResponse.json({ error: userError.message }, { status: 500 })
-  }
-
-  return NextResponse.json({
-    success: true,
-    message: `${devEmail} is now a super admin`
-  })
 }

@@ -1,45 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { NumbersService } from '@/lib/ctm/services/numbers'
-import { authenticate } from '@/lib/api-helpers'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
-  const authError = await authenticate(request)
-  if (authError) return authError
-
   try {
     const searchParams = request.nextUrl.searchParams
-    const numbersService = new NumbersService()
+    const queryParams = searchParams.toString()
 
-    const params: {
-      country?: string
-      searchby?: 'area' | 'address' | 'zip'
-      areacode?: string
-      address?: string
-      pattern?: string
-    } = {}
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/ctm/numbers/search${queryParams ? `?${queryParams}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    const country = searchParams.get('country')
-    if (country) params.country = country
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to search numbers' },
+        { status: response.status }
+      )
+    }
 
-    const searchby = searchParams.get('searchby') as 'area' | 'address' | 'zip' | null
-    if (searchby) params.searchby = searchby
-
-    const areacode = searchParams.get('areacode')
-    if (areacode) params.areacode = areacode
-
-    const address = searchParams.get('address')
-    if (address) params.address = address
-
-    const pattern = searchParams.get('pattern')
-    if (pattern) params.pattern = pattern
-
-    const data = await numbersService.searchNumbers(params)
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
       ...data
     })
   } catch (error) {
+    console.error('[ctm/numbers/search] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to search numbers in CallTrackingMetrics' },
       { status: 502 }

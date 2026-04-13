@@ -1,31 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { CallsService } from '@/lib/ctm/services/calls'
-import { authenticate } from '@/lib/api-helpers'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function GET(request: NextRequest) {
-  const authError = await authenticate(request)
-  if (authError) return authError
-
   try {
     const searchParams = request.nextUrl.searchParams
-    const phone = searchParams.get('phone')
-    const hours = parseInt(searchParams.get('hours') || '8760', 10)
+    const queryParams = searchParams.toString()
 
-    if (!phone) {
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/ctm/calls/history${queryParams ? `?${queryParams}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'phone parameter is required' },
-        { status: 400 }
+        { error: 'Failed to fetch call history' },
+        { status: response.status }
       )
     }
 
-    const callsService = new CallsService()
-    const calls = await callsService.searchCallsByPhone(phone, hours)
+    const data = await response.json()
 
     return NextResponse.json({
       success: true,
-      calls
+      calls: data.calls || [],
+      total: data.total,
+      page: data.page
     })
   } catch (error) {
+    console.error('[ctm/calls/history] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch call history from CallTrackingMetrics' },
       { status: 502 }

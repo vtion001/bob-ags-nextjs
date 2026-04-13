@@ -1,21 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticate } from '@/lib/api-helpers'
+
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
   try {
-    const authError = await authenticate(request)
-    if (authError) return authError
-
     const body = await request.json()
 
-    // Call analysis requires external AI service - return mock result
+    // Proxy to Laravel API
+    const response = await fetch(`${LARAVEL_API_URL}/api/analyze`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to analyze call' },
+        { status: response.status }
+      )
+    }
+
+    const data = await response.json()
+
     return NextResponse.json({
       success: true,
-      message: 'Analysis requires OpenRouter API configuration',
-      analysis: null
+      ...data
     })
   } catch (error) {
-    console.error('Analyze error:', error)
+    console.error('[analyze] Proxy error:', error)
     return NextResponse.json(
       { error: 'Failed to analyze call' },
       { status: 500 }
