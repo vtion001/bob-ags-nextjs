@@ -1,40 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { isDevUser } from './auth/is-dev-user'
 
-// Re-export from canonical location for backwards compatibility
-export { DEV_BYPASS_UID, isDevUser } from './auth/is-dev-user'
+const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
 /**
- * Authenticate request - returns response if unauthorized, null if authorized
- * Use this at the start of any API route handler:
- *
- * export async function GET(request: NextRequest) {
- *   const authError = await authenticate(request)
- *   if (authError) return authError
- *   // ... continue with handler
- * }
+ * Authenticate request via Laravel Sanctum - returns response if unauthorized, null if authorized
  */
 export async function authenticate(request: NextRequest): Promise<NextResponse | null> {
-  if (isDevUser(request)) {
+  try {
+    const response = await fetch(`${LARAVEL_API_URL}/api/user`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Cookie': request.headers.get('cookie') || '',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     return null
-  }
-
-  const { supabase } = await createServerSupabase(request)
-  // MUST use getSession() (not getUser()) to refresh the session cookie
-  // getUser() only validates the JWT without refreshing, causing getSession() to return null on subsequent API calls
-  const { data: { session }, error } = await supabase.auth.getSession()
-
-  if (error) {
-    console.error('Session error:', error.message)
-  }
-
-  if (!session?.user) {
+  } catch {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
     )
   }
-
-  return null
 }

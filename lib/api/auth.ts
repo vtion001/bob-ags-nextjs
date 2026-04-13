@@ -1,5 +1,5 @@
-import { createServerSupabase } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { authApi } from '@/lib/laravel/api-client'
 
 const DEV_EMAIL = 'agsdev@allianceglobalsolutions.com'
 
@@ -15,32 +15,24 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<{
   error: Response | null
 }> {
   try {
-    const { supabase } = await createServerSupabase(request)
-    const { data: { user } } = await supabase.auth.getUser()
+    const userData = await authApi.getUser()
 
-    if (!user) {
+    if (!userData.user) {
       return {
         user: null,
         error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
       }
     }
 
-    const isDevAdmin = user.email === DEV_EMAIL
-
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    const isAdmin = isDevAdmin || userRole?.role === 'admin'
+    const isDevAdmin = userData.user.email === DEV_EMAIL
+    const isAdmin = isDevAdmin || userData.role === 'admin'
 
     return {
       user: {
-        id: user.id,
-        email: user.email || '',
+        id: userData.user.id,
+        email: userData.user.email,
         isAdmin,
-        role: userRole?.role || 'viewer',
+        role: userData.role,
       },
       error: null,
     }
@@ -70,12 +62,7 @@ export async function requireAdmin(request: NextRequest): Promise<{
 }
 
 export async function getUserSettings(request: NextRequest, userId: string) {
-  const { supabase } = await createServerSupabase(request)
-  const { data: userSettings } = await supabase
-    .from('user_settings')
-    .select('settings')
-    .eq('user_id', userId)
-    .single()
-
-  return userSettings?.settings || {}
+  const { userApi } = await import('@/lib/laravel/api-client')
+  const data = await userApi.getSettings()
+  return data.settings || {}
 }
