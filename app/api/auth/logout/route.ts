@@ -4,7 +4,6 @@ const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://local
 
 export async function POST(request: NextRequest) {
   try {
-    // Proxy to Laravel API
     const response = await fetch(`${LARAVEL_API_URL}/api/logout`, {
       method: 'POST',
       headers: {
@@ -23,17 +22,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Clear any leftover Supabase cookies for cleanliness
-    const nextResponse = NextResponse.json({
+    return NextResponse.json({
       success: true,
       message: data.message || 'Logged out successfully'
     })
-
-    nextResponse.cookies.set('sb-session', '', { maxAge: 0, path: '/' })
-    nextResponse.cookies.set('sb-refresh-token', '', { maxAge: 0, path: '/' })
-    nextResponse.cookies.set('sb-dev-session', '', { maxAge: 0, path: '/' })
-
-    return nextResponse
   } catch (error) {
     console.error('[logout] Proxy error:', error)
     return NextResponse.json(

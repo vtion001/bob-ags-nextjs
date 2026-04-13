@@ -76,3 +76,11 @@ jobs:
             --name bob-laravel \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --command "php artisan migrate --force"
+
+      - name: Seed initial users
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          az containerapp exec \
+            --name bob-laravel \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --command "php artisan db:seed --force"

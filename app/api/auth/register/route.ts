@@ -2,38 +2,37 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000'
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const queryParams = searchParams.toString()
+    const body = await request.json()
 
-    const response = await fetch(`${LARAVEL_API_URL}/api/calls/search${queryParams ? `?${queryParams}` : ''}`, {
-      method: 'GET',
+    const response = await fetch(`${LARAVEL_API_URL}/api/register`, {
+      method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
       credentials: 'include',
+      body: JSON.stringify(body),
     })
+
+    const data = await response.json()
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: 'Failed to search calls' },
+        { error: data.error || 'Registration failed' },
         { status: response.status }
       )
     }
 
-    const data = await response.json()
-
     return NextResponse.json({
       success: true,
-      calls: data.calls || [],
-      source: 'laravel'
+      message: data.message || 'Registration successful'
     })
   } catch (error) {
-    console.error('[calls/search] Proxy error:', error)
+    console.error('[register] Proxy error:', error)
     return NextResponse.json(
-      { error: 'Failed to search calls' },
+      { error: 'Registration failed' },
       { status: 500 }
     )
   }

@@ -339,7 +339,6 @@ export default function MonitorPage() {
                       extractGroup={extractGroup}
                     />
                     <TranscriptPanel
-                      transcript={liveState.transcript || []}
                       formatDuration={formatDuration}
                     />
                   </Card>

@@ -365,17 +365,16 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
         resultsCount: searchedCalls.length
       })
 
-      // If CTM returns no results, try Supabase for historical calls
+      // If CTM returns no results, try Laravel DB for historical calls
       if (searchedCalls.length === 0) {
-        console.log('[useCallHistory] No CTM results, searching Supabase for historical calls...')
+        console.log('[useCallHistory] No CTM results, searching Laravel DB for historical calls...')
 
-        const supabaseRes = await fetch(`/api/calls/search?phone=${encodeURIComponent(normalizedPhone)}`)
+        const historicalRes = await fetch(`/api/calls/search?phone=${encodeURIComponent(normalizedPhone)}`)
 
-        if (supabaseRes.ok) {
-          const supabaseData = await supabaseRes.json()
-          if (supabaseData.calls && supabaseData.calls.length > 0) {
-            // Transform Supabase calls to match CTM Call format
-            searchedCalls = supabaseData.calls.map((call: any) => ({
+        if (historicalRes.ok) {
+          const historicalData = await historicalRes.json()
+          if (historicalData.calls && historicalData.calls.length > 0) {
+            searchedCalls = historicalData.calls.map((call: any) => ({
               id: call.ctm_call_id,
               phone: call.phone || call.caller_number,
               callerNumber: call.caller_number,
@@ -401,7 +400,7 @@ export function useCallHistory(options: UseCallHistoryOptions = {}): UseCallHist
               ringTime: 0,
             }))
 
-            console.log('[useCallHistory] Found historical calls in Supabase:', searchedCalls.length)
+            console.log('[useCallHistory] Found historical calls in Laravel DB:', searchedCalls.length)
           }
         }
       }

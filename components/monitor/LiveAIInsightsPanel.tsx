@@ -1,8 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useDeferredValue, useMemo } from 'react'
 import CollapsiblePanel from '@/components/ui/CollapsiblePanel'
-import { type LiveAIInsight } from '@/hooks/monitor/useLiveAIInsights'
+import type { LiveAIInsight } from '@/hooks/monitor/useLiveAIInsights'
 
 interface LiveAIInsightsPanelProps {
   insights: LiveAIInsight[]
@@ -85,6 +85,16 @@ export default function LiveAIInsightsPanel({
   expanded,
   onToggle,
 }: LiveAIInsightsPanelProps) {
+  const deferredInsights = useDeferredValue(insights)
+  const isStale = deferredInsights !== insights
+
+  const sortedInsights = useMemo(() => {
+    return [...deferredInsights].sort((a, b) => {
+      const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
+      return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1)
+    })
+  }, [deferredInsights])
+
   return (
     <CollapsiblePanel
       title="AI Recommendations"
@@ -121,7 +131,7 @@ export default function LiveAIInsightsPanel({
           </div>
         )}
 
-        {insights.length === 0 && !isAnalyzing ? (
+        {sortedInsights.length === 0 && !isAnalyzing ? (
           <div className="p-6 text-center">
             <div className="w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center mx-auto mb-3">
               <svg className="w-5 h-5 text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +146,7 @@ export default function LiveAIInsightsPanel({
             </p>
           </div>
         ) : (
-          insights.map((insight) => (
+          sortedInsights.map((insight) => (
             <div
               key={insight.id}
               className={`px-4 py-3 flex items-start gap-3 ${getInsightColor(insight.type)}`}
@@ -171,7 +181,15 @@ export default function LiveAIInsightsPanel({
           ))
         )}
 
-        {isAnalyzing && insights.length === 0 && (
+        {isStale && (
+          <div className="px-4 py-2 bg-navy-50 border-t border-navy-200">
+            <p className="text-xs text-navy-400 italic">
+              Updating insights...
+            </p>
+          </div>
+        )}
+
+        {isAnalyzing && sortedInsights.length === 0 && (
           <div className="p-4 text-center">
             <div className="w-8 h-8 border-2 border-navy-200 border-t-navy-600 rounded-full animate-spin mx-auto" />
             <p className="text-navy-600 text-sm mt-2 font-medium">Analyzing conversation...</p>

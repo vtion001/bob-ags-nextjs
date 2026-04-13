@@ -1,28 +1,32 @@
-import React from "react";
-import type { RealtimeTranscript } from "@/lib/realtime";
+'use client'
+
+import React, { useMemo, useRef } from "react"
+import { useLiveMonitoringStore, selectTranscript } from "@/lib/stores/liveMonitoringStore"
+import { useVirtualizer } from "@tanstack/react-virtual"
 
 interface TranscriptPanelProps {
-  transcript: RealtimeTranscript[];
-  formatDuration: (seconds: number) => string;
+  formatDuration: (seconds: number) => string
 }
 
-function TranscriptMessage({ 
-  text, 
-  timestamp, 
+interface TranscriptMessageProps {
+  text: string
+  timestamp: number
+  isAgent: boolean
+  formatDuration: (seconds: number) => string
+}
+
+function TranscriptMessage({
+  text,
+  timestamp,
   isAgent,
-  formatDuration 
-}: { 
-  text: string; 
-  timestamp: number; 
-  isAgent: boolean;
-  formatDuration: (seconds: number) => string;
-}) {
+  formatDuration
+}: TranscriptMessageProps) {
   return (
     <div className="flex gap-2">
       <div className="flex-1">
         <div className={`inline-block px-3 py-2 rounded-2xl text-sm ${
-          isAgent 
-            ? "rounded-bl-sm bg-navy-900 text-white" 
+          isAgent
+            ? "rounded-bl-sm bg-navy-900 text-white"
             : "rounded-br-sm bg-navy-100 text-navy-900"
         }`}>
           {text}
@@ -32,7 +36,7 @@ function TranscriptMessage({
         </p>
       </div>
     </div>
-  );
+  )
 }
 
 function EmptyTranscriptState() {
@@ -60,12 +64,90 @@ function EmptyTranscriptState() {
         Start speaking to see the transcript
       </p>
     </div>
-  );
+  )
 }
 
-export default function TranscriptPanel({ transcript, formatDuration }: TranscriptPanelProps) {
-  const agentMessages = transcript.filter((t) => t.speaker === "Agent");
-  const callerMessages = transcript.filter((t) => t.speaker === "Caller");
+function VirtualizedMessageList({
+  messages,
+  isAgent,
+  formatDuration
+}: {
+  messages: { text: string; startTime: number }[]
+  isAgent: boolean
+  formatDuration: (seconds: number) => string
+}) {
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 70,
+    overscan: 5,
+  })
+
+  const items = virtualizer.getVirtualItems()
+
+  if (messages.length === 0) {
+    return (
+      <p className="text-sm text-navy-400 italic">
+        {isAgent ? "Agent messages will appear here" : "Caller messages will appear here"}
+      </p>
+    )
+  }
+
+  return (
+    <div ref={parentRef} className="flex-1 overflow-y-auto">
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {items.map((virtualItem) => {
+          const message = messages[virtualItem.index]
+          return (
+            <div
+              key={virtualItem.key}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualItem.start}px)`,
+              }}
+            >
+              <TranscriptMessage
+                text={message.text}
+                timestamp={message.startTime}
+                isAgent={isAgent}
+                formatDuration={formatDuration}
+              />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export default function TranscriptPanel({ formatDuration }: TranscriptPanelProps) {
+  const transcript = useLiveMonitoringStore(selectTranscript)
+
+  const { agentMessages, callerMessages } = useMemo(() => {
+    const agent: { text: string; startTime: number }[] = []
+    const caller: { text: string; startTime: number }[] = []
+
+    for (const t of transcript) {
+      if (t.speaker === "Agent") {
+        agent.push({ text: t.text, startTime: t.startTime })
+      } else {
+        caller.push({ text: t.text, startTime: t.startTime })
+      }
+    }
+
+    return { agentMessages: agent, callerMessages: caller }
+  }, [transcript])
 
   return (
     <div className="h-[400px] overflow-y-auto p-4 bg-slate-50/50">
@@ -82,23 +164,11 @@ export default function TranscriptPanel({ transcript, formatDuration }: Transcri
                 Agent
               </span>
             </div>
-            <div className="flex-1 overflow-y-auto space-y-3">
-              {agentMessages.length === 0 ? (
-                <p className="text-sm text-navy-400 italic">
-                  Agent messages will appear here
-                </p>
-              ) : (
-                agentMessages.map((t, i) => (
-                  <TranscriptMessage
-                    key={i}
-                    text={t.text}
-                    timestamp={t.startTime}
-                    isAgent={true}
-                    formatDuration={formatDuration}
-                  />
-                ))
-              )}
-            </div>
+            <VirtualizedMessageList
+              messages={agentMessages}
+              isAgent={true}
+              formatDuration={formatDuration}
+            />
           </div>
 
           <div className="flex flex-col border-l border-navy-200 pl-4">
@@ -110,26 +180,14 @@ export default function TranscriptPanel({ transcript, formatDuration }: Transcri
                 Caller
               </span>
             </div>
-            <div className="flex-1 overflow-y-auto space-y-3">
-              {callerMessages.length === 0 ? (
-                <p className="text-sm text-navy-400 italic">
-                  Caller messages will appear here
-                </p>
-              ) : (
-                callerMessages.map((t, i) => (
-                  <TranscriptMessage
-                    key={i}
-                    text={t.text}
-                    timestamp={t.startTime}
-                    isAgent={false}
-                    formatDuration={formatDuration}
-                  />
-                ))
-              )}
-            </div>
+            <VirtualizedMessageList
+              messages={callerMessages}
+              isAgent={false}
+              formatDuration={formatDuration}
+            />
           </div>
         </div>
       )}
     </div>
-  );
+  )
 }
